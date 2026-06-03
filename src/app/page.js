@@ -58,6 +58,7 @@ export default function RootGatePage() {
       <div className="absolute bottom-1/4 left-1/3 w-80 h-80 bg-teal-500/5 rounded-full blur-[80px] pointer-events-none" />
 
       <div className="w-full max-w-sm bg-white border border-slate-200/80 p-8 rounded-3xl backdrop-blur-xl shadow-xl flex flex-col items-center text-center space-y-6 animate-fade-in relative z-10">
+        <img src="/logo.png" alt="ASENTRA Logo" className="h-16 w-auto object-contain mb-2" />
         
         {status === 'checking' && (
           <>

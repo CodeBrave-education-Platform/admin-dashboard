@@ -66,11 +66,8 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
       }`}>
         {/* Brand wordmark logo */}
         <div className="h-16 px-6 border-b border-slate-200 flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-xs shadow-md">
-              Δ
-            </div>
-            <span className="font-black text-sm tracking-[0.2em] text-slate-900">ASENTRA</span>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <img src="/logo.png" alt="ASENTRA Logo" className="h-9 w-auto object-contain" />
           </Link>
 
           <button 

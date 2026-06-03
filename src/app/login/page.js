@@ -74,12 +74,9 @@ export default function AdminLoginPage() {
         className="w-full max-w-md bg-white border border-slate-200/80 p-8 sm:p-10 rounded-[2.5rem] shadow-2xl space-y-6 relative z-10 text-slate-800"
       >
         <div className="text-center space-y-2">
-          {/* Hexagonal decorative shell */}
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-650 font-extrabold text-sm mb-4 animate-pulse">
-            Δ
-          </div>
-          <h2 className="text-2xl font-black tracking-tight text-slate-900">ASENTRA Admin Console</h2>
-          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black font-sans">Secure administrative login gateway</p>
+          <img src="/logo.png" alt="ASENTRA Logo" className="mx-auto h-24 w-auto object-contain mb-2 animate-fade-in" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500">Admin Control Console</h2>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-black font-sans">Secure administrative login gateway</p>
         </div>
 
         {errorMsg && (
