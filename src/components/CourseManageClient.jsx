@@ -1001,7 +1001,7 @@ export default function CourseManageClient({
         ].map(tab => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => startTransition(() => setActiveTab(tab.id))}
             className={`w-full flex flex-col items-start gap-1.5 p-4 rounded-3xl border transition-all duration-200 select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98] tactile-press text-left ${
               activeTab === tab.id 
                 ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold shadow-sm' 
@@ -1036,7 +1036,7 @@ export default function CourseManageClient({
       </aside>
 
       {/* Main Tab Panel */}
-      <div className="lg:col-span-3 bg-white border border-slate-200 rounded-3xl p-6 lg:p-8 relative overflow-hidden flex flex-col justify-between shadow-sm">
+      <div className={`lg:col-span-3 bg-white border border-slate-200 rounded-3xl p-6 lg:p-8 relative overflow-hidden flex flex-col justify-between shadow-sm transition-opacity duration-200 ${isPending ? 'opacity-65 pointer-events-none' : ''}`}>
         
         {activeTab === 'settings' && (
           <div className="space-y-6">

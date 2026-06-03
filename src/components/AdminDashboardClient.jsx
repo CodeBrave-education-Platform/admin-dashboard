@@ -94,10 +94,64 @@ export default function AdminDashboardClient() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="animate-pulse bg-white border border-slate-200 rounded-3xl p-6 h-28 shadow-sm" />
-          ))}
+        <div className="space-y-8 animate-pulse">
+          {/* Asymmetric Bento-Grid Statistics Skeletons */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-white border border-slate-200 p-6 rounded-3xl flex items-center justify-between shadow-sm h-24">
+                <div className="space-y-2">
+                  <div className="w-24 h-2 bg-slate-100 rounded" />
+                  <div className="w-12 h-5 bg-slate-200 rounded" />
+                </div>
+                <div className="w-12 h-12 bg-slate-100 rounded-2.5xl" />
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Student Roster Directory Skeleton */}
+            <div className="lg:col-span-2 bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 shadow-sm min-h-[400px]">
+              <div className="flex justify-between items-center border-b border-slate-150 pb-4">
+                <div className="w-48 h-4 bg-slate-100 rounded" />
+                <div className="w-60 h-8 bg-slate-50 border border-slate-150 rounded-xl" />
+              </div>
+              <div className="space-y-4">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-slate-100" />
+                      <div className="space-y-2">
+                        <div className="w-32 h-3 bg-slate-150 rounded" />
+                        <div className="w-48 h-2 bg-slate-100 rounded" />
+                      </div>
+                    </div>
+                    <div className="w-16 h-3 bg-slate-100 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Actions & CBT Telemetry Skeleton */}
+            <div className="space-y-6 lg:col-span-1">
+              <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm h-44 flex flex-col justify-center space-y-3">
+                <div className="w-24 h-3 bg-slate-100 rounded" />
+                <div className="h-10 bg-slate-50 border border-slate-100 rounded-2xl" />
+                <div className="h-10 bg-slate-50 border border-slate-100 rounded-2xl" />
+              </div>
+              <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm h-64 flex flex-col justify-center space-y-3">
+                <div className="w-32 h-3 bg-slate-100 rounded" />
+                {[1, 2].map(i => (
+                  <div key={i} className="bg-slate-50 p-3 border border-slate-100 rounded-xl space-y-2">
+                    <div className="flex justify-between">
+                      <div className="w-20 h-3 bg-slate-150 rounded" />
+                      <div className="w-8 h-3 bg-slate-100 rounded" />
+                    </div>
+                    <div className="w-28 h-2 bg-slate-100 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <>

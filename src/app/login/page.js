@@ -62,67 +62,67 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none font-sans">
+    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none font-sans">
       {/* Dynamic ambient gradients */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[110px] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-[110px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/5 rounded-full blur-[100px] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="w-full max-w-md bg-zinc-900/60 border border-zinc-800/80 p-8 sm:p-10 rounded-[2.5rem] backdrop-blur-xl shadow-[0_25px_60px_rgba(0,0,0,0.6)] space-y-6 relative z-10"
+        className="w-full max-w-md bg-white border border-slate-200/80 p-8 sm:p-10 rounded-[2.5rem] shadow-2xl space-y-6 relative z-10 text-slate-800"
       >
         <div className="text-center space-y-2">
           {/* Hexagonal decorative shell */}
-          <div className="mx-auto w-12 h-12 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-extrabold text-sm mb-4 animate-pulse">
+          <div className="mx-auto w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-650 font-extrabold text-sm mb-4 animate-pulse">
             Δ
           </div>
-          <h2 className="text-2xl font-black tracking-tight text-white">ASENTRA Admin Console</h2>
-          <p className="text-[10px] text-zinc-550 uppercase tracking-widest font-black font-sans">Secure administrative login gateway</p>
+          <h2 className="text-2xl font-black tracking-tight text-slate-900">ASENTRA Admin Console</h2>
+          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black font-sans">Secure administrative login gateway</p>
         </div>
 
         {errorMsg && (
-          <div className="p-4 bg-rose-600/10 border border-rose-500/20 text-rose-455 rounded-2xl text-xs font-bold leading-normal flex items-start gap-2.5 animate-shake">
-            <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-600 rounded-2xl text-xs font-bold leading-normal flex items-start gap-2.5 animate-shake">
+            <ShieldAlert className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-4 bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 rounded-2xl text-xs font-bold leading-normal flex items-start gap-2.5">
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400 mt-0.5" />
+          <div className="p-4 bg-emerald-55/10 bg-emerald-50 border border-emerald-250 text-emerald-600 rounded-2xl text-xs font-bold leading-normal flex items-start gap-2.5">
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
             <span>{successMsg}</span>
           </div>
         )}
 
         <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Email Address</label>
+            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Email Address</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-650" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 placeholder="administrator@asentra.in"
                 disabled={loading}
-                className="w-full bg-zinc-950 border border-zinc-800/80 rounded-2xl pl-11 pr-4 py-3.5 text-xs text-white outline-none focus:border-indigo-500 transition font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs text-slate-800 outline-none focus:border-indigo-500 transition font-bold"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block">Security Key (Password)</label>
+            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Security Key (Password)</label>
             <div className="relative">
-              <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-650" />
+              <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 disabled={loading}
-                className="w-full bg-zinc-950 border border-zinc-800/80 rounded-2xl pl-11 pr-4 py-3.5 text-xs text-white outline-none focus:border-indigo-500 transition font-bold"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-xs text-slate-800 outline-none focus:border-indigo-500 transition font-bold"
               />
             </div>
           </div>
@@ -130,7 +130,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-4 bg-indigo-600 hover:bg-indigo-750 disabled:bg-zinc-900 disabled:text-zinc-650 disabled:border-zinc-800 disabled:cursor-not-allowed text-white rounded-2.5xl text-xs font-black shadow-md cursor-pointer transition select-none flex items-center justify-center gap-2 border border-indigo-500 hover:scale-[1.01] active:scale-[0.99] tactile-press mt-2"
+            className="w-full py-4 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-white rounded-2.5xl text-xs font-black shadow-md cursor-pointer transition select-none flex items-center justify-center gap-2 border border-slate-950 hover:scale-[1.01] active:scale-[0.99] tactile-press mt-2"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin text-white" />
