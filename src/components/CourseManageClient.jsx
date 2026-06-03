@@ -24,29 +24,29 @@ const compileMarkdownToHtml = (markdown) => {
 
   // 1. Process Block LaTeX: $$ ... $$
   html = html.replace(/\$\$(.*?)\$\$/gs, (match, formula) => {
-    return `<div class="katex-block my-4 text-center overflow-x-auto text-indigo-400 font-serif font-bold text-base bg-zinc-950/60 p-4 rounded-xl border border-zinc-800/80">${formula.trim()}</div>`;
+    return `<div class="katex-block my-4 text-center overflow-x-auto text-indigo-650 font-serif font-bold text-base bg-slate-50 p-4 rounded-xl border border-slate-200">${formula.trim()}</div>`;
   });
 
   // 2. Process Inline LaTeX: $ ... $
   html = html.replace(/\$(.*?)\$/g, (match, formula) => {
-    return `<span class="katex-inline font-serif font-semibold text-indigo-400 bg-zinc-950/40 px-1.5 py-0.5 rounded border border-zinc-800/40">${formula.trim()}</span>`;
+    return `<span class="katex-inline font-serif font-semibold text-indigo-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">${formula.trim()}</span>`;
   });
 
   // 3. Headers: #, ##, ###, ####
-  html = html.replace(/^#### (.*?)$/gm, '<h5 class="text-sm font-black text-white mt-4 mb-2">$1</h5>');
-  html = html.replace(/^### (.*?)$/gm, '<h4 class="text-base font-black text-white mt-5 mb-2.5">$1</h4>');
-  html = html.replace(/^## (.*?)$/gm, '<h3 class="text-lg font-black text-white mt-6 mb-3">$1</h3>');
-  html = html.replace(/^# (.*?)$/gm, '<h2 class="text-xl font-black text-white mt-7 mb-4 border-b border-zinc-800 pb-2">$1</h2>');
+  html = html.replace(/^#### (.*?)$/gm, '<h5 class="text-sm font-black text-slate-800 mt-4 mb-2">$1</h5>');
+  html = html.replace(/^### (.*?)$/gm, '<h4 class="text-base font-black text-slate-800 mt-5 mb-2.5">$1</h4>');
+  html = html.replace(/^## (.*?)$/gm, '<h3 class="text-lg font-black text-slate-800 mt-6 mb-3">$1</h3>');
+  html = html.replace(/^# (.*?)$/gm, '<h2 class="text-xl font-black text-slate-900 mt-7 mb-4 border-b border-slate-200 pb-2">$1</h2>');
 
   // 4. Bold and Italics
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-white">$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em class="italic text-zinc-300">$1</em>');
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="font-extrabold text-slate-900">$1</strong>');
+  html = html.replace(/\*(.*?)\*/g, '<em class="italic text-slate-600">$1</em>');
 
   // 5. Unordered lists
-  html = html.replace(/^\s*[\-\*]\s+(.*?)$/gm, '<li class="list-disc ml-5 mb-1.5 text-zinc-300">$1</li>');
+  html = html.replace(/^\s*[\-\*]\s+(.*?)$/gm, '<li class="list-disc ml-5 mb-1.5 text-slate-600">$1</li>');
 
   // 6. Ordered lists
-  html = html.replace(/^\s*\d+\.\s+(.*?)$/gm, '<li class="list-decimal ml-5 mb-1.5 text-zinc-300">$1</li>');
+  html = html.replace(/^\s*\d+\.\s+(.*?)$/gm, '<li class="list-decimal ml-5 mb-1.5 text-slate-600">$1</li>');
 
   // 7. Paragraphs
   const paragraphs = html.split(/\n\n+/);
@@ -56,7 +56,7 @@ const compileMarkdownToHtml = (markdown) => {
     if (trimmed.startsWith('<h') || trimmed.startsWith('<div') || trimmed.startsWith('<li') || trimmed.startsWith('<ul') || trimmed.startsWith('<ol')) {
       return trimmed;
     }
-    return `<p class="mb-4 text-zinc-300 leading-relaxed text-xs sm:text-sm">${trimmed.replace(/\n/g, '<br />')}</p>`;
+    return `<p class="mb-4 text-slate-650 leading-relaxed text-xs sm:text-sm">${trimmed.replace(/\n/g, '<br />')}</p>`;
   }).join('\n');
 
   return html;
@@ -243,26 +243,26 @@ function LiveClassesTab({ course, triggerToast }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold tracking-tight text-white">Synchronized Cohort Poll Command Center</h2>
-        <p className="text-xs text-zinc-500 mt-1">Broadcast real-time dynamic conceptual quizzes and monitor student cohort response analytics instantly</p>
+        <h2 className="text-xl font-bold tracking-tight text-slate-900">Synchronized Cohort Poll Command Center</h2>
+        <p className="text-xs text-slate-500 mt-1">Broadcast real-time dynamic conceptual quizzes and monitor student cohort response analytics instantly</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Column: Creator Form */}
-        <div className="bg-[#030303]/60 border border-zinc-800/80 p-6 rounded-3xl space-y-5">
-          <div className="flex items-center gap-2 border-b border-zinc-800/80 pb-3">
-            <Radio className="w-4 h-4 text-indigo-400 animate-pulse" />
-            <h3 className="font-bold text-xs uppercase text-zinc-400 tracking-wider">Configure Poll Blueprint</h3>
+        <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+          <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+            <Radio className="w-4 h-4 text-indigo-600 animate-pulse" />
+            <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Configure Poll Blueprint</h3>
           </div>
 
           <form onSubmit={handleLaunchPoll} className="space-y-4">
             <div className="space-y-1">
-              <label className="text-[10px] font-bold text-zinc-550 uppercase tracking-wider block">Question Supplement</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Question Supplement</label>
               <textarea
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 placeholder="e.g. Find the angular momentum of a rolling disc with mass 2kg and radius 0.5m..."
-                className="w-full h-20 bg-zinc-950 border border-zinc-800/80 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition resize-none placeholder-zinc-750 font-bold"
+                className="w-full h-20 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition resize-none placeholder-slate-400 font-bold"
               />
             </div>
 
@@ -274,13 +274,13 @@ function LiveClassesTab({ course, triggerToast }) {
                 { label: 'Option D', val: optionD, set: setOptionD }
               ].map((opt, idx) => (
                 <div key={idx} className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-550 uppercase block">{opt.label}</label>
+                  <label className="text-[9px] font-bold text-slate-500 uppercase block">{opt.label}</label>
                   <input
                     type="text"
                     value={opt.val}
                     onChange={e => opt.set(e.target.value)}
                     placeholder={`Choice ${String.fromCharCode(65 + idx)}`}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                   />
                 </div>
               ))}
@@ -288,11 +288,11 @@ function LiveClassesTab({ course, triggerToast }) {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-550 uppercase tracking-wider block">Authoritative Answer</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Authoritative Answer</label>
                 <select
                   value={correctAnswerIndex}
                   onChange={e => setCorrectAnswerIndex(parseInt(e.target.value))}
-                  className="w-full bg-zinc-950 border border-zinc-800/80 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
                 >
                   <option value={0}>Option A</option>
                   <option value={1}>Option B</option>
@@ -302,8 +302,8 @@ function LiveClassesTab({ course, triggerToast }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-zinc-550 uppercase tracking-wider block">Timer Duration: {duration}s</label>
-                <div className="flex bg-zinc-950 border border-zinc-800 p-1 rounded-xl gap-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Timer Duration: {duration}s</label>
+                <div className="flex bg-slate-50 border border-slate-200 p-1 rounded-xl gap-1">
                   {[15, 30, 60, 90].map(s => (
                     <button
                       key={s}
@@ -311,8 +311,8 @@ function LiveClassesTab({ course, triggerToast }) {
                       onClick={() => setDuration(s)}
                       className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition cursor-pointer select-none tactile-press hover:scale-105 active:scale-95 ${
                         duration === s
-                          ? 'bg-indigo-600/20 text-indigo-400 border border-indigo-500/30'
-                          : 'text-zinc-500 hover:text-zinc-300'
+                          ? 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+                          : 'text-slate-500 hover:text-slate-700'
                       }`}
                     >
                       {s}s
@@ -326,12 +326,12 @@ function LiveClassesTab({ course, triggerToast }) {
               <button
                 type="submit"
                 disabled={isLaunching || !!activePoll}
-                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-900 disabled:text-zinc-650 disabled:border-zinc-800 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-bold shadow-md cursor-pointer transition select-none flex items-center justify-center gap-2 border border-indigo-500 hover:scale-[1.01] active:scale-[0.99] tactile-press"
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-bold shadow-sm cursor-pointer transition select-none flex items-center justify-center gap-2 border border-slate-800 hover:scale-[1.01] active:scale-[0.99] tactile-press"
               >
                 {isLaunching ? (
                   <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <PlayCircle className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
+                  <PlayCircle className="w-3.5 h-3.5 text-slate-300 shrink-0" />
                 )}
                 <span>{activePoll ? 'Poll Active (Wait to finish)' : 'Launch Live Poll broadcast'}</span>
               </button>
@@ -340,34 +340,34 @@ function LiveClassesTab({ course, triggerToast }) {
         </div>
 
         {/* Right Column: Live Telemetry Results */}
-        <div className="bg-[#030303]/60 border border-zinc-800 p-6 rounded-3xl space-y-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
             <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <h3 className="font-bold text-xs uppercase text-zinc-400 tracking-wider">Live Response Telemetry</h3>
+              <BarChart3 className="w-4 h-4 text-emerald-600 animate-pulse" />
+              <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Live Response Telemetry</h3>
             </div>
             
             {activePoll && (
-              <span className="px-2 py-0.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg text-[9px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1">
-                <Timer className="w-3 h-3 text-emerald-400" /> {activePoll.timeLeftSeconds || 0}s Left
+              <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1">
+                <Timer className="w-3 h-3 text-emerald-600" /> {activePoll.timeLeftSeconds || 0}s Left
               </span>
             )}
           </div>
 
           {!activePoll ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-[#030303]/20 border border-zinc-800 rounded-2xl min-h-[300px]">
-              <StopCircle className="w-10 h-10 text-zinc-700 mb-3 animate-pulse" />
-              <h3 className="font-bold text-xs text-zinc-400">Classroom Broadcast Inactive</h3>
-              <p className="text-[10px] text-zinc-550 mt-1.5 max-w-xs leading-relaxed">
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50 border border-slate-200 rounded-2xl min-h-[300px]">
+              <StopCircle className="w-12 h-12 text-slate-200 mb-3 mx-auto animate-pulse" />
+              <h3 className="font-bold text-xs text-slate-700">Classroom Broadcast Inactive</h3>
+              <p className="text-[10px] text-slate-500 mt-1.5 max-w-xs leading-relaxed">
                 Configure a poll blueprint on the left pane and press launch. Active student percentages will automatically compile and display in real-time horizontal charts.
               </p>
             </div>
           ) : (
             <div className="flex-1 flex flex-col justify-between space-y-5">
               {/* Question Summary */}
-              <div className="bg-zinc-950/70 border border-zinc-800/60 p-4 rounded-2xl space-y-2">
-                <h4 className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest leading-none">Active Poll Question</h4>
-                <p className="text-xs font-extrabold text-white leading-relaxed">{activePoll.question}</p>
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2">
+                <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Active Poll Question</h4>
+                <p className="text-xs font-extrabold text-slate-800 leading-relaxed">{activePoll.question}</p>
               </div>
 
               {/* Options & Progress Bar Charts */}
@@ -380,33 +380,33 @@ function LiveClassesTab({ course, triggerToast }) {
 
                   return (
                     <div key={idx} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-bold text-zinc-300">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                         <span className="truncate max-w-[200px] flex items-center gap-1.5">
                           <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black border ${
                             isCorrect 
-                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-                              : 'bg-zinc-900 border-zinc-800 text-zinc-500'
+                              ? 'bg-emerald-50 border-emerald-300 text-emerald-600' 
+                              : 'bg-slate-100 border-slate-200 text-slate-550'
                           }`}>
                             {String.fromCharCode(65 + idx)}
                           </span>
                           <span>{opt}</span>
                           {isCorrect && (
-                            <span className="text-[9px] font-black uppercase text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded ml-1 border border-emerald-500/20">
+                            <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded ml-1 border border-emerald-100">
                               Correct Key
                             </span>
                           )}
                         </span>
-                        <span className="text-zinc-400">{pct}% ({votes} votes)</span>
+                        <span className="text-slate-500">{pct}% ({votes} votes)</span>
                       </div>
 
-                      <div className="w-full bg-slate-900 h-3 rounded-full overflow-hidden relative border border-zinc-800">
+                      <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden relative border border-slate-200">
                         <motion.div
                           animate={{ width: `${pct}%` }}
                           transition={{ type: 'spring', stiffness: 80, damping: 15 }}
                           className={`h-full rounded-full ${
                             isCorrect 
-                              ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.35)]' 
-                              : 'bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.25)]'
+                              ? 'bg-emerald-600 shadow-[0_0_10px_rgba(16,185,129,0.15)]' 
+                              : 'bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.15)]'
                           }`}
                         />
                       </div>
@@ -416,21 +416,21 @@ function LiveClassesTab({ course, triggerToast }) {
               </div>
 
               {/* Total votes + Terminate button footer */}
-              <div className="flex items-center justify-between gap-4 pt-4 border-t border-zinc-800/60 shrink-0">
-                <div className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                  Total Votes: <span className="text-white text-xs ml-1 font-extrabold">{activePoll.totalVotes || 0} Responses</span>
+              <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200 shrink-0">
+                <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                  Total Votes: <span className="text-slate-800 text-xs ml-1 font-extrabold">{activePoll.totalVotes || 0} Responses</span>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleTerminatePoll}
                   disabled={isTerminating}
-                  className="px-4 py-2 bg-rose-600/10 hover:bg-rose-650 border border-rose-500/20 hover:border-rose-500/60 text-rose-455 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer select-none tactile-press"
+                  className="px-4 py-2 bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer select-none tactile-press"
                 >
                   {isTerminating ? (
                     <RefreshCw className="w-3 h-3 animate-spin" />
                   ) : (
-                    <StopCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+                    <StopCircle className="w-3.5 h-3.5 text-rose-455 shrink-0" />
                   )}
                   <span>Terminate Poll</span>
                 </button>
@@ -1002,88 +1002,88 @@ export default function CourseManageClient({
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`w-full flex flex-col items-start gap-1.5 p-4 rounded-3xl border transition-all duration-300 select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98] tactile-press text-left ${
+            className={`w-full flex flex-col items-start gap-1.5 p-4 rounded-3xl border transition-all duration-200 select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98] tactile-press text-left ${
               activeTab === tab.id 
-                ? 'bg-indigo-650/10 border-indigo-500/35 text-indigo-400 font-extrabold shadow-[0_0_20px_rgba(99,102,241,0.08)]' 
-                : 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:text-white hover:bg-zinc-850/50'
+                ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-extrabold shadow-sm' 
+                : 'bg-white border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 shadow-xs'
             }`}
           >
             <div className="flex items-center gap-2">
-              <tab.icon className="w-4 h-4 shrink-0 text-indigo-500" />
+              <tab.icon className="w-4 h-4 shrink-0 text-indigo-600" />
               <span className="text-xs font-bold uppercase tracking-wider">{tab.label}</span>
             </div>
-            <span className="text-[10px] text-zinc-500 font-medium">{tab.desc}</span>
+            <span className="text-[10px] text-slate-400 font-medium">{tab.desc}</span>
           </button>
         ))}
 
-        <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-3xl p-5 space-y-3 select-none">
-          <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Syllabus Status</h4>
+        <div className="bg-white border border-slate-200 rounded-3xl p-5 space-y-3 select-none shadow-sm">
+          <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Syllabus Status</h4>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-zinc-400 font-semibold">Video classes</span>
-              <span className="font-extrabold text-white">{lessons.length} Modules</span>
+              <span className="text-slate-500 font-semibold">Video classes</span>
+              <span className="font-extrabold text-slate-700">{lessons.length} Modules</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-zinc-400 font-semibold">Attached PDFs</span>
-              <span className="font-extrabold text-white">{files.length} Sheets</span>
+              <span className="text-slate-500 font-semibold">Attached PDFs</span>
+              <span className="font-extrabold text-slate-700">{files.length} Sheets</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-zinc-400 font-semibold">CBT Exams</span>
-              <span className="font-extrabold text-emerald-400">{exams.length} Active</span>
+              <span className="text-slate-500 font-semibold">CBT Exams</span>
+              <span className="font-extrabold text-emerald-600">{exams.length} Active</span>
             </div>
           </div>
         </div>
       </aside>
 
       {/* Main Tab Panel */}
-      <div className="lg:col-span-3 bg-zinc-900/60 border border-zinc-800/80 rounded-3xl p-6 lg:p-8 backdrop-blur-md relative overflow-hidden flex flex-col justify-between">
+      <div className="lg:col-span-3 bg-white border border-slate-200 rounded-3xl p-6 lg:p-8 relative overflow-hidden flex flex-col justify-between shadow-sm">
         
         {activeTab === 'settings' && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold tracking-tight">Configuration Settings</h2>
-              <p className="text-xs text-zinc-500 mt-1">Manage dynamic pricing, target groups, and Cloudinary thumbnail image blocks</p>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">Configuration Settings</h2>
+              <p className="text-xs text-slate-500 mt-1">Manage dynamic pricing, target groups, and Cloudinary thumbnail image blocks</p>
             </div>
             
             <form onSubmit={handleUpdateCourse} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase block">Course Title</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block">Course Title</label>
                   <input
                     type="text"
                     value={title}
                     onChange={e => setTitle(e.target.value)}
-                    className="w-full bg-[#030303] border border-zinc-800/80 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase block">Price (INR)</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block">Price (INR)</label>
                   <input
                     type="number"
                     value={price}
                     onChange={e => setPrice(e.target.value)}
-                    className="w-full bg-[#030303] border border-zinc-800/80 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase block">Thumbnail Image URL</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block">Thumbnail Image URL</label>
                   <input
                     type="text"
                     value={thumbUrl}
                     onChange={e => setThumbUrl(e.target.value)}
-                    className="w-full bg-[#030303] border border-zinc-800/80 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                     placeholder="https://images.unsplash.com/..."
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase block">Audience Level</label>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block">Audience Level</label>
                   <select
                     value={level}
                     onChange={e => setLevel(e.target.value)}
-                    className="w-full bg-[#030303] border border-zinc-800/80 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition cursor-pointer"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
                   >
                     <option value="foundation">JEE Foundation</option>
                     <option value="mains">JEE Mains Capsule</option>
@@ -1093,17 +1093,17 @@ export default function CourseManageClient({
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase block">Syllabus Description</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase block">Syllabus Description</label>
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full bg-[#030303] border border-zinc-800/80 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition h-28 resize-none"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition h-28 resize-none font-bold"
                 />
               </div>
 
               <button
                 type="submit"
-                className="px-5 py-3 bg-indigo-600 hover:bg-indigo-705 text-white rounded-xl text-xs font-semibold shadow-md cursor-pointer transition select-none border border-indigo-500 hover:scale-[1.02] active:scale-[0.98] tactile-press"
+                className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm cursor-pointer transition select-none border border-slate-800 hover:scale-[1.02] active:scale-[0.98] tactile-press"
               >
                 Save Configurations
               </button>
@@ -1114,31 +1114,31 @@ export default function CourseManageClient({
         {activeTab === 'syllabus' && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold tracking-tight">Syllabus Video Outlines</h2>
-              <p className="text-xs text-zinc-500 mt-1">Map HLS video streams or YouTube lecture embeds dynamically to course outlines</p>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">Syllabus Video Outlines</h2>
+              <p className="text-xs text-slate-500 mt-1">Map HLS video streams or YouTube lecture embeds dynamically to course outlines</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <form onSubmit={handleAddLesson} className="md:col-span-1 bg-[#030303]/60 border border-zinc-800/80 p-5 rounded-2xl space-y-4">
-                <h3 className="font-bold text-xs uppercase text-zinc-400 tracking-wider">Add video lecture</h3>
+              <form onSubmit={handleAddLesson} className="md:col-span-1 bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
+                <h3 className="font-bold text-xs uppercase text-slate-700 tracking-wider">Add video lecture</h3>
                 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Lesson Title</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Lesson Title</label>
                   <input
                     type="text"
                     value={lesTitle}
                     onChange={e => setLesTitle(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                     placeholder="Coordinate Geometry Intro"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Subject</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Subject</label>
                   <select
                     value={lesSubject}
                     onChange={e => setLesSubject(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition cursor-pointer"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
                   >
                     <option value="Physics">Physics</option>
                     <option value="Chemistry">Chemistry</option>
@@ -1147,51 +1147,51 @@ export default function CourseManageClient({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Video URL</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Video URL</label>
                   <input
                     type="text"
                     value={lesUrl}
                     onChange={e => setLesUrl(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                     placeholder="https://...m3u8 or YouTube"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Duration (minutes)</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Duration (minutes)</label>
                   <input
                     type="number"
                     value={lesDuration}
                     onChange={e => setLesDuration(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Worksheet Title</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Worksheet Title</label>
                   <input
                     type="text"
                     value={lesWorksheetTitle}
                     onChange={e => setLesWorksheetTitle(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                     placeholder="Kinematics Sheet A"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Worksheet URL</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Worksheet URL</label>
                   <input
                     type="text"
                     value={lesWorksheetUrl}
                     onChange={e => setLesWorksheetUrl(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                     placeholder="https://...pdf"
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition select-none flex items-center justify-center gap-1 border border-indigo-500 hover:scale-[1.02] active:scale-[0.98] tactile-press"
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer transition select-none flex items-center justify-center gap-1 border border-slate-800 hover:scale-[1.02] active:scale-[0.98] tactile-press shadow-sm"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Publish Lesson</span>
@@ -1199,15 +1199,15 @@ export default function CourseManageClient({
               </form>
 
               <div className="md:col-span-2 space-y-4 flex flex-col">
-                <div className="flex gap-2 border-b border-zinc-800 pb-2">
+                <div className="flex gap-2 border-b border-slate-200 pb-2">
                   {['Physics', 'Chemistry', 'Mathematics'].map(sub => (
                     <button
                       key={sub}
                       onClick={() => setLesSubject(sub)}
                       className={`px-3 py-1.5 rounded-xl text-[10px] font-bold tracking-wider uppercase transition cursor-pointer select-none hover:scale-[1.03] active:scale-[0.97] tactile-press ${
                         lesSubject === sub 
-                          ? 'bg-indigo-600/10 text-indigo-400 border border-indigo-500/30' 
-                          : 'text-zinc-500 border border-transparent hover:text-zinc-350'
+                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
+                          : 'text-slate-500 border border-transparent hover:text-slate-800'
                       }`}
                     >
                       {sub}
@@ -1217,22 +1217,22 @@ export default function CourseManageClient({
 
                 <div className="space-y-3 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar flex-1">
                   {lessons.filter(l => l.subject === lesSubject).length === 0 ? (
-                    <div className="text-center text-zinc-650 text-xs py-12 bg-[#030303]/30 border border-zinc-800/80 rounded-3xl">
+                    <div className="text-center text-slate-500 text-xs py-12 bg-slate-50 border border-slate-200 rounded-3xl">
                       No video lectures added yet under this subject division.
                     </div>
                   ) : (
                     lessons.filter(l => l.subject === lesSubject).map((les, idx) => (
-                      <div key={les.id} className="bg-[#030303]/40 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center gap-4 hover:border-zinc-700 transition">
+                      <div key={les.id} className="bg-white border border-slate-200 p-4 rounded-2xl flex justify-between items-center gap-4 hover:border-slate-300 hover:bg-slate-50/50 transition shadow-xs">
                         <div className="min-w-0">
-                          <h4 className="font-bold text-xs text-white truncate max-w-[280px]">Lecture {idx + 1}: {les.title}</h4>
-                          <div className="flex items-center gap-3 text-[10px] text-zinc-500 mt-1.5">
-                            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {les.duration_minutes} Mins</span>
-                            {les.assignment_title && <span className="text-emerald-450 font-bold">✓ Worksheet Linked</span>}
+                          <h4 className="font-bold text-xs text-slate-800 truncate max-w-[280px]">Lecture {idx + 1}: {les.title}</h4>
+                          <div className="flex items-center gap-3 text-[10px] text-slate-500 mt-1.5">
+                            <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-slate-400" /> {les.duration_minutes} Mins</span>
+                            {les.assignment_title && <span className="text-emerald-600 font-bold">✓ Worksheet Linked</span>}
                           </div>
                         </div>
                         <button
                           onClick={() => handleDeleteLesson(les.id)}
-                          className="p-2 bg-rose-600/15 hover:bg-rose-600 text-rose-455 hover:text-white rounded-lg transition cursor-pointer"
+                          className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-lg transition cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1243,25 +1243,23 @@ export default function CourseManageClient({
               </div>
             </div>
           </div>
-        )}
-
-        {activeTab === 'materials' && (
+        )}        {activeTab === 'materials' && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold tracking-tight">Reference Worksheets & PDF Guides</h2>
-              <p className="text-xs text-zinc-500 mt-1">Attach worksheets or conceptual summary PDF sheets straight to outline chapters</p>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">Reference Worksheets & PDF Guides</h2>
+              <p className="text-xs text-slate-500 mt-1">Attach worksheets or conceptual summary PDF sheets straight to outline chapters</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <form onSubmit={handleAddFile} className="md:col-span-1 bg-[#030303]/60 border border-zinc-800 p-5 rounded-2xl space-y-4">
-                <h3 className="font-bold text-xs uppercase text-zinc-400 tracking-wider">Attach study PDF</h3>
+              <form onSubmit={handleAddFile} className="md:col-span-1 bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
+                <h3 className="font-bold text-xs uppercase text-slate-700 tracking-wider">Attach study PDF</h3>
                 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Select Target Chapter</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Select Target Chapter</label>
                   <select
                     value={targetLessonId}
                     onChange={e => setTargetLessonId(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition cursor-pointer"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
                   >
                     <option value="">-- Choose video class --</option>
                     {lessons.map(l => (
@@ -1271,30 +1269,30 @@ export default function CourseManageClient({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Material Name</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Material Name</label>
                   <input
                     type="text"
                     value={noteTitle}
                     onChange={e => setNoteTitle(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                     placeholder="e.g., Summary Sheet Formulas"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Secure PDF Link</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Secure PDF Link</label>
                   <input
                     type="text"
                     value={noteUrl}
                     onChange={e => setNoteUrl(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                     placeholder="https://drive.google.com/..."
                   />
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition select-none flex items-center justify-center gap-1 border border-indigo-500 hover:scale-[1.02] active:scale-[0.98] tactile-press"
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer transition select-none flex items-center justify-center gap-1 border border-slate-800 hover:scale-[1.02] active:scale-[0.98] tactile-press shadow-sm"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Attach PDF Note</span>
@@ -1302,9 +1300,9 @@ export default function CourseManageClient({
               </form>
 
               <div className="md:col-span-2 space-y-4 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
-                <h3 className="font-bold text-xs uppercase text-zinc-400 tracking-wider border-b border-zinc-800 pb-2">Active attachments ({files.length})</h3>
+                <h3 className="font-bold text-xs uppercase text-slate-700 tracking-wider border-b border-slate-200 pb-2">Active attachments ({files.length})</h3>
                 {files.length === 0 ? (
-                  <div className="text-center text-zinc-650 text-xs py-12 bg-[#030303]/30 border border-zinc-800 rounded-3xl">
+                  <div className="text-center text-slate-500 text-xs py-12 bg-slate-50 border border-slate-200 rounded-3xl">
                     No reference PDFs attached to this syllabus yet.
                   </div>
                 ) : (
@@ -1312,22 +1310,22 @@ export default function CourseManageClient({
                     {files.map(file => {
                       const associatedLes = lessons.find(l => l.id === file.lesson_id);
                       return (
-                        <div key={file.id} className="bg-[#030303]/40 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center gap-4 hover:border-zinc-700 transition">
+                        <div key={file.id} className="bg-white border border-slate-200 p-4 rounded-2xl flex justify-between items-center gap-4 hover:border-slate-300 hover:bg-slate-50/50 transition shadow-xs">
                           <div className="min-w-0">
-                            <h4 className="font-bold text-xs text-white truncate max-w-[280px]">{file.file_name}</h4>
-                            <p className="text-[10px] text-zinc-500 mt-1">Chapter: {associatedLes ? associatedLes.title : 'General'}</p>
+                            <h4 className="font-bold text-xs text-slate-800 truncate max-w-[280px]">{file.file_name}</h4>
+                            <p className="text-[10px] text-slate-500 mt-1">Chapter: {associatedLes ? associatedLes.title : 'General'}</p>
                           </div>
                           <div className="flex gap-2">
                             <a
                               href={file.file_path}
                               target="_blank"
-                              className="px-3 py-1.5 bg-zinc-900 border border-zinc-800 text-indigo-400 hover:text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer"
+                              className="px-3 py-1.5 bg-white border border-slate-200 text-indigo-600 hover:text-white rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
                             >
                               View <ExternalLink className="w-3 h-3" />
                             </a>
                             <button
                               onClick={() => handleDeleteFile(file.id)}
-                              className="p-2 bg-rose-600/15 hover:bg-rose-600 text-rose-405 hover:text-white rounded-lg transition cursor-pointer"
+                              className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-lg transition cursor-pointer"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -1345,41 +1343,41 @@ export default function CourseManageClient({
         {activeTab === 'exams' && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold tracking-tight">JEE Mock Exams & Assessments</h2>
-              <p className="text-xs text-zinc-500 mt-1">Ingest dynamic question databases or configure CBT answer keys for dynamic results</p>
+              <h2 className="text-xl font-bold tracking-tight text-slate-900">JEE Mock Exams & Assessments</h2>
+              <p className="text-xs text-slate-500 mt-1">Ingest dynamic question databases or configure CBT answer keys for dynamic results</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <form onSubmit={handleAddExam} className="md:col-span-1 bg-[#030303]/60 border border-zinc-800 p-5 rounded-2xl space-y-4">
-                <h3 className="font-bold text-xs uppercase text-zinc-400 tracking-wider">Configure Assessment</h3>
+              <form onSubmit={handleAddExam} className="md:col-span-1 bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
+                <h3 className="font-bold text-xs uppercase text-slate-700 tracking-wider">Configure Assessment</h3>
                 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Exam Name</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Exam Name</label>
                   <input
                     type="text"
                     value={examTitle}
                     onChange={e => setExamTitle(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                     placeholder="e.g. JEE advanced Mock Mechanics"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Duration (minutes)</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Duration (minutes)</label>
                   <input
                     type="number"
                     value={examDuration}
                     onChange={e => setExamDuration(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-zinc-500 block">Link to Chapter (Optional)</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Link to Chapter (Optional)</label>
                   <select
                     value={selectedLessonForExam}
                     onChange={e => setSelectedLessonForExam(e.target.value)}
-                    className="w-full bg-zinc-950 border border-zinc-800/80 rounded-lg px-3 py-2 text-xs text-white outline-none focus:border-indigo-500 transition cursor-pointer"
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
                   >
                     <option value="">General Course Assessment</option>
                     {lessons.map(l => (
@@ -1390,7 +1388,7 @@ export default function CourseManageClient({
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition select-none flex items-center justify-center gap-1 border border-indigo-500 hover:scale-[1.02] active:scale-[0.98] tactile-press"
+                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer transition select-none flex items-center justify-center gap-1 border border-slate-800 hover:scale-[1.02] active:scale-[0.98] tactile-press shadow-sm"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Link Assessment</span>
@@ -1398,9 +1396,9 @@ export default function CourseManageClient({
               </form>
 
               <div className="md:col-span-2 space-y-4 max-h-[460px] overflow-y-auto pr-2 custom-scrollbar">
-                <h3 className="font-bold text-xs uppercase text-zinc-400 tracking-wider border-b border-zinc-800 pb-2">Active Assessments ({exams.length})</h3>
+                <h3 className="font-bold text-xs uppercase text-slate-700 tracking-wider border-b border-slate-200 pb-2">Active Assessments ({exams.length})</h3>
                 {exams.length === 0 ? (
-                  <div className="text-center text-zinc-650 text-xs py-12 bg-[#030303]/30 border border-zinc-800 rounded-3xl">
+                  <div className="text-center text-slate-500 text-xs py-12 bg-slate-50 border border-slate-200 rounded-3xl">
                     No CBT assessments registered yet under this course.
                   </div>
                 ) : (
@@ -1408,14 +1406,14 @@ export default function CourseManageClient({
                     {exams.map(exam => {
                       const associatedLes = lessons.find(l => l.id === exam.lesson_id);
                       return (
-                        <div key={exam.id} className="bg-[#030303]/40 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center gap-4 hover:border-zinc-700 transition">
+                        <div key={exam.id} className="bg-white border border-slate-200 p-4 rounded-2xl flex justify-between items-center gap-4 hover:border-slate-350 hover:bg-slate-50/50 transition shadow-xs">
                           <div className="min-w-0">
-                            <h4 className="font-bold text-xs text-white truncate max-w-[280px]">{exam.title}</h4>
-                            <p className="text-[10px] text-zinc-550 mt-1 font-semibold">Duration: {exam.duration_minutes} Mins • Linked: {associatedLes ? associatedLes.title : 'Course-Wide'}</p>
+                            <h4 className="font-bold text-xs text-slate-800 truncate max-w-[280px]">{exam.title}</h4>
+                            <p className="text-[10px] text-slate-500 mt-1 font-semibold">Duration: {exam.duration_minutes} Mins • Linked: {associatedLes ? associatedLes.title : 'Course-Wide'}</p>
                           </div>
                           <button
                             onClick={() => handleDeleteExam(exam.id)}
-                            className="p-2 bg-rose-600/15 hover:bg-rose-600 text-rose-405 hover:text-white rounded-lg transition cursor-pointer"
+                            className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-lg transition cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1425,17 +1423,15 @@ export default function CourseManageClient({
                   </div>
                 )}
               </div>
-            </div>
-
-            {/* Cohort Telemetry & Gradebook Section */}
-            <div className="pt-8 border-t border-zinc-800 space-y-6">
+            </div>              {/* Cohort Telemetry & Gradebook Section */}
+            <div className="pt-8 border-t border-slate-200 space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                    <Users className="w-5 h-5 text-indigo-400" />
+                  <h2 className="text-lg font-bold tracking-tight text-slate-900 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-indigo-650" />
                     <span>Cohort Telemetry & Gradebook</span>
                   </h2>
-                  <p className="text-xs text-zinc-500 mt-1">Analyze NTA-style student scoring sheets, question breakdowns, and dynamic time metrics</p>
+                  <p className="text-xs text-slate-500 mt-1">Analyze NTA-style student scoring sheets, question breakdowns, and dynamic time metrics</p>
                 </div>
 
                 {/* High-Performance Enterprise Filter Deck */}
@@ -1445,13 +1441,13 @@ export default function CourseManageClient({
                     value={gradebookSearch}
                     onChange={e => setGradebookSearch(e.target.value)}
                     placeholder="Search student or email..."
-                    className="bg-zinc-950 border border-zinc-800 px-4 py-2 text-xs text-white rounded-xl outline-none focus:border-indigo-500 transition w-44 font-semibold"
+                    className="bg-white border border-slate-200 px-4 py-2 text-xs text-slate-800 rounded-xl outline-none focus:border-indigo-500 transition w-44 font-semibold"
                   />
 
                   <select
                     value={gradebookExamFilter}
                     onChange={e => setGradebookExamFilter(e.target.value)}
-                    className="bg-zinc-950 border border-zinc-800 px-4 py-2 text-xs text-white rounded-xl outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                    className="bg-white border border-slate-200 px-4 py-2 text-xs text-slate-800 rounded-xl outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
                   >
                     <option value="all">All Assessments</option>
                     {exams.map(e => (
@@ -1464,14 +1460,14 @@ export default function CourseManageClient({
               {isLoadingAttempts ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[1, 2, 3].map(i => (
-                    <div key={i} className="animate-pulse bg-zinc-900/60 border border-zinc-800 rounded-2xl p-5 space-y-3 h-24" />
+                    <div key={i} className="animate-pulse bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-3 h-24" />
                   ))}
                 </div>
               ) : safeAttempts.length === 0 ? (
-                <div className="text-center text-zinc-500 text-xs py-16 bg-[#030303]/30 border border-zinc-800 rounded-3xl space-y-3">
-                  <AlertCircle className="w-10 h-10 mx-auto text-zinc-650 animate-pulse" />
-                  <h3 className="font-extrabold text-sm text-zinc-400">No Telemetry Data Available</h3>
-                  <p className="text-xs text-zinc-500 max-w-sm mx-auto leading-relaxed">
+                <div className="text-center text-slate-500 text-xs py-16 bg-slate-50 border border-slate-200 rounded-3xl space-y-3">
+                  <AlertCircle className="w-12 h-12 mx-auto text-slate-200 mb-3 animate-pulse" />
+                  <h3 className="font-extrabold text-sm text-slate-700">No Telemetry Data Available</h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
                     Student mock test scorecards will compile here once participants begin submitting their exam sheets.
                   </p>
                 </div>
@@ -1479,43 +1475,43 @@ export default function CourseManageClient({
                 <div className="space-y-6">
                   {/* Telemetry Summary Bento Row */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5 select-none">
-                    <div className="bg-[#030303]/50 border border-zinc-800 p-5 rounded-2xl flex items-center gap-4 hover:border-zinc-700 transition">
-                      <div className="p-3.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20 text-indigo-400">
+                    <div className="bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 hover:border-slate-350 transition shadow-sm">
+                      <div className="p-3.5 bg-indigo-50 rounded-xl border border-indigo-100 text-indigo-650">
                         <Trophy className="w-5 h-5" />
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Cohort Avg Score</span>
-                        <h4 className="text-xl font-extrabold text-white mt-0.5">{telemetryStats.avg} <span className="text-xs text-zinc-550 font-medium">Points</span></h4>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Cohort Avg Score</span>
+                        <h4 className="text-xl font-extrabold text-slate-800 mt-0.5">{telemetryStats.avg} <span className="text-xs text-slate-400 font-medium">Points</span></h4>
                       </div>
                     </div>
 
-                    <div className="bg-[#030303]/50 border border-zinc-800 p-5 rounded-2xl flex items-center gap-4 hover:border-zinc-700 transition">
-                      <div className="p-3.5 bg-emerald-500/10 rounded-xl border border-emerald-500/20 text-emerald-400">
+                    <div className="bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 hover:border-slate-350 transition shadow-sm">
+                      <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-100 text-emerald-600">
                         <Target className="w-5 h-5" />
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Highest JEE Score</span>
-                        <h4 className="text-xl font-extrabold text-emerald-400 mt-0.5">+{telemetryStats.highest} <span className="text-xs text-zinc-550 font-medium">Points</span></h4>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Highest JEE Score</span>
+                        <h4 className="text-xl font-extrabold text-emerald-600 mt-0.5">+{telemetryStats.highest} <span className="text-xs text-slate-400 font-medium">Points</span></h4>
                       </div>
                     </div>
 
-                    <div className="bg-[#030303]/50 border border-zinc-800 p-5 rounded-2xl flex items-center gap-4 hover:border-zinc-700 transition">
-                      <div className="p-3.5 bg-cyan-500/10 rounded-xl border border-cyan-500/20 text-cyan-400">
+                    <div className="bg-white border border-slate-200 p-5 rounded-2xl flex items-center gap-4 hover:border-slate-350 transition shadow-sm">
+                      <div className="p-3.5 bg-cyan-50 rounded-xl border border-cyan-100 text-cyan-600">
                         <Clock className="w-5 h-5" />
                       </div>
                       <div>
-                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Average Time Spent</span>
-                        <h4 className="text-xl font-extrabold text-white mt-0.5">{telemetryStats.avgTimeStr}</h4>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Average Time Spent</span>
+                        <h4 className="text-xl font-extrabold text-slate-800 mt-0.5">{telemetryStats.avgTimeStr}</h4>
                       </div>
                     </div>
                   </div>
 
                   {/* Enterprise Datatable Roster */}
-                  <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
+                  <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                     <div className="overflow-x-auto custom-scrollbar">
                       <table className="w-full text-left border-collapse min-w-[700px]">
                         <thead>
-                          <tr className="border-b border-zinc-800 bg-zinc-900/30 text-zinc-550 text-[10px] uppercase font-black tracking-widest">
+                          <tr className="border-b border-slate-200 bg-slate-50 text-slate-650 text-[10px] uppercase font-bold tracking-widest">
                             <th className="py-3.5 px-5">Student Participant</th>
                             <th className="py-3.5 px-4">Exam Sheet</th>
                             <th className="py-3.5 px-4">Date Taken</th>
@@ -1524,43 +1520,43 @@ export default function CourseManageClient({
                             <th className="py-3.5 px-5 text-right">JEE Score</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-800 text-xs">
+                        <tbody className="divide-y divide-slate-100 text-xs">
                           {filteredGradebookRoster.map(roster => (
                             <tr
                               key={roster.id}
                               onClick={() => setSelectedAttempt(roster)}
-                              className="hover:bg-zinc-900/40 cursor-pointer select-none transition duration-150 tactile-press border-b border-zinc-800"
+                              className="hover:bg-slate-50/50 cursor-pointer select-none transition duration-150 tactile-press border-b border-slate-100"
                             >
                               <td className="py-3.5 px-5">
                                 <div className="min-w-0">
-                                  <h4 className="font-extrabold text-white leading-tight">
+                                  <h4 className="font-extrabold text-slate-800 leading-tight">
                                     {roster.profiles?.full_name || roster.profiles?.email?.split('@')[0] || 'Anonymous student'}
                                   </h4>
-                                  <span className="text-[10px] text-zinc-500 font-medium truncate block max-w-[200px]">
+                                  <span className="text-[10px] text-slate-550 font-medium truncate block max-w-[200px]">
                                     {roster.profiles?.email || 'No email registered'}
                                   </span>
                                 </div>
                               </td>
                               <td className="py-3.5 px-4">
-                                <span className="font-bold text-zinc-300">{roster.assessments?.title || 'Chapter Assessment'}</span>
+                                <span className="font-bold text-slate-700">{roster.assessments?.title || 'Chapter Assessment'}</span>
                               </td>
-                              <td className="py-3.5 px-4 text-zinc-400 font-bold">
+                              <td className="py-3.5 px-4 text-slate-500 font-bold">
                                 {new Date(roster.submitted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                               </td>
-                              <td className="py-3.5 px-4 font-mono font-bold text-zinc-450">
+                              <td className="py-3.5 px-4 font-mono font-bold text-slate-600">
                                 {roster.timeStr}
                               </td>
                               <td className="py-3.5 px-4 text-center">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-black tracking-wide ${
-                                  roster.accuracy >= 70 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                                  roster.accuracy >= 40 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                                  'bg-rose-500/10 text-rose-455 border border-rose-500/20'
+                                  roster.accuracy >= 70 ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                  roster.accuracy >= 40 ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                                  'bg-rose-50 text-rose-600 border border-rose-100'
                                 }`}>
                                   {roster.accuracy}%
                                 </span>
                               </td>
-                              <td className="py-3.5 px-5 text-right font-extrabold text-white font-mono">
-                                <span className={roster.score >= 0 ? 'text-emerald-400' : 'text-rose-455'}>
+                              <td className="py-3.5 px-5 text-right font-extrabold text-slate-800 font-mono">
+                                <span className={roster.score >= 0 ? 'text-emerald-600 font-black' : 'text-rose-600 font-black'}>
                                   {roster.score >= 0 ? `+${roster.score}` : roster.score}
                                 </span>
                               </td>
@@ -1578,17 +1574,17 @@ export default function CourseManageClient({
 
         {activeTab === 'readings' && (
           <div className="space-y-6 flex flex-col h-full">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4 shrink-0">
               <div>
-                <h2 className="text-xl font-bold tracking-tight">Rich Editorial Readings Engine</h2>
-                <p className="text-xs text-zinc-500 mt-1">Author formatted readings and compile complex mathematical LaTeX equations</p>
+                <h2 className="text-xl font-bold tracking-tight text-slate-900">Rich Editorial Readings Engine</h2>
+                <p className="text-xs text-slate-500 mt-1">Author formatted readings and compile complex mathematical LaTeX equations</p>
               </div>
 
               <div className="flex items-center gap-3">
                 <select
                   value={selectedLessonForReading}
                   onChange={e => setSelectedLessonForReading(e.target.value)}
-                  className="bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                  className="bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
                 >
                   <option value="">-- Choose video lecture --</option>
                   {lessons.map(l => (
@@ -1601,7 +1597,7 @@ export default function CourseManageClient({
                 <button
                   onClick={handleSaveReading}
                   disabled={!selectedLessonForReading || isSavingReading}
-                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md cursor-pointer transition select-none flex items-center gap-2 border border-indigo-500 hover:scale-[1.02] active:scale-[0.98] tactile-press disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm cursor-pointer transition select-none flex items-center gap-2 border border-slate-800 hover:scale-[1.02] active:scale-[0.98] tactile-press disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSavingReading ? (
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -1614,22 +1610,22 @@ export default function CourseManageClient({
             </div>
 
             {!selectedLessonForReading ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-[#030303]/30 border border-zinc-800 rounded-3xl min-h-[350px]">
-                <BookOpen className="w-12 h-12 text-zinc-650 mb-4 animate-pulse" />
-                <h3 className="font-extrabold text-sm text-zinc-400">Select a Lecture to Begin</h3>
-                <p className="text-xs text-zinc-550 mt-2 max-w-sm leading-relaxed">
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-slate-50 border border-slate-200 rounded-3xl min-h-[350px]">
+                <BookOpen className="w-12 h-12 text-slate-200 mb-4 mx-auto animate-pulse" />
+                <h3 className="font-extrabold text-sm text-slate-700">Select a Lecture to Begin</h3>
+                <p className="text-xs text-slate-500 mt-2 max-w-sm leading-relaxed">
                   Please choose a syllabus lecture chapter from the dropdown to start authoring rich supplement readings.
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[420px] flex-1 animate-fade-in">
                 <div className="flex flex-col space-y-2">
-                  <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">
                     <span>Source Markdown & LaTeX</span>
-                    <span className="text-indigo-400 font-extrabold font-mono">Math Supported</span>
+                    <span className="text-indigo-600 font-extrabold font-mono">Math Supported</span>
                   </div>
 
-                  <div className="bg-zinc-950/80 border border-zinc-800 px-3 py-2 rounded-xl flex flex-wrap gap-2">
+                  <div className="bg-slate-100 border border-slate-200 px-3 py-2 rounded-xl flex flex-wrap gap-2">
                     {[
                       { label: 'H1', value: '# Title', desc: 'Main Header' },
                       { label: 'H2', value: '## Subtitle', desc: 'Sub Header' },
@@ -1643,7 +1639,7 @@ export default function CourseManageClient({
                         key={btn.label}
                         type="button"
                         onClick={() => handleInsertSnippet(btn.value)}
-                        className="px-2 py-1 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white rounded text-[10px] font-extrabold transition cursor-pointer select-none hover:border-zinc-700"
+                        className="px-2 py-1 bg-white border border-slate-200 text-slate-600 hover:text-slate-800 rounded text-[10px] font-extrabold transition cursor-pointer select-none hover:border-slate-350"
                         title={btn.desc}
                       >
                         {btn.label}
@@ -1655,23 +1651,23 @@ export default function CourseManageClient({
                     value={readingMarkdown}
                     onChange={e => setReadingMarkdown(e.target.value)}
                     placeholder="Write detailed readings here. Supports standard Markdown highlights, bullets, ordered listings, and LaTeX equations."
-                    className="w-full flex-1 min-h-[300px] md:min-h-[380px] bg-zinc-950 border border-zinc-800/80 rounded-2xl p-4 text-xs font-mono text-zinc-100 placeholder-zinc-700 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none custom-scrollbar"
+                    className="w-full flex-1 min-h-[300px] md:min-h-[380px] bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs font-mono text-slate-850 placeholder-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none custom-scrollbar font-bold"
                   />
                 </div>
 
                 <div className="flex flex-col space-y-2">
-                  <div className="text-[10px] font-bold text-zinc-550 uppercase tracking-widest px-1">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">
                     <span>Dynamic Rendered output</span>
                   </div>
 
-                  <div className="w-full flex-1 min-h-[300px] md:min-h-[380px] overflow-y-auto bg-zinc-950/40 border border-zinc-800/80 p-5 rounded-2xl break-words text-zinc-300 space-y-4 custom-scrollbar">
+                  <div className="w-full flex-1 min-h-[300px] md:min-h-[380px] overflow-y-auto bg-slate-50/50 border border-slate-200 p-5 rounded-2xl break-words text-slate-700 space-y-4 custom-scrollbar">
                     {readingMarkdown.trim() ? (
                       <div 
                         dangerouslySetInnerHTML={{ __html: renderedHtml }}
                         className="prose prose-invert max-w-none text-xs sm:text-sm leading-relaxed"
                       />
                     ) : (
-                      <div className="text-zinc-650 text-xs italic py-12 text-center">
+                      <div className="text-slate-400 text-xs italic py-12 text-center">
                         Styled preview will compile here in real-time as you write.
                       </div>
                     )}
@@ -1684,23 +1680,23 @@ export default function CourseManageClient({
 
         {activeTab === 'doubts' && (
           <div className="space-y-6 flex flex-col h-full">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4 shrink-0">
               <div>
-                <h2 className="text-xl font-bold tracking-tight">Doubt Board Resolution Hub</h2>
-                <p className="text-xs text-zinc-500 mt-1">Moderate, respond, and resolve student doubts dynamically in real-time</p>
+                <h2 className="text-xl font-bold tracking-tight text-slate-900">Doubt Board Resolution Hub</h2>
+                <p className="text-xs text-slate-500 mt-1">Moderate, respond, and resolve student doubts dynamically in real-time</p>
               </div>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={fetchCourseDoubts}
                   disabled={isLoadingDoubts}
-                  className="p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white rounded-xl transition cursor-pointer flex items-center justify-center shrink-0 hover:scale-[1.02] active:scale-[0.98] tactile-press"
+                  className="p-2.5 bg-white border border-slate-200 text-slate-650 hover:bg-slate-50 rounded-xl transition cursor-pointer flex items-center justify-center shrink-0 hover:scale-[1.02] active:scale-[0.98] tactile-press shadow-xs"
                   title="Refresh Doubt Inbox"
                 >
                   <RefreshCw className={`w-4 h-4 ${isLoadingDoubts ? 'animate-spin' : ''}`} />
                 </button>
 
-                <div className="flex bg-zinc-950 border border-zinc-800 p-1 rounded-xl">
+                <div className="flex bg-slate-100 border border-slate-200 p-1 rounded-xl">
                   {[
                     { id: 'unresolved', label: 'Unresolved' },
                     { id: 'resolved', label: 'Resolved' },
@@ -1711,8 +1707,8 @@ export default function CourseManageClient({
                       onClick={() => { setDoubtFilter(filter.id); setActiveDoubt(null); }}
                       className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition cursor-pointer select-none ${
                         doubtFilter === filter.id
-                          ? 'bg-indigo-600/15 text-indigo-400 border border-indigo-500/20'
-                          : 'text-zinc-500 hover:text-zinc-300'
+                          ? 'bg-indigo-50 text-indigo-755 border border-indigo-200 font-extrabold'
+                          : 'text-slate-500 hover:text-slate-750'
                       }`}
                     >
                       {filter.label}
@@ -1728,8 +1724,8 @@ export default function CourseManageClient({
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 h-[520px]">
-                <div className="md:col-span-1 border-r border-zinc-800 pr-4 flex flex-col h-full overflow-hidden">
-                  <div className="text-[10px] font-bold text-zinc-550 uppercase tracking-widest mb-3 shrink-0">
+                <div className="md:col-span-1 border-r border-slate-200 pr-4 flex flex-col h-full overflow-hidden">
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 shrink-0">
                     <span>Tickets ({
                       doubts.filter(d => !d.parent_id && (
                         doubtFilter === 'unresolved' ? !d.resolved :
@@ -1743,7 +1739,7 @@ export default function CourseManageClient({
                       doubtFilter === 'unresolved' ? !d.resolved :
                       doubtFilter === 'resolved' ? d.resolved : true
                     )).length === 0 ? (
-                      <div className="text-center text-zinc-650 text-xs py-16 bg-[#030303]/30 border border-zinc-800 rounded-2xl">
+                      <div className="text-center text-slate-500 text-xs py-16 bg-slate-50 border border-slate-200 rounded-2xl">
                         No doubt threads found in this folder.
                       </div>
                     ) : (
@@ -1759,29 +1755,29 @@ export default function CourseManageClient({
                             onClick={() => { setActiveDoubt(doubt); setReplyContent(''); }}
                             className={`p-4 rounded-2xl border transition-all duration-300 select-none cursor-pointer text-left ${
                               isSelected
-                                ? 'bg-indigo-650/10 border-indigo-500/40 text-white shadow-md'
-                                : 'bg-[#030303]/40 border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200'
+                                ? 'bg-indigo-50 border-indigo-300 text-slate-900 shadow-sm'
+                                : 'bg-white border-slate-205 hover:border-slate-350 text-slate-500 hover:text-slate-800'
                             }`}
                           >
                             <div className="flex items-center justify-between gap-2 mb-1.5">
-                              <span className="text-[10px] font-bold truncate max-w-[120px] text-zinc-300">
+                              <span className="text-[10px] font-bold truncate max-w-[120px] text-slate-700">
                                 {doubt.profiles?.full_name || doubt.profiles?.email?.split('@')[0] || 'Student'}
                               </span>
-                              <span className="text-[9px] text-zinc-550 font-medium">
+                              <span className="text-[9px] text-slate-400 font-medium">
                                 {new Date(doubt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
 
-                            <p className={`text-xs font-bold line-clamp-2 leading-relaxed ${isSelected ? 'text-zinc-200' : 'text-zinc-400'}`}>
+                            <p className={`text-xs font-bold line-clamp-2 leading-relaxed ${isSelected ? 'text-slate-900 font-extrabold' : 'text-slate-650'}`}>
                               {doubt.content}
                             </p>
 
-                            <div className="flex items-center justify-between mt-3 text-[9px] font-bold uppercase tracking-wider pt-2 border-t border-zinc-800/50">
-                              <span className="text-indigo-400 truncate max-w-[125px]">
+                            <div className="flex items-center justify-between mt-3 text-[9px] font-bold uppercase tracking-wider pt-2 border-t border-slate-100">
+                              <span className="text-indigo-600 truncate max-w-[125px]">
                                 {doubt.lessons?.title || 'Chapter Lesson'}
                               </span>
-                              <span className="flex items-center gap-1 text-zinc-500">
-                                <MessageSquare className="w-3 h-3 text-zinc-500" /> {count} replies
+                              <span className="flex items-center gap-1 text-slate-400">
+                                <MessageSquare className="w-3 h-3 text-slate-450" /> {count} replies
                               </span>
                             </div>
                           </div>
@@ -1793,27 +1789,27 @@ export default function CourseManageClient({
 
                 <div className="md:col-span-2 flex flex-col h-full overflow-hidden pl-2">
                   {!activeDoubt ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-[#030303]/20 border border-zinc-800 rounded-3xl h-full">
-                      <MessageSquare className="w-12 h-12 text-zinc-650 mb-4 animate-pulse" />
-                      <h3 className="font-extrabold text-sm text-zinc-400">Moderate Doubt Thread</h3>
-                      <p className="text-xs text-zinc-550 mt-2 max-w-sm leading-relaxed">
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-12 bg-slate-50 border border-slate-200 rounded-3xl h-full">
+                      <MessageSquare className="w-12 h-12 text-slate-200 mb-4 mx-auto animate-pulse" />
+                      <h3 className="font-extrabold text-sm text-slate-700">Moderate Doubt Thread</h3>
+                      <p className="text-xs text-slate-500 mt-2 max-w-sm leading-relaxed">
                         Select a doubt ticket from the inbox column to view student credentials, resolve threads, spam-delete, or post replies using scientific Snip formulae.
                       </p>
                     </div>
                   ) : (
                     <div className="flex flex-col h-full justify-between">
                       <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
-                        <div className="bg-zinc-950 border border-zinc-800 p-5 rounded-2xl space-y-3 relative group">
-                          <div className="flex items-center justify-between gap-3 border-b border-zinc-800 pb-3">
+                        <div className="bg-white border border-slate-200 p-5 rounded-2xl space-y-3 relative group shadow-sm">
+                          <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-3">
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center">
-                                <User className="w-4 h-4 text-indigo-400" />
+                              <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-150 flex items-center justify-center">
+                                <User className="w-4 h-4 text-indigo-600" />
                               </div>
                               <div>
-                                <h4 className="text-xs font-black text-white leading-none">
+                                <h4 className="text-xs font-black text-slate-800 leading-none">
                                   {activeDoubt.profiles?.full_name || 'Student'}
                                 </h4>
-                                <span className="text-[9px] text-zinc-555 font-medium">
+                                <span className="text-[9px] text-slate-500 font-medium">
                                   {activeDoubt.profiles?.email || 'N/A'} • {new Date(activeDoubt.created_at).toLocaleString()}
                                 </span>
                               </div>
@@ -1821,13 +1817,13 @@ export default function CourseManageClient({
 
                             <div className="flex items-center gap-2">
                               {activeDoubt.resolved ? (
-                                <span className="px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                                <span className="px-2 py-1 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
                                   <Check className="w-3 h-3" /> Resolved
                                 </span>
                               ) : (
                                 <button
                                   onClick={() => handleMarkDoubtSolved(activeDoubt.id)}
-                                  className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 hover:border-amber-500/60 text-amber-400 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition cursor-pointer select-none hover:scale-[1.02] active:scale-[0.98] tactile-press"
+                                  className="px-2.5 py-1 bg-amber-50 border border-amber-250 hover:border-amber-300 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition cursor-pointer select-none hover:scale-[1.02] active:scale-[0.98] tactile-press"
                                 >
                                   Mark Solved
                                 </button>
@@ -1835,7 +1831,7 @@ export default function CourseManageClient({
 
                               <button
                                 onClick={() => handleDeleteDoubt(activeDoubt.id)}
-                                className="p-1.5 bg-rose-600/10 border border-rose-500/20 hover:bg-rose-600 hover:text-white text-rose-400 rounded-lg transition cursor-pointer"
+                                className="p-1.5 bg-rose-50 border border-rose-205 hover:bg-rose-600 hover:text-white text-rose-600 rounded-lg transition cursor-pointer"
                                 title="Spam Delete Thread"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1843,23 +1839,23 @@ export default function CourseManageClient({
                             </div>
                           </div>
 
-                          <p className="text-sm font-bold text-zinc-200 leading-relaxed select-text">
+                          <p className="text-sm font-bold text-slate-800 leading-relaxed select-text">
                             {activeDoubt.content}
                           </p>
 
-                          <div className="text-[9px] text-indigo-400 font-black uppercase tracking-widest flex items-center gap-1 pt-1.5">
-                            <span className="text-zinc-500">Target Lesson:</span>
+                          <div className="text-[9px] text-indigo-600 font-black uppercase tracking-widest flex items-center gap-1 pt-1.5">
+                            <span className="text-slate-500">Target Lesson:</span>
                             <span>{activeDoubt.lessons?.title || 'Chapter Lesson'}</span>
                           </div>
                         </div>
 
-                        <div className="space-y-3 pl-4 border-l border-zinc-800 mt-2">
-                          <span className="text-[9px] font-black text-zinc-500 uppercase tracking-widest block mb-1">
+                        <div className="space-y-3 pl-4 border-l border-slate-200 mt-2">
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">
                             Discussion Thread
                           </span>
 
                           {doubts.filter(d => d.parent_id === activeDoubt.id).length === 0 ? (
-                            <div className="text-zinc-650 text-xs italic py-4 pl-2">
+                            <div className="text-slate-400 text-xs italic py-4 pl-2">
                               No replies posted yet. Respond to this doubt below.
                             </div>
                           ) : (
@@ -1870,12 +1866,12 @@ export default function CourseManageClient({
                                   key={reply.id}
                                   className={`p-4 rounded-xl border text-xs leading-relaxed relative group ${
                                     isInstructor
-                                      ? 'bg-zinc-950 border-indigo-950 text-zinc-300'
-                                      : 'bg-[#030303]/40 border-zinc-800 text-zinc-400'
+                                      ? 'bg-indigo-50/50 border-indigo-100 text-slate-800'
+                                      : 'bg-slate-50 border-slate-200 text-slate-700'
                                   }`}
                                 >
-                                  <div className="flex items-center justify-between gap-3 font-extrabold text-[10px] text-zinc-550 mb-1.5 uppercase tracking-wider">
-                                    <span className={isInstructor ? 'text-indigo-400 font-black' : 'text-zinc-500'}>
+                                  <div className="flex items-center justify-between gap-3 font-extrabold text-[10px] text-slate-500 mb-1.5 uppercase tracking-wider">
+                                    <span className={isInstructor ? 'text-indigo-600 font-black' : 'text-slate-650'}>
                                       {reply.profiles?.full_name || 'Instructor'} {isInstructor && '(You)'}
                                     </span>
                                     <span className="flex items-center gap-2">
@@ -1883,7 +1879,7 @@ export default function CourseManageClient({
                                       
                                       <button
                                         onClick={() => handleDeleteDoubt(reply.id)}
-                                        className="text-zinc-600 hover:text-rose-500 transition opacity-0 group-hover:opacity-100 p-0.5"
+                                        className="text-slate-400 hover:text-rose-600 transition opacity-0 group-hover:opacity-100 p-0.5"
                                         title="Delete spam reply"
                                       >
                                         <Trash2 className="w-3 h-3" />
@@ -1891,7 +1887,7 @@ export default function CourseManageClient({
                                     </span>
                                   </div>
 
-                                  <p className="text-zinc-200 font-bold leading-relaxed select-text">
+                                  <p className="text-slate-850 font-bold leading-relaxed select-text">
                                     {reply.content}
                                   </p>
                                 </div>
@@ -1901,17 +1897,17 @@ export default function CourseManageClient({
                         </div>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-zinc-800 shrink-0">
+                      <div className="mt-4 pt-3 border-t border-slate-200 shrink-0">
                         <div className="flex items-center gap-2 mb-2 overflow-x-auto pb-1.5 custom-scrollbar max-w-full">
-                          <span className="text-[9px] font-black text-zinc-550 uppercase tracking-widest shrink-0 mr-1 flex items-center gap-0.5">
-                            <Sparkles className="w-3 h-3 text-indigo-400" /> Snippets:
+                          <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest shrink-0 mr-1 flex items-center gap-0.5">
+                            <Sparkles className="w-3 h-3 text-indigo-650" /> Snippets:
                           </span>
                           {FORMULA_SNIPPETS.map(snippet => (
                             <button
                               key={snippet.label}
                               type="button"
                               onClick={() => handleInsertSnippet(snippet.value)}
-                              className="px-2.5 py-1 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white rounded-lg text-[9px] font-bold transition cursor-pointer select-none shrink-0"
+                              className="px-2.5 py-1 bg-white border border-slate-200 hover:border-slate-350 text-slate-600 hover:text-slate-800 rounded-lg text-[9px] font-bold transition cursor-pointer select-none shrink-0"
                               title={snippet.desc}
                             >
                               {snippet.label}
@@ -1926,13 +1922,13 @@ export default function CourseManageClient({
                             onChange={e => setReplyContent(e.target.value)}
                             placeholder="Type a helpful explanation, math equation, or guidelines reply..."
                             disabled={isPostingReply}
-                            className="flex-1 bg-zinc-950 border border-zinc-800 rounded-2xl px-4 py-3 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-zinc-700 text-zinc-200 font-bold"
+                            className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-400 text-slate-850 font-bold"
                           />
                           <button
                             type="button"
                             onClick={handlePostReply}
                             disabled={!replyContent.trim() || isPostingReply}
-                            className="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl transition disabled:bg-zinc-955 disabled:text-zinc-650 cursor-pointer shadow-sm shrink-0 border border-indigo-500 hover:scale-[1.02] active:scale-[0.98] tactile-press flex items-center justify-center"
+                            className="p-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl transition disabled:bg-slate-100 disabled:text-slate-400 cursor-pointer shadow-sm shrink-0 border border-slate-950 hover:scale-[1.02] active:scale-[0.98] tactile-press flex items-center justify-center"
                           >
                             <Send className="w-4 h-4" />
                           </button>
@@ -1954,7 +1950,7 @@ export default function CourseManageClient({
       {/* Detailed Scorecard Overlay Modal */}
       <AnimatePresence>
         {selectedAttempt && (
-          <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center z-50 p-6">
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-6">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1968,64 +1964,64 @@ export default function CourseManageClient({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
               transition={{ type: 'spring', duration: 0.3 }}
-              className="bg-zinc-950 border border-zinc-800 rounded-3xl max-w-2xl w-full flex flex-col shadow-2xl relative text-white overflow-hidden z-10 p-6 md:p-8"
+              className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full flex flex-col shadow-2xl relative text-slate-800 overflow-hidden z-10 p-6 md:p-8"
             >
-              <div className="flex items-center justify-between border-b border-zinc-800 pb-5 shrink-0">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-5 shrink-0">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-650/15 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-extrabold text-sm uppercase">
+                  <div className="w-10 h-10 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-650 font-extrabold text-sm uppercase">
                     {selectedAttempt.profiles?.full_name?.substring(0, 2) || selectedAttempt.profiles?.email?.substring(0, 2) || 'ST'}
                   </div>
                   <div>
-                    <h3 className="text-sm font-black text-white leading-tight">
+                    <h3 className="text-sm font-black text-slate-800 leading-tight">
                       {selectedAttempt.profiles?.full_name || 'Anonymous Student'}
                     </h3>
-                    <p className="text-[10px] text-zinc-500 mt-0.5">
+                    <p className="text-[10px] text-slate-500 mt-0.5">
                       {selectedAttempt.profiles?.email || 'N/A'} • Submitted on {new Date(selectedAttempt.submitted_at).toLocaleString()}
                     </p>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <span className="text-[9px] font-bold text-zinc-550 uppercase tracking-widest block">JEE Scorecard</span>
-                  <div className={`text-xl font-mono font-extrabold mt-0.5 ${selectedAttempt.score >= 0 ? 'text-emerald-400' : 'text-rose-455'}`}>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">JEE Scorecard</span>
+                  <div className={`text-xl font-mono font-extrabold mt-0.5 ${selectedAttempt.score >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {selectedAttempt.score >= 0 ? `+${selectedAttempt.score}` : selectedAttempt.score}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-zinc-900/40 border border-zinc-805 p-4 rounded-2xl mt-5 space-y-2">
-                <h4 className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest block leading-none">Assessment Outline</h4>
-                <p className="text-xs font-extrabold text-zinc-200">{selectedAttempt.assessments?.title || 'Chapter Assessment'}</p>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] text-zinc-500 pt-1.5 border-t border-zinc-800/50 mt-1.5">
-                  <span>Duration Spent: <strong className="text-zinc-300 font-mono font-bold">{selectedAttempt.timeStr}</strong></span>
-                  <span>Accuracy: <strong className="text-indigo-400 font-bold">{selectedAttempt.accuracy}%</strong></span>
-                  <span>Attempt ID: <span className="font-mono text-zinc-600 select-all">{selectedAttempt.id}</span></span>
+              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl mt-5 space-y-2">
+                <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block leading-none">Assessment Outline</h4>
+                <p className="text-xs font-extrabold text-slate-700">{selectedAttempt.assessments?.title || 'Chapter Assessment'}</p>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] text-slate-500 pt-1.5 border-t border-slate-200/50 mt-1.5">
+                  <span>Duration Spent: <strong className="text-slate-700 font-mono font-bold">{selectedAttempt.timeStr}</strong></span>
+                  <span>Accuracy: <strong className="text-indigo-600 font-bold">{selectedAttempt.accuracy}%</strong></span>
+                  <span>Attempt ID: <span className="font-mono text-slate-400 select-all">{selectedAttempt.id}</span></span>
                 </div>
               </div>
 
               {/* Dynamic NTA counts Bento Grid */}
               <div className="grid grid-cols-3 gap-4 mt-5 select-none">
-                <div className="bg-emerald-955/20 border border-emerald-900/30 p-4 rounded-xl flex flex-col justify-between hover:border-emerald-500/20 transition h-20">
-                  <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider block leading-none">Correct</span>
-                  <h4 className="text-lg font-black text-emerald-400 font-mono">+{selectedAttempt.correct} <span className="text-[9px] text-zinc-500 font-bold">Qns</span></h4>
+                <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-xl flex flex-col justify-between hover:border-emerald-250 transition h-20">
+                  <span className="text-[9px] font-bold text-emerald-650 uppercase tracking-wider block leading-none">Correct</span>
+                  <h4 className="text-lg font-black text-emerald-600 font-mono">+{selectedAttempt.correct} <span className="text-[9px] text-slate-400 font-bold">Qns</span></h4>
                 </div>
 
-                <div className="bg-rose-955/20 border border-rose-900/30 p-4 rounded-xl flex flex-col justify-between hover:border-rose-500/20 transition h-20">
-                  <span className="text-[9px] font-bold text-rose-500 uppercase tracking-wider block leading-none">Incorrect</span>
-                  <h4 className="text-lg font-black text-rose-455 font-mono">-{selectedAttempt.incorrect} <span className="text-[9px] text-zinc-550 font-bold">Qns</span></h4>
+                <div className="bg-rose-50 border border-rose-100 p-4 rounded-xl flex flex-col justify-between hover:border-rose-250 transition h-20">
+                  <span className="text-[9px] font-bold text-rose-650 uppercase tracking-wider block leading-none">Incorrect</span>
+                  <h4 className="text-lg font-black text-rose-600 font-mono">-{selectedAttempt.incorrect} <span className="text-[9px] text-slate-400 font-bold">Qns</span></h4>
                 </div>
 
-                <div className="bg-zinc-900/30 border border-zinc-800 p-4 rounded-xl flex flex-col justify-between hover:border-zinc-700/50 transition h-20">
-                  <span className="text-[9px] font-bold text-zinc-550 uppercase tracking-wider block leading-none">Unanswered</span>
-                  <h4 className="text-lg font-black text-zinc-400 font-mono">{selectedAttempt.unanswered} <span className="text-[9px] text-zinc-550 font-bold">Qns</span></h4>
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col justify-between hover:border-slate-350 transition h-20">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block leading-none">Unanswered</span>
+                  <h4 className="text-lg font-black text-slate-700 font-mono">{selectedAttempt.unanswered} <span className="text-[9px] text-slate-400 font-bold">Qns</span></h4>
                 </div>
               </div>
 
-              <div className="mt-6 pt-5 border-t border-zinc-800 flex justify-end shrink-0">
+              <div className="mt-6 pt-5 border-t border-slate-200 flex justify-end shrink-0">
                 <button
                   type="button"
                   onClick={() => setSelectedAttempt(null)}
-                  className="px-5 py-2.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white rounded-xl text-xs font-bold transition select-none cursor-pointer tactile-press hover:scale-105 active:scale-95"
+                  className="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 hover:text-slate-900 rounded-xl text-xs font-bold transition select-none cursor-pointer tactile-press hover:scale-105 active:scale-95"
                 >
                   Close Scorecard
                 </button>
@@ -2039,8 +2035,8 @@ export default function CourseManageClient({
       {toast && (
         <div className={`fixed bottom-8 right-8 z-50 px-6 py-3.5 rounded-xl border font-bold text-sm shadow-2xl animate-fade-in ${
           toast.type === 'success' 
-            ? 'bg-emerald-600/10 border-emerald-500/30 text-emerald-400' 
-            : 'bg-rose-600/10 border-rose-500/30 text-rose-455'
+            ? 'bg-emerald-50 border-emerald-250 text-emerald-600' 
+            : 'bg-rose-50 border-rose-255 text-rose-650'
         }`}>
           {toast.msg}
         </div>
