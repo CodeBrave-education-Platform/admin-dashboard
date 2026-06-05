@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { motion } from 'framer-motion'
@@ -15,6 +15,31 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+
+  // Sync login page errors from callback redirects
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search)
+    const errorParam = query.get('error')
+    if (errorParam) {
+      setErrorMsg(decodeURIComponent(errorParam))
+    }
+  }, [])
+
+  const handleGoogleLogin = async () => {
+    setErrorMsg('')
+    setSuccessMsg('')
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`
+        }
+      })
+      if (error) throw error
+    } catch (err) {
+      setErrorMsg(err.message || 'Google authentication failed.')
+    }
+  }
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault()
@@ -136,6 +161,38 @@ export default function AdminLoginPage() {
             )}
           </button>
         </form>
+
+        <div className="relative flex py-2 items-center">
+          <div className="flex-grow border-t border-slate-200"></div>
+          <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">Or continue with</span>
+          <div className="flex-grow border-t border-slate-200"></div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          className="w-full py-3.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 rounded-2.5xl text-xs font-bold shadow-xs cursor-pointer transition select-none flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] tactile-press"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <path
+              fill="#EA4335"
+              d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.55 14.97 1 12 1 7.24 1 3.2 3.73 1.24 7.72l3.86 3C6.03 7.8 8.78 5.04 12 5.04z"
+            />
+            <path
+              fill="#4285F4"
+              d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.29 1.48-1.14 2.73-2.42 3.58l3.76 2.91c2.2-2.03 3.49-5.02 3.49-8.64z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M5.1 14.28a7.11 7.11 0 0 1 0-4.56l-3.86-3a11.96 11.96 0 0 0 0 10.56l3.86-3z"
+            />
+            <path
+              fill="#34A853"
+              d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.76-2.91c-1.1.74-2.5 1.18-4.2 1.18-3.22 0-5.97-2.76-6.9-6.68l-3.86 3A11.95 11.95 0 0 0 12 23z"
+            />
+          </svg>
+          <span>Sign In with Google</span>
+        </button>
       </motion.div>
     </div>
   )

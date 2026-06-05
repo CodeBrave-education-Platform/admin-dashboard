@@ -1,23 +1,59 @@
 /**
  * Cross-Origin Cache Invalidation Bridge
- * Dispatches cache purging POST requests to the Student Portal (running on localhost:3000)
- * to ensure immediate cache synchronization on administrative updates.
+ * Purges keys directly in Upstash Redis and sends a backup invalidation POST request
+ * to the Student Portal (running on localhost:3000 or similar) to ensure immediate synchronization.
  */
-export async function invalidateCache(type, courseId) {
+
+async function redisCommand(command) {
+  let url = process.env.UPSTASH_REDIS_REST_URL;
+  let token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (url) url = url.replace(/^['"]|['"]$/g, '');
+  if (token) token = token.replace(/^['"]|['"]$/g, '');
+  if (!url || !token) {
+    console.warn('[Cache Invalidation] Redis env variables missing from admin dashboard environment.');
+    return false;
+  }
   try {
-    const res = await fetch('http://localhost:3000/api/cache/invalidate', {
+    const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type, courseId }),
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(command),
+      next: { revalidate: 0 }
     });
-    
-    if (res.ok) {
-      console.log(`[Cache Invalidation Success]: Purged ${type} for Course: ${courseId}`);
-    } else {
-      console.warn(`[Cache Invalidation Warn]: Purge endpoint returned status ${res.status}`);
-    }
+    return res.ok;
   } catch (err) {
-    // Graceful error logging to prevent admin portal lockups if student portal is offline
-    console.warn('[Cache Invalidation Failed]: Student portal server on http://localhost:3000 is currently offline.', err.message);
+    console.warn('[Cache Invalidation] Direct Redis command failed:', command, err.message);
+    return false;
+  }
+}
+
+export async function invalidateCache(type, courseId, batchId = null) {
+  try {
+    // 1. Direct Redis purge from Admin Dashboard to bypass port/offline limitations of student webhook
+    const purgedKeys = ['asentra:course:catalog'];
+    if (courseId) {
+      purgedKeys.push(`asentra:course:${courseId}`);
+    }
+    if (batchId) {
+      purgedKeys.push(`asentra:batch:meta:${batchId}`);
+    }
+
+    console.log('[Cache Invalidation] Purging Redis keys directly:', purgedKeys);
+    await Promise.allSettled(purgedKeys.map(key => redisCommand(['DEL', key])));
+
+    // 2. Backup webhook dispatch to student portal (port 3000)
+    fetch('http://localhost:3000/api/cache/invalidate', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer asentra-secret-drm-key-2026'
+      },
+      body: JSON.stringify({ type, courseId, batchId }),
+    }).catch(() => {});
+  } catch (err) {
+    console.warn('[Cache Invalidation Webhook Exception]:', err.message);
   }
 }

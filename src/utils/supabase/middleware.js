@@ -25,13 +25,28 @@ export async function updateSession(request) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value, options))
+          const host = request.headers.get('host') || ''
+          const cookieDomain = (host.endsWith('institute.com') || host.includes('institute.com')) ? '.institute.com' : undefined
+
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const updatedOptions = { ...options }
+            if (cookieDomain) {
+              updatedOptions.domain = cookieDomain
+            }
+            request.cookies.set(name, value, updatedOptions)
+          })
+
           supabaseResponse = NextResponse.next({
             request,
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+
+          cookiesToSet.forEach(({ name, value, options }) => {
+            const updatedOptions = { ...options }
+            if (cookieDomain) {
+              updatedOptions.domain = cookieDomain
+            }
+            supabaseResponse.cookies.set(name, value, updatedOptions)
+          })
         },
       },
     }

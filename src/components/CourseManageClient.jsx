@@ -8,7 +8,8 @@ import {
   Trash2, BookOpen, Clock, FileUp, Sparkles, CheckCircle2,
   MessageSquare, Send, Check, ListFilter, User, ExternalLink, RefreshCw, HelpCircle,
   Radio, PlayCircle, StopCircle, BarChart3, Timer, RefreshCcw,
-  Users, Trophy, Target, ChevronRight, AlertCircle
+  Users, Trophy, Target, ChevronRight, AlertCircle, X,
+  Video, Calendar
 } from 'lucide-react';
 import { invalidateCache } from '@/utils/invalidateCache';
 
@@ -113,6 +114,14 @@ const convertHtmlToMarkdown = (html) => {
   return md;
 };
 
+// Helper to extract the 11-character YouTube video ID
+const extractYouTubeId = (url) => {
+  if (!url) return '';
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  return (match && match[2].length === 11) ? match[2] : url;
+};
+
 // Physics and math quick equation helper toolbox
 const FORMULA_SNIPPETS = [
   { label: 'Kinematics 1st', value: '$$v = u + at$$', desc: 'Velocity equation' },
@@ -126,7 +135,234 @@ const FORMULA_SNIPPETS = [
   { label: 'Einstein Mass', value: '$$E = mc^2$$', desc: 'Mass energy' }
 ];
 
+// Dynamically load PDF.js client-side script from CDN
+const loadPdfJs = () => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('PDF.js can only be loaded in a browser context'));
+      return;
+    }
+    if (window.pdfjsLib) {
+      resolve(window.pdfjsLib);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    script.onload = () => {
+      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      window.pdfjsLib = pdfjsLib;
+      resolve(pdfjsLib);
+    };
+    script.onerror = (err) => reject(new Error('Failed to load PDF.js compiler from CDN'));
+    document.head.appendChild(script);
+  });
+};
+
+const extractTextWithLayout = async (page) => {
+  const textContent = await page.getTextContent();
+  const items = textContent.items;
+  if (!items || items.length === 0) return '';
+
+  // Group items by y-coordinate (transform[5])
+  const linesMap = {};
+  for (const item of items) {
+    if (!item.str || (!item.str.trim() && item.str !== ' ')) continue;
+    const y = item.transform[5];
+    // Find an existing line y-coordinate within 3.5px tolerance
+    let foundY = null;
+    for (const key of Object.keys(linesMap)) {
+      if (Math.abs(parseFloat(key) - y) < 3.5) {
+        foundY = key;
+        break;
+      }
+    }
+    if (foundY !== null) {
+      linesMap[foundY].push(item);
+    } else {
+      linesMap[y] = [item];
+    }
+  }
+
+  // Sort line y-coordinates descending (top to bottom)
+  const sortedYs = Object.keys(linesMap)
+    .map(Number)
+    .sort((a, b) => b - a);
+
+  const lines = [];
+  for (const y of sortedYs) {
+    const lineItems = linesMap[y];
+    // Sort items on the same line from left to right (transform[4] is x-coordinate)
+    lineItems.sort((a, b) => a.transform[4] - b.transform[4]);
+    const lineStr = lineItems.map(item => item.str).join(' ');
+    lines.push(lineStr);
+  }
+
+  return lines.join('\n');
+};
+
+const cleanExtractedText = (text) => {
+  if (!text) return '';
+  const lines = text.split('\n');
+  const cleanedLines = lines.filter(line => {
+    const trimmed = line.trim();
+    if (!trimmed) return false;
+    
+    // Ignore lines that look like page numbers: "Page 1 of 12", "Page 1", "1 of 12"
+    if (/^\s*page\s*\d+\s*(?:of\s*\d+)?$/i.test(trimmed)) return false;
+    if (/^\s*\d+\s*of\s*\d+$/i.test(trimmed)) return false;
+    
+    // Ignore line numbers alone
+    if (/^\s*\d+\s*$/i.test(trimmed)) return false;
+    
+    // Ignore header/footer lines that contain only dates or test titles
+    if (/^\s*JEE\s*(?:Main|Advanced)?\s*(?:Mock|Practice)?\s*Test/i.test(trimmed)) return false;
+    
+    return true;
+  });
+  return cleanedLines.join('\n');
+};
+
+const parseQuestionBlock = (block) => {
+  if (!block) return null;
+  const lines = block.split('\n');
+  let questionLines = [];
+  let options = ['', '', '', ''];
+  let correctOptionIndex = -1;
+  let currentOptionIdx = -1;
+  
+  const ansRegex = /\b(?:ans(?:wer)?|key|correct|option)\b\s*[\:\-\=]?\s*([A-D])/i;
+  
+  for (let line of lines) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) continue;
+    
+    // Check if this line is an answer key line
+    const ansMatch = ansRegex.exec(trimmedLine);
+    if (ansMatch) {
+      const char = ansMatch[1].toUpperCase();
+      correctOptionIndex = char.charCodeAt(0) - 65;
+      continue;
+    }
+    
+    // Check if this line starts a new option (Case-sensitive uppercase A-D, require punctuation delimiter)
+    const optMatch = /^\s*[\*\_\(\[]*\s*(A|B|C|D)\s*[\*\_\)\]\.\-]+\s*(.*?)$/.exec(trimmedLine);
+    if (optMatch) {
+      const char = optMatch[1];
+      const text = optMatch[2].trim();
+      currentOptionIdx = char.charCodeAt(0) - 65;
+      options[currentOptionIdx] = text;
+    } else {
+      if (currentOptionIdx !== -1) {
+        options[currentOptionIdx] += ' ' + trimmedLine;
+      } else {
+        questionLines.push(trimmedLine);
+      }
+    }
+  }
+  
+  const hasLineOptions = options.some(o => o !== '');
+  if (!hasLineOptions) {
+    // Fallback to inline options matching
+    const inlineOptRegex = /[\(\[]?(A|B|C|D)[\)\]\.\-]\s+/g;
+    let firstOptionIndex = -1;
+    let match = inlineOptRegex.exec(block);
+    if (match) {
+      firstOptionIndex = match.index;
+    }
+    
+    // Parse options
+    const inlineExtractRegex = /[\*\_\(\[]*\s*(A|B|C|D)\s*[\*\_\)\]\.\-]+\s*([^\(\[\n]+)/g;
+    const tempOptions = ['', '', '', ''];
+    let foundCount = 0;
+    while ((match = inlineExtractRegex.exec(block)) !== null) {
+      const char = match[1];
+      const text = match[2].trim();
+      const idx = char.charCodeAt(0) - 65;
+      tempOptions[idx] = text;
+      foundCount++;
+    }
+    
+    if (foundCount >= 2) {
+      options = tempOptions;
+      if (firstOptionIndex !== -1) {
+        questionLines = [block.substring(0, firstOptionIndex).trim()];
+      }
+    }
+  }
+  
+  // Try to find the answer in the entire block if not found line-by-line
+  if (correctOptionIndex === -1) {
+    const ansMatch = ansRegex.exec(block);
+    if (ansMatch) {
+      const char = ansMatch[1].toUpperCase();
+      correctOptionIndex = char.charCodeAt(0) - 65;
+    }
+  }
+  
+  const filledOptionsCount = options.filter(o => o.trim() !== '').length;
+  
+  // Fallback if we have fewer than 2 options
+  if (filledOptionsCount < 2) {
+    const fullBlockText = lines.filter(line => !ansRegex.test(line)).join('\n').trim();
+    return {
+      content: fullBlockText,
+      options: ['Option A', 'Option B', 'Option C', 'Option D'],
+      correct_option_index: correctOptionIndex !== -1 ? correctOptionIndex : 0
+    };
+  }
+  
+  const content = questionLines.join('\n').trim();
+  if (content) {
+    return {
+      content,
+      options: options.map(o => o || 'Option Placeholder'),
+      correct_option_index: correctOptionIndex !== -1 ? correctOptionIndex : 0
+    };
+  }
+  return null;
+};
+
+const parseExtractedText = (text) => {
+  if (!text) return [];
+  const cleaned = cleanExtractedText(text);
+  const questionRegex = /(?:^|\n)\s*(?:Q(?:uestion)?)?\s*(\d+)\s*[\.\:\)]/gi;
+  
+  const matches = [];
+  let match;
+  while ((match = questionRegex.exec(cleaned)) !== null) {
+    matches.push({
+      index: match.index,
+      number: match[1],
+      length: match[0].length
+    });
+  }
+  
+  if (matches.length === 0) return [];
+  
+  const parsedQuestions = [];
+  for (let i = 0; i < matches.length; i++) {
+    const startIdx = matches[i].index + matches[i].length;
+    const endIdx = (i + 1 < matches.length) ? matches[i + 1].index : cleaned.length;
+    const block = cleaned.substring(startIdx, endIdx).trim();
+    
+    const questionObj = parseQuestionBlock(block);
+    if (questionObj) {
+      parsedQuestions.push({
+        id: `draft-${i}-${Date.now()}`,
+        content: questionObj.content,
+        options: questionObj.options,
+        correct_option_index: questionObj.correct_option_index,
+        marks_positive: 4,
+        marks_negative: 1
+      });
+    }
+  }
+  return parsedQuestions;
+};
+
 function LiveClassesTab({ course, triggerToast }) {
+  const supabase = createClient();
   const [question, setQuestion] = useState('');
   const [optionA, setOptionA] = useState('');
   const [optionB, setOptionB] = useState('');
@@ -138,6 +374,16 @@ function LiveClassesTab({ course, triggerToast }) {
   const [activePoll, setActivePoll] = useState(null);
   const [isLaunching, setIsLaunching] = useState(false);
   const [isTerminating, setIsTerminating] = useState(false);
+
+  // Live Class scheduling states
+  const [courseLiveSessions, setCourseLiveSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [newLiveTitle, setNewLiveTitle] = useState('');
+  const [newLiveDate, setNewLiveDate] = useState('');
+  const [newLiveStartTime, setNewLiveStartTime] = useState('');
+  const [newLiveEndTime, setNewLiveEndTime] = useState('');
+  const [newLiveRoomUrl, setNewLiveRoomUrl] = useState('');
+  const [isSchedulingSession, setIsSchedulingSession] = useState(false);
 
   // Poll server for active poll status using safe self-scheduling recursive setTimeout
   useEffect(() => {
@@ -173,6 +419,29 @@ function LiveClassesTab({ course, triggerToast }) {
       }
     };
   }, []);
+
+  // Fetch course scheduled live sessions
+  const fetchCourseLiveSessions = async () => {
+    setLoadingSessions(true);
+    try {
+      const { data, error } = await supabase
+        .from('live_sessions')
+        .select('*')
+        .eq('course_id', course.id)
+        .order('scheduled_start', { ascending: true });
+      if (error) throw error;
+      setCourseLiveSessions(data || []);
+    } catch (err) {
+      console.error('Error fetching live sessions:', err.message);
+      triggerToast('Failed to load live sessions', 'error');
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourseLiveSessions();
+  }, [course.id]);
 
   const handleLaunchPoll = async (e) => {
     e.preventDefault();
@@ -240,203 +509,515 @@ function LiveClassesTab({ course, triggerToast }) {
     }
   };
 
+  const handleAddCourseLive = async (e) => {
+    e.preventDefault();
+    if (!newLiveTitle.trim()) return triggerToast('Title is required', 'error');
+    if (!newLiveDate) return triggerToast('Date is required', 'error');
+    if (!newLiveStartTime) return triggerToast('Start time is required', 'error');
+    if (!newLiveEndTime) return triggerToast('End time is required', 'error');
+    if (!newLiveRoomUrl.trim()) return triggerToast('Meeting Room URL is required', 'error');
+
+    setIsSchedulingSession(true);
+    try {
+      const startString = `${newLiveDate}T${newLiveStartTime}`;
+      const endString = `${newLiveDate}T${newLiveEndTime}`;
+      const startObj = new Date(startString);
+      const endObj = new Date(endString);
+      
+      if (isNaN(startObj.getTime()) || isNaN(endObj.getTime())) {
+        throw new Error('Invalid start or end date/time');
+      }
+      
+      const diffMs = endObj.getTime() - startObj.getTime();
+      if (diffMs <= 0) {
+        throw new Error('End time must be after start time');
+      }
+      const duration = Math.round(diffMs / 60000);
+
+      const { data, error } = await supabase
+        .from('live_sessions')
+        .insert([{
+          course_id: course.id,
+          title: newLiveTitle.trim(),
+          meeting_url: newLiveRoomUrl.trim(),
+          scheduled_start: startObj.toISOString(),
+          duration_minutes: duration,
+          status: 'scheduled',
+          batch_id: null
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCourseLiveSessions(prev => [...prev, data]);
+      triggerToast('Live Class scheduled successfully!');
+      
+      // Invalidate caches
+      invalidateCache('course', course.id);
+      invalidateCache('catalog', course.id);
+
+      // Reset Form
+      setNewLiveTitle('');
+      setNewLiveDate('');
+      setNewLiveStartTime('');
+      setNewLiveEndTime('');
+      setNewLiveRoomUrl('');
+    } catch (err) {
+      triggerToast(err.message, 'error');
+    } finally {
+      setIsSchedulingSession(false);
+    }
+  };
+
+  const handleDeleteCourseLive = async (sessionId) => {
+    if (!confirm('Are you sure you want to permanently delete this scheduled live class?')) return;
+    try {
+      const { error } = await supabase
+        .from('live_sessions')
+        .delete()
+        .eq('id', sessionId);
+
+      if (error) throw error;
+
+      setCourseLiveSessions(prev => prev.filter(s => s.id !== sessionId));
+      triggerToast('Live Class deleted successfully');
+      
+      // Invalidate caches
+      invalidateCache('course', course.id);
+      invalidateCache('catalog', course.id);
+    } catch (err) {
+      triggerToast(err.message, 'error');
+    }
+  };
+
+  const handleToggleLiveStatus = async (sessionId, currentStatus, meetingUrl) => {
+    const nextStatus = currentStatus === 'live' ? 'ended' : 'live';
+    const actionLabel = nextStatus === 'live' ? 'Launch host room and go live?' : 'Mark this live class as ended?';
+    
+    if (!confirm(actionLabel)) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('live_sessions')
+        .update({ status: nextStatus })
+        .eq('id', sessionId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setCourseLiveSessions(prev => prev.map(s => s.id === sessionId ? data : s));
+      triggerToast(`Live Class status updated to ${nextStatus}`);
+      
+      // Invalidate caches
+      invalidateCache('course', course.id);
+      invalidateCache('catalog', course.id);
+
+      // If going live, open the meeting room URL
+      if (nextStatus === 'live') {
+        window.open(meetingUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (err) {
+      triggerToast(err.message, 'error');
+    }
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      {/* Page Header */}
       <div>
-        <h2 className="text-xl font-bold tracking-tight text-slate-900">Synchronized Cohort Poll Command Center</h2>
-        <p className="text-xs text-slate-500 mt-1">Broadcast real-time dynamic conceptual quizzes and monitor student cohort response analytics instantly</p>
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+          <Video className="w-5 h-5 text-indigo-650" />
+          <span>Synchronized Course Live Classes & Polls</span>
+        </h2>
+        <p className="text-xs text-slate-550 mt-1">Schedule video lectures, host live classes, and broadcast synchronized cohort quick-polls</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column: Creator Form */}
-        <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-5 shadow-sm hover:shadow-md transition-shadow duration-200">
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-            <Radio className="w-4 h-4 text-indigo-600 animate-pulse" />
-            <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Configure Poll Blueprint</h3>
+        {/* Left Column: Quick-Poll Command Center */}
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+              <Radio className="w-4 h-4 text-indigo-600 animate-pulse" />
+              <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Configure Poll Blueprint</h3>
+            </div>
+
+            <form onSubmit={handleLaunchPoll} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Question Supplement</label>
+                <textarea
+                  value={question}
+                  onChange={e => setQuestion(e.target.value)}
+                  placeholder="e.g. Find the angular momentum of a rolling disc with mass 2kg and radius 0.5m..."
+                  className="w-full h-20 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition resize-none placeholder-slate-400 font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { label: 'Option A', val: optionA, set: setOptionA },
+                  { label: 'Option B', val: optionB, set: setOptionB },
+                  { label: 'Option C', val: optionC, set: setOptionC },
+                  { label: 'Option D', val: optionD, set: setOptionD }
+                ].map((opt, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase block">{opt.label}</label>
+                    <input
+                      type="text"
+                      value={opt.val}
+                      onChange={e => opt.set(e.target.value)}
+                      placeholder={`Choice ${String.fromCharCode(65 + idx)}`}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Authoritative Answer</label>
+                  <select
+                    value={correctAnswerIndex}
+                    onChange={e => setCorrectAnswerIndex(parseInt(e.target.value))}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                  >
+                    <option value={0}>Option A</option>
+                    <option value={1}>Option B</option>
+                    <option value={2}>Option C</option>
+                    <option value={3}>Option D</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Timer Duration: {duration}s</label>
+                  <div className="flex bg-slate-50 border border-slate-200 p-1 rounded-xl gap-1">
+                    {[15, 30, 60, 90].map(s => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setDuration(s)}
+                        className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition cursor-pointer select-none tactile-press hover:scale-105 active:scale-95 ${
+                          duration === s
+                            ? 'bg-indigo-50 text-indigo-600 border border-indigo-200'
+                            : 'text-slate-500 hover:text-slate-700'
+                        }`}
+                      >
+                        {s}s
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isLaunching || !!activePoll}
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-bold shadow-sm cursor-pointer transition select-none flex items-center justify-center gap-2 border border-slate-800 hover:scale-[1.01] active:scale-[0.99] tactile-press"
+                >
+                  {isLaunching ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <PlayCircle className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                  )}
+                  <span>{activePoll ? 'Poll Active (Wait to finish)' : 'Launch Live Poll broadcast'}</span>
+                </button>
+              </div>
+            </form>
           </div>
 
-          <form onSubmit={handleLaunchPoll} className="space-y-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Question Supplement</label>
-              <textarea
-                value={question}
-                onChange={e => setQuestion(e.target.value)}
-                placeholder="e.g. Find the angular momentum of a rolling disc with mass 2kg and radius 0.5m..."
-                className="w-full h-20 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition resize-none placeholder-slate-400 font-bold"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { label: 'Option A', val: optionA, set: setOptionA },
-                { label: 'Option B', val: optionB, set: setOptionB },
-                { label: 'Option C', val: optionC, set: setOptionC },
-                { label: 'Option D', val: optionD, set: setOptionD }
-              ].map((opt, idx) => (
-                <div key={idx} className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-500 uppercase block">{opt.label}</label>
-                  <input
-                    type="text"
-                    value={opt.val}
-                    onChange={e => opt.set(e.target.value)}
-                    placeholder={`Choice ${String.fromCharCode(65 + idx)}`}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Authoritative Answer</label>
-                <select
-                  value={correctAnswerIndex}
-                  onChange={e => setCorrectAnswerIndex(parseInt(e.target.value))}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
-                >
-                  <option value={0}>Option A</option>
-                  <option value={1}>Option B</option>
-                  <option value={2}>Option C</option>
-                  <option value={3}>Option D</option>
-                </select>
+          {/* Live Telemetry Results */}
+          <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200 min-h-[300px]">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-emerald-600 animate-pulse" />
+                <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Live Response Telemetry</h3>
               </div>
+              
+              {activePoll && (
+                <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1">
+                  <Timer className="w-3 h-3 text-emerald-600" /> {activePoll.timeLeftSeconds || 0}s Left
+                </span>
+              )}
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Timer Duration: {duration}s</label>
-                <div className="flex bg-slate-50 border border-slate-200 p-1 rounded-xl gap-1">
-                  {[15, 30, 60, 90].map(s => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setDuration(s)}
-                      className={`flex-1 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition cursor-pointer select-none tactile-press hover:scale-105 active:scale-95 ${
-                        duration === s
-                          ? 'bg-indigo-50 text-indigo-600 border border-indigo-200'
-                          : 'text-slate-500 hover:text-slate-700'
-                      }`}
-                    >
-                      {s}s
-                    </button>
-                  ))}
+            {!activePoll ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50 border border-slate-200 rounded-2xl min-h-[220px]">
+                <StopCircle className="w-10 h-10 text-slate-200 mb-2 mx-auto animate-pulse" />
+                <h3 className="font-bold text-xs text-slate-700">Classroom Broadcast Inactive</h3>
+                <p className="text-[10px] text-slate-505 mt-1.5 max-w-xs leading-relaxed">
+                  Configure a poll blueprint on the left pane and press launch. Active student percentages will automatically compile and display in real-time horizontal charts.
+                </p>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col justify-between space-y-5">
+                <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2">
+                  <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Active Poll Question</h4>
+                  <p className="text-xs font-extrabold text-slate-800 leading-relaxed">{activePoll.question}</p>
+                </div>
+
+                <div className="space-y-4 flex-1">
+                  {activePoll.options.map((opt, idx) => {
+                    const votes = activePoll.results?.[idx] || 0;
+                    const total = activePoll.totalVotes || 0;
+                    const pct = total > 0 ? Math.round((votes / total) * 100) : 0;
+                    const isCorrect = idx === activePoll.correctAnswerIndex;
+
+                    return (
+                      <div key={idx} className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                          <span className="truncate max-w-[200px] flex items-center gap-1.5">
+                            <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black border ${
+                              isCorrect 
+                                ? 'bg-emerald-50 border-emerald-300 text-emerald-600' 
+                                : 'bg-slate-100 border-slate-200 text-slate-550'
+                            }`}>
+                              {String.fromCharCode(65 + idx)}
+                            </span>
+                            <span>{opt}</span>
+                            {isCorrect && (
+                              <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded ml-1 border border-emerald-100">
+                                Correct Key
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-slate-550">{pct}% ({votes} votes)</span>
+                        </div>
+
+                        <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden relative border border-slate-200">
+                          <motion.div
+                            animate={{ width: `${pct}%` }}
+                            transition={{ type: 'spring', stiffness: 80, damping: 15 }}
+                            className={`h-full rounded-full ${
+                              isCorrect 
+                                ? 'bg-emerald-600 shadow-[0_0_10px_rgba(16,185,129,0.15)]' 
+                                : 'bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.15)]'
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200 shrink-0">
+                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                    Total Votes: <span className="text-slate-800 text-xs ml-1 font-extrabold">{activePoll.totalVotes || 0} Responses</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleTerminatePoll}
+                    disabled={isTerminating}
+                    className="px-4 py-2 bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer select-none tactile-press"
+                  >
+                    {isTerminating ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <StopCircle className="w-3.5 h-3.5 text-rose-455 shrink-0" />
+                    )}
+                    <span>Terminate Poll</span>
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={isLaunching || !!activePoll}
-                className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 disabled:cursor-not-allowed text-white rounded-2xl text-xs font-bold shadow-sm cursor-pointer transition select-none flex items-center justify-center gap-2 border border-slate-800 hover:scale-[1.01] active:scale-[0.99] tactile-press"
-              >
-                {isLaunching ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <PlayCircle className="w-3.5 h-3.5 text-slate-300 shrink-0" />
-                )}
-                <span>{activePoll ? 'Poll Active (Wait to finish)' : 'Launch Live Poll broadcast'}</span>
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Right Column: Live Telemetry Results */}
-        <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-emerald-600 animate-pulse" />
-              <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Live Response Telemetry</h3>
-            </div>
-            
-            {activePoll && (
-              <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider animate-pulse flex items-center gap-1">
-                <Timer className="w-3 h-3 text-emerald-600" /> {activePoll.timeLeftSeconds || 0}s Left
-              </span>
             )}
           </div>
+        </div>
 
-          {!activePoll ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50 border border-slate-200 rounded-2xl min-h-[300px]">
-              <StopCircle className="w-12 h-12 text-slate-200 mb-3 mx-auto animate-pulse" />
-              <h3 className="font-bold text-xs text-slate-700">Classroom Broadcast Inactive</h3>
-              <p className="text-[10px] text-slate-500 mt-1.5 max-w-xs leading-relaxed">
-                Configure a poll blueprint on the left pane and press launch. Active student percentages will automatically compile and display in real-time horizontal charts.
-              </p>
+        {/* Right Column: Live Class Scheduling & Hosting */}
+        <div className="space-y-6">
+          {/* Scheduling Form */}
+          <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-5 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+              <Calendar className="w-4 h-4 text-indigo-650" />
+              <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Schedule Live Lecture</h3>
             </div>
-          ) : (
-            <div className="flex-1 flex flex-col justify-between space-y-5">
-              {/* Question Summary */}
-              <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-2">
-                <h4 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Active Poll Question</h4>
-                <p className="text-xs font-extrabold text-slate-800 leading-relaxed">{activePoll.question}</p>
+
+            <form onSubmit={handleAddCourseLive} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Class Title</label>
+                <input
+                  type="text"
+                  value={newLiveTitle}
+                  onChange={e => setNewLiveTitle(e.target.value)}
+                  placeholder="e.g. Masterclass: Rotational Mechanics (Advanced Q&A)"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold placeholder-slate-405"
+                />
               </div>
 
-              {/* Options & Progress Bar Charts */}
-              <div className="space-y-4 flex-1">
-                {activePoll.options.map((opt, idx) => {
-                  const votes = activePoll.results?.[idx] || 0;
-                  const total = activePoll.totalVotes || 0;
-                  const pct = total > 0 ? Math.round((votes / total) * 100) : 0;
-                  const isCorrect = idx === activePoll.correctAnswerIndex;
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Date</label>
+                <input
+                  type="date"
+                  value={newLiveDate}
+                  onChange={e => setNewLiveDate(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Start Time</label>
+                  <input
+                    type="time"
+                    value={newLiveStartTime}
+                    onChange={e => setNewLiveStartTime(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">End Time</label>
+                  <input
+                    type="time"
+                    value={newLiveEndTime}
+                    onChange={e => setNewLiveEndTime(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Meeting Room URL (Meet/Zoom)</label>
+                <input
+                  type="url"
+                  value={newLiveRoomUrl}
+                  onChange={e => setNewLiveRoomUrl(e.target.value)}
+                  placeholder="https://meet.google.com/abc-defg-hij"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold placeholder-slate-405"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSchedulingSession}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:border-slate-200 text-white rounded-2xl text-xs font-bold shadow-sm cursor-pointer transition select-none flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] tactile-press"
+                >
+                  {isSchedulingSession ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5 text-slate-100 shrink-0" />
+                  )}
+                  <span>Schedule Live Session</span>
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* Scheduled Live Sessions List */}
+          <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <Video className="w-4 h-4 text-indigo-650" />
+                <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Scheduled Live Sessions</h3>
+              </div>
+              <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold border border-indigo-100">
+                {courseLiveSessions.length} Scheduled
+              </span>
+            </div>
+
+            {loadingSessions ? (
+              <div className="flex items-center justify-center py-12">
+                <RefreshCw className="w-6 h-6 text-indigo-500 animate-spin" />
+              </div>
+            ) : courseLiveSessions.length === 0 ? (
+              <div className="text-center text-slate-500 text-xs py-12 bg-slate-50 border border-slate-200 rounded-2xl">
+                No live class sessions scheduled yet for this course.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
+                {courseLiveSessions.map((session) => {
+                  const startTime = new Date(session.scheduled_start).toLocaleString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  });
+                  const isLive = session.status === 'live';
+                  const isEnded = session.status === 'ended';
 
                   return (
-                    <div key={idx} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                        <span className="truncate max-w-[200px] flex items-center gap-1.5">
-                          <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-black border ${
-                            isCorrect 
-                              ? 'bg-emerald-50 border-emerald-300 text-emerald-600' 
-                              : 'bg-slate-100 border-slate-200 text-slate-550'
-                          }`}>
-                            {String.fromCharCode(65 + idx)}
-                          </span>
-                          <span>{opt}</span>
-                          {isCorrect && (
-                            <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded ml-1 border border-emerald-100">
-                              Correct Key
+                    <div 
+                      key={session.id} 
+                      className={`p-4 rounded-2xl border transition duration-150 flex flex-col justify-between gap-3 shadow-xs hover:border-slate-300 ${
+                        isLive 
+                          ? 'bg-emerald-50/20 border-emerald-200' 
+                          : 'bg-white border-slate-200'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            {isLive && (
+                              <span className="relative flex h-2 w-2 shrink-0">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                              </span>
+                            )}
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded border ${
+                              isLive 
+                                ? 'bg-emerald-100 text-emerald-700 border-emerald-250' 
+                                : isEnded 
+                                  ? 'bg-slate-100 text-slate-450 border-slate-200' 
+                                  : 'bg-indigo-550/10 text-indigo-700 border-indigo-150/50'
+                            }`}>
+                              {session.status || 'scheduled'}
                             </span>
-                          )}
-                        </span>
-                        <span className="text-slate-500">{pct}% ({votes} votes)</span>
+                            <span className="text-[10px] text-slate-500 font-bold">
+                              {startTime} ({session.duration_minutes}m)
+                            </span>
+                          </div>
+                          <h4 className="font-extrabold text-xs text-slate-800 leading-snug">
+                            {session.title}
+                          </h4>
+                        </div>
+
+                        <button
+                          onClick={() => handleDeleteCourseLive(session.id)}
+                          className="p-1.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-lg transition cursor-pointer shrink-0"
+                          title="Cancel live class"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
 
-                      <div className="w-full bg-slate-100 h-3 rounded-full overflow-hidden relative border border-slate-200">
-                        <motion.div
-                          animate={{ width: `${pct}%` }}
-                          transition={{ type: 'spring', stiffness: 80, damping: 15 }}
-                          className={`h-full rounded-full ${
-                            isCorrect 
-                              ? 'bg-emerald-600 shadow-[0_0_10px_rgba(16,185,129,0.15)]' 
-                              : 'bg-indigo-600 shadow-[0_0_10px_rgba(99,102,241,0.15)]'
-                          }`}
-                        />
+                      <div className="flex items-center gap-2 border-t border-slate-100 pt-2 shrink-0">
+                        {isEnded ? (
+                          <span className="text-[10px] font-bold text-slate-450 flex items-center gap-1 py-1">
+                            Class marked as completed
+                          </span>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleToggleLiveStatus(session.id, session.status, session.meeting_url)}
+                              className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition cursor-pointer select-none flex items-center justify-center gap-1.5 tactile-press ${
+                                isLive
+                                  ? 'bg-rose-50 hover:bg-rose-600 border border-rose-200 text-rose-600 hover:text-white'
+                                  : 'bg-emerald-50 hover:bg-emerald-600 border border-emerald-200 text-emerald-600 hover:text-white'
+                              }`}
+                            >
+                              <Video className="w-3.5 h-3.5" />
+                              <span>{isLive ? 'End Class' : 'Go Live & Host'}</span>
+                            </button>
+
+                            <a
+                              href={session.meeting_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-xl text-[10px] font-extrabold transition flex items-center gap-1 cursor-pointer"
+                            >
+                              Launch Link <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
                 })}
               </div>
-
-              {/* Total votes + Terminate button footer */}
-              <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-200 shrink-0">
-                <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                  Total Votes: <span className="text-slate-800 text-xs ml-1 font-extrabold">{activePoll.totalVotes || 0} Responses</span>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleTerminatePoll}
-                  disabled={isTerminating}
-                  className="px-4 py-2 bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 text-rose-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer select-none tactile-press"
-                >
-                  {isTerminating ? (
-                    <RefreshCw className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <StopCircle className="w-3.5 h-3.5 text-rose-455 shrink-0" />
-                  )}
-                  <span>Terminate Poll</span>
-                </button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -450,6 +1031,7 @@ export default function CourseManageClient({
   initialExams 
 }) {
   const supabase = createClient();
+  const replyInputRef = React.useRef(null);
   const [isPending, startTransition] = useTransition();
 
   // Dynamic States
@@ -467,10 +1049,14 @@ export default function CourseManageClient({
   const [price, setPrice] = useState(course?.price || '');
   const [level, setLevel] = useState(course?.level || 'foundation');
   const [thumbUrl, setThumbUrl] = useState(course?.thumbnail_url || '');
+  const [startDate, setStartDate] = useState(course?.start_date || '');
+  const [endDate, setEndDate] = useState(course?.end_date || '');
 
   // Syllabus forms state
   const [lesTitle, setLesTitle] = useState('');
   const [lesUrl, setLesUrl] = useState('');
+  const [lesVideoSource, setLesVideoSource] = useState('youtube');
+  const [lesVideoId, setLesVideoId] = useState('');
   const [lesDuration, setLesDuration] = useState('45');
   const [lesSubject, setLesSubject] = useState('Physics');
   const [lesReading, setLesReading] = useState('');
@@ -486,6 +1072,27 @@ export default function CourseManageClient({
   const [examTitle, setExamTitle] = useState('');
   const [examDuration, setExamDuration] = useState('180');
   const [selectedLessonForExam, setSelectedLessonForExam] = useState('');
+  const [examType, setExamType] = useState('jee_mock');
+  const [examStartWindow, setExamStartWindow] = useState('');
+  const [examEndWindow, setExamEndWindow] = useState('');
+
+
+  // Assessment Builder Modal state hooks
+  const [activeBuilderExam, setActiveBuilderExam] = useState(null);
+  const [builderQuestions, setBuilderQuestions] = useState([]);
+  const [isFetchingQuestions, setIsFetchingQuestions] = useState(false);
+  const [builderContent, setBuilderContent] = useState('');
+  const [optA, setOptA] = useState('');
+  const [optB, setOptB] = useState('');
+  const [optC, setOptC] = useState('');
+  const [optD, setOptD] = useState('');
+  const [correctIdx, setCorrectIdx] = useState('0');
+  const [posMarks, setPosMarks] = useState('4');
+  const [negMarks, setNegMarks] = useState('-1');
+  const [isAddingQuestion, setIsAddingQuestion] = useState(false);
+  const [buildMode, setBuildMode] = useState('manual'); // 'manual' | 'pdf'
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [draftQuestions, setDraftQuestions] = useState([]);
 
   // Module 1: Rich Readings and Debounced LaTeX state
   const [selectedLessonForReading, setSelectedLessonForReading] = useState('');
@@ -687,8 +1294,14 @@ export default function CourseManageClient({
       if (error) throw error;
       setDoubts(data || []);
     } catch (err) {
-      console.error('Error fetching doubts:', err);
-      triggerToast('Failed to fetch doubts', 'error');
+      console.error('Error fetching doubts details:', {
+        message: err.message,
+        details: err.details,
+        hint: err.hint,
+        code: err.code,
+        raw: err
+      });
+      triggerToast('Failed to fetch doubts: ' + (err.message || err), 'error');
     } finally {
       setIsLoadingDoubts(false);
     }
@@ -711,7 +1324,9 @@ export default function CourseManageClient({
           description: description.trim(),
           price: parseFloat(price) || 0,
           level,
-          thumbnail_url: thumbUrl.trim()
+          thumbnail_url: thumbUrl.trim(),
+          start_date: startDate || null,
+          end_date: endDate || null
         })
         .eq('id', course.id)
         .select()
@@ -722,6 +1337,7 @@ export default function CourseManageClient({
       setCourse(data);
       triggerToast('Configurations saved successfully!');
       invalidateCache('catalog', course.id);
+      invalidateCache('course', course.id);
     } catch (err) {
       triggerToast(err.message, 'error');
     }
@@ -730,18 +1346,37 @@ export default function CourseManageClient({
   // Syllabus Video Insertion API call
   const handleAddLesson = async (e) => {
     e.preventDefault();
-    if (!lesTitle.trim() || !lesUrl.trim()) {
-      return triggerToast('Title and Video URL are required', 'error');
+    if (!lesTitle.trim() || !lesVideoId.trim()) {
+      return triggerToast('Title and Video ID are required', 'error');
+    }
+
+    let finalVideoId = lesVideoId.trim();
+    if (lesVideoSource === 'youtube') {
+      const extracted = extractYouTubeId(finalVideoId);
+      if (extracted.length === 11) {
+        finalVideoId = extracted;
+      }
+      if (finalVideoId.length !== 11) {
+        return triggerToast('YouTube Video ID must be exactly 11 characters', 'error');
+      }
     }
 
     try {
       const nextOrder = lessons.filter(l => l.subject === lesSubject).length + 1;
+      const computedUrl = lesVideoSource === 'youtube'
+        ? `https://www.youtube.com/watch?v=${finalVideoId}`
+        : lesVideoSource === 'vimeo'
+          ? `https://vimeo.com/${finalVideoId}`
+          : finalVideoId;
+
       const { data: lesson, error } = await supabase
         .from('lessons')
         .insert([{
           course_id: course.id,
           title: lesTitle.trim(),
-          video_url: lesUrl.trim(),
+          video_url: computedUrl,
+          video_source: lesVideoSource,
+          video_id: finalVideoId,
           duration_minutes: parseInt(lesDuration) || 45,
           subject: lesSubject,
           order_index: nextOrder,
@@ -757,7 +1392,8 @@ export default function CourseManageClient({
       setLessons(prev => [...prev, lesson]);
       
       setLesTitle('');
-      setLesUrl('');
+      setLesVideoId('');
+      setLesVideoSource('youtube');
       setLesDuration('45');
       setLesReading('');
       setLesWorksheetTitle('');
@@ -843,7 +1479,9 @@ export default function CourseManageClient({
           lesson_id: selectedLessonForExam || null,
           title: examTitle.trim(),
           duration_minutes: parseInt(examDuration) || 180,
-          type: 'jee_mock'
+          type: examType,
+          start_window: examStartWindow ? new Date(examStartWindow).toISOString() : null,
+          end_window: examEndWindow ? new Date(examEndWindow).toISOString() : null
         }])
         .select()
         .single();
@@ -853,6 +1491,9 @@ export default function CourseManageClient({
       setExams(prev => [exam, ...prev]);
       setExamTitle('');
       setSelectedLessonForExam('');
+      setExamType('jee_mock');
+      setExamStartWindow('');
+      setExamEndWindow('');
       triggerToast('Mock Exam successfully linked!');
       invalidateCache('catalog', course.id);
     } catch (err) {
@@ -872,6 +1513,187 @@ export default function CourseManageClient({
       invalidateCache('catalog', course.id);
     } catch (err) {
       triggerToast(err.message, 'error');
+    }
+  };
+
+  // Assessment Question Builder: fetch questions for activeBuilderExam
+  useEffect(() => {
+    if (activeBuilderExam) {
+      const fetchQuestions = async () => {
+        setIsFetchingQuestions(true);
+        try {
+          const { data, error } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('assessment_id', activeBuilderExam.id)
+            .order('id', { ascending: true });
+          
+          if (error) throw error;
+          setBuilderQuestions(data || []);
+        } catch (err) {
+          triggerToast('Failed to load assessment questions: ' + err.message, 'error');
+        } finally {
+          setIsFetchingQuestions(false);
+        }
+      };
+      fetchQuestions();
+    } else {
+      setBuilderQuestions([]);
+    }
+  }, [activeBuilderExam]);
+
+  // Assessment Question Builder: add question
+  const handleAddQuestion = async (e) => {
+    e.preventDefault();
+    if (!builderContent.trim()) return triggerToast('Question content is required', 'error');
+    if (!optA.trim() || !optB.trim() || !optC.trim() || !optD.trim()) {
+      return triggerToast('All 4 options must be completed', 'error');
+    }
+    
+    setIsAddingQuestion(true);
+    try {
+      const parsedPos = parseInt(posMarks) || 4;
+      const parsedNeg = Math.abs(parseInt(negMarks)) || 0; // store absolute value so subtraction works
+      const optionArray = [optA.trim(), optB.trim(), optC.trim(), optD.trim()];
+      
+      const { data, error } = await supabase
+        .from('questions')
+        .insert([{
+          assessment_id: activeBuilderExam.id,
+          content: builderContent.trim(),
+          options: optionArray,
+          correct_option_index: parseInt(correctIdx) || 0,
+          marks_positive: parsedPos,
+          marks_negative: parsedNeg
+        }])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      setBuilderQuestions(prev => [...prev, data]);
+      
+      // Reset builder form fields
+      setBuilderContent('');
+      setOptA('');
+      setOptB('');
+      setOptC('');
+      setOptD('');
+      setCorrectIdx('0');
+      setPosMarks('4');
+      setNegMarks('-1');
+      
+      triggerToast('Question successfully added to assessment!');
+    } catch (err) {
+      triggerToast('Failed to add question: ' + err.message, 'error');
+    } finally {
+      setIsAddingQuestion(false);
+    }
+  };
+
+  // Assessment Question Builder: delete question
+  const handleDeleteQuestion = async (id) => {
+    if (!confirm('Permanently remove this question from assessment?')) return;
+    try {
+      const { error } = await supabase
+        .from('questions')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      setBuilderQuestions(prev => prev.filter(q => q.id !== id));
+      triggerToast('Question removed successfully');
+    } catch (err) {
+      triggerToast('Failed to delete question: ' + err.message, 'error');
+    }
+  };
+
+  // Dynamic draft question handlers for PDF Importer
+  const handleUpdateDraftQuestion = (id, fields) => {
+    setDraftQuestions(prev => prev.map(q => q.id === id ? { ...q, ...fields } : q));
+  };
+
+  const handleDeleteDraftQuestion = (id) => {
+    setDraftQuestions(prev => prev.filter(q => q.id !== id));
+  };
+
+  const handleBulkSaveQuestions = async () => {
+    if (draftQuestions.length === 0 || !activeBuilderExam) return;
+    setIsAddingQuestion(true);
+    try {
+      const payload = draftQuestions.map(q => ({
+        assessment_id: activeBuilderExam.id,
+        content: q.content.trim(),
+        options: q.options.map(o => o.trim()),
+        correct_option_index: q.correct_option_index,
+        marks_positive: parseInt(q.marks_positive) || 4,
+        marks_negative: Math.abs(parseInt(q.marks_negative)) || 0
+      }));
+
+      const { data, error } = await supabase
+        .from('questions')
+        .insert(payload)
+        .select();
+
+      if (error) throw error;
+
+      setBuilderQuestions(prev => [...prev, ...data]);
+      setDraftQuestions([]);
+      setBuildMode('manual');
+      triggerToast(`Successfully imported ${data.length} questions into assessment!`);
+    } catch (err) {
+      triggerToast('Bulk save failed: ' + (err.message || err), 'error');
+    } finally {
+      setIsAddingQuestion(false);
+    }
+  };
+
+  const handlePdfUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      return triggerToast('Only PDF files are supported', 'error');
+    }
+
+    setPdfLoading(true);
+    try {
+      const pdfjsLib = await loadPdfJs();
+      
+      const fileReader = new FileReader();
+      const arrayBuffer = await new Promise((resolve, reject) => {
+        fileReader.onload = () => resolve(fileReader.result);
+        fileReader.onerror = () => reject(fileReader.error);
+        fileReader.readAsArrayBuffer(file);
+      });
+
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const pageText = await extractTextWithLayout(page);
+        fullText += pageText + '\n';
+      }
+
+      if (!fullText.trim()) {
+        throw new Error('No readable text content could be extracted from this PDF.');
+      }
+
+      const parsed = parseExtractedText(fullText);
+      if (parsed.length === 0) {
+        throw new Error('Could not identify any multiple-choice questions matching standard formats.');
+      }
+
+      setDraftQuestions(parsed);
+      triggerToast(`Extracted ${parsed.length} draft questions!`);
+    } catch (err) {
+      triggerToast(err.message || 'Failed to parse PDF', 'error');
+      console.error('[PDF Parse Failure]:', err);
+    } finally {
+      setPdfLoading(false);
+      e.target.value = '';
     }
   };
 
@@ -902,7 +1724,22 @@ export default function CourseManageClient({
   // Reply to Student Doubt
   const handlePostReply = async (e) => {
     e.preventDefault();
-    if (!replyContent.trim() || !activeDoubt || isPostingReply || !adminUser) return;
+    if (!replyContent.trim() || !activeDoubt || isPostingReply) return;
+
+    let currentUser = adminUser;
+    if (!currentUser) {
+      const { data: { user } } = await supabase.auth.getUser();
+      currentUser = user;
+      if (user) {
+        setAdminUser(user);
+      }
+    }
+
+    if (!currentUser) {
+      triggerToast('Authentication required: Admin user session not found.', 'error');
+      return;
+    }
+
     setIsPostingReply(true);
 
     try {
@@ -910,7 +1747,7 @@ export default function CourseManageClient({
         .from('lesson_doubts')
         .insert([{
           lesson_id: activeDoubt.lesson_id,
-          user_id: adminUser.id,
+          user_id: currentUser.id,
           content: replyContent.trim(),
           parent_id: activeDoubt.id,
           resolved: false
@@ -923,8 +1760,8 @@ export default function CourseManageClient({
       const mockReply = {
         ...data,
         profiles: {
-          full_name: adminUser.user_metadata?.full_name || adminUser.email.split('@')[0] || 'Instructor',
-          email: adminUser.email
+          full_name: currentUser.user_metadata?.full_name || currentUser.email.split('@')[0] || 'Instructor',
+          email: currentUser.email
         }
       };
 
@@ -1092,6 +1929,27 @@ export default function CourseManageClient({
                 </div>
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block">Start Date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={e => setStartDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase block">End Date</label>
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={e => setEndDate(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-500 uppercase block">Syllabus Description</label>
                 <textarea
@@ -1147,13 +2005,36 @@ export default function CourseManageClient({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-500 block">Video URL</label>
+                  <label className="text-[9px] font-bold text-slate-500 block">Video Source</label>
+                  <select
+                    value={lesVideoSource}
+                    onChange={e => setLesVideoSource(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                  >
+                    <option value="youtube">YouTube</option>
+                    <option value="vimeo">Vimeo</option>
+                    <option value="hls">HLS Stream</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-500 block">Video ID</label>
                   <input
                     type="text"
-                    value={lesUrl}
-                    onChange={e => setLesUrl(e.target.value)}
+                    value={lesVideoId}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val.includes('/') || val.includes('?')) {
+                        const extracted = extractYouTubeId(val);
+                        if (extracted) {
+                          setLesVideoId(extracted.substring(0, 11));
+                          return;
+                        }
+                      }
+                      setLesVideoId(val.substring(0, 11));
+                    }}
                     className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
-                    placeholder="https://...m3u8 or YouTube"
+                    placeholder="e.g. dQw4w9WgXcQ (11 chars)"
                   />
                 </div>
 
@@ -1373,6 +2254,18 @@ export default function CourseManageClient({
                 </div>
 
                 <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-500 block">Assessment Type</label>
+                  <select
+                    value={examType}
+                    onChange={e => setExamType(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                  >
+                    <option value="jee_mock">JEE Mock Exam</option>
+                    <option value="quiz">Chapter Quiz</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
                   <label className="text-[9px] font-bold text-slate-500 block">Link to Chapter (Optional)</label>
                   <select
                     value={selectedLessonForExam}
@@ -1384,6 +2277,26 @@ export default function CourseManageClient({
                       <option key={l.id} value={l.id}>{l.subject.substring(0,4).toUpperCase()} • {l.title}</option>
                     ))}
                   </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-500 block">Start Window (Optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={examStartWindow}
+                    onChange={e => setExamStartWindow(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-500 block">End Window (Optional)</label>
+                  <input
+                    type="datetime-local"
+                    value={examEndWindow}
+                    onChange={e => setExamEndWindow(e.target.value)}
+                    className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                  />
                 </div>
 
                 <button
@@ -1410,13 +2323,27 @@ export default function CourseManageClient({
                           <div className="min-w-0">
                             <h4 className="font-bold text-xs text-slate-800 truncate max-w-[280px]">{exam.title}</h4>
                             <p className="text-[10px] text-slate-500 mt-1 font-semibold">Duration: {exam.duration_minutes} Mins • Linked: {associatedLes ? associatedLes.title : 'Course-Wide'}</p>
+                            {(exam.start_window || exam.end_window) && (
+                              <div className="text-[9px] text-slate-400 font-bold mt-1 space-y-0.5">
+                                {exam.start_window && <div>Start: {new Date(exam.start_window).toLocaleString()}</div>}
+                                {exam.end_window && <div>End: {new Date(exam.end_window).toLocaleString()}</div>}
+                              </div>
+                            )}
                           </div>
-                          <button
-                            onClick={() => handleDeleteExam(exam.id)}
-                            className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-lg transition cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => setActiveBuilderExam(exam)}
+                              className="px-3 py-1.5 bg-white border border-slate-200 text-indigo-650 hover:text-white hover:bg-indigo-600 rounded-lg text-[10px] font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                            >
+                              Add Questions
+                            </button>
+                            <button
+                              onClick={() => handleDeleteExam(exam.id)}
+                              className="p-2 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-lg transition cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -1816,6 +2743,14 @@ export default function CourseManageClient({
                             </div>
 
                             <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => replyInputRef.current?.focus()}
+                                className="px-2.5 py-1 bg-indigo-50 border border-indigo-200 hover:border-indigo-300 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition cursor-pointer select-none hover:scale-[1.02] active:scale-[0.98] tactile-press"
+                                title="Write a Reply"
+                              >
+                                <MessageSquare className="w-3 h-3" /> Reply
+                              </button>
+
                               {activeDoubt.resolved ? (
                                 <span className="px-2 py-1 bg-emerald-50 border border-emerald-200 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
                                   <Check className="w-3 h-3" /> Resolved
@@ -1915,8 +2850,9 @@ export default function CourseManageClient({
                           ))}
                         </div>
 
-                        <div className="flex gap-2 items-end">
+                        <form onSubmit={handlePostReply} className="flex gap-2 items-end">
                           <input
+                            ref={replyInputRef}
                             type="text"
                             value={replyContent}
                             onChange={e => setReplyContent(e.target.value)}
@@ -1925,14 +2861,13 @@ export default function CourseManageClient({
                             className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-xs focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 placeholder-slate-400 text-slate-850 font-bold"
                           />
                           <button
-                            type="button"
-                            onClick={handlePostReply}
+                            type="submit"
                             disabled={!replyContent.trim() || isPostingReply}
                             className="p-3 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl transition disabled:bg-slate-100 disabled:text-slate-400 cursor-pointer shadow-sm shrink-0 border border-slate-950 hover:scale-[1.02] active:scale-[0.98] tactile-press flex items-center justify-center"
                           >
                             <Send className="w-4 h-4" />
                           </button>
-                        </div>
+                        </form>
                       </div>
                     </div>
                   )}
@@ -1946,6 +2881,394 @@ export default function CourseManageClient({
         )}
 
       </div>
+
+      {/* Assessment Question Builder Modal */}
+      <AnimatePresence>
+        {activeBuilderExam && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 md:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setActiveBuilderExam(null)}
+              className="absolute inset-0 cursor-pointer"
+            />
+
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="bg-white border border-slate-200 rounded-3xl max-w-5xl w-full max-h-[90dvh] flex flex-col shadow-2xl relative text-slate-800 overflow-hidden z-10"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-slate-200 p-5 shrink-0 bg-slate-50">
+                <div className="flex items-center gap-2">
+                  <ClipboardList className="w-5 h-5 text-indigo-655" />
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800 leading-tight">
+                      Question Builder: {activeBuilderExam.title}
+                    </h3>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      Configure LaTeX equations, multiple-choice options, correct options, and marks payload.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveBuilderExam(null)}
+                  className="p-1.5 hover:bg-slate-200 rounded-xl text-slate-500 hover:text-slate-800 transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="flex-1 overflow-y-auto p-6 md:p-8 grid grid-cols-1 lg:grid-cols-2 gap-8 custom-scrollbar">
+                
+                {/* Left panel: Add Question form / PDF Importer */}
+                <div className="space-y-4 flex flex-col min-h-0">
+                  {/* Mode Selector Tab */}
+                  <div className="flex bg-slate-105 bg-slate-100 p-1 rounded-2xl border border-slate-200 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setBuildMode('manual')}
+                      className={`flex-grow py-2 text-xs font-bold rounded-xl transition cursor-pointer select-none ${
+                        buildMode === 'manual'
+                          ? 'bg-white text-indigo-700 shadow-xs border border-slate-100 font-extrabold'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      Manual Editor
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBuildMode('pdf')}
+                      className={`flex-grow py-2 text-xs font-bold rounded-xl transition cursor-pointer select-none flex items-center justify-center gap-1.5 ${
+                        buildMode === 'pdf'
+                          ? 'bg-white text-indigo-700 shadow-xs border border-slate-100 font-extrabold'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      <FileUp className="w-3.5 h-3.5 text-indigo-650" />
+                      AI PDF Importer
+                    </button>
+                  </div>
+
+                  {buildMode === 'manual' ? (
+                    <form onSubmit={handleAddQuestion} className="space-y-4 overflow-y-auto pr-1 custom-scrollbar">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Question Content (Markdown/LaTeX)</label>
+                        <textarea
+                          value={builderContent}
+                          onChange={e => setBuilderContent(e.target.value)}
+                          placeholder="e.g. Find the derivative of $f(x) = \sin(x^2)$..."
+                          className="w-full h-24 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 transition resize-none placeholder-slate-400 font-bold"
+                        />
+                      </div>
+                      
+                      {/* LaTeX Compilation Preview */}
+                      {builderContent.trim() && (
+                        <div className="space-y-1 bg-slate-50 border border-slate-200 p-3 rounded-xl">
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block leading-none mb-1">Live Equation Preview</span>
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: compileMarkdownToHtml(builderContent) }}
+                            className="text-xs text-slate-700 leading-relaxed font-medium break-words max-h-24 overflow-y-auto custom-scrollbar"
+                          />
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { label: 'Option A', val: optA, set: setOptA },
+                          { label: 'Option B', val: optB, set: setOptB },
+                          { label: 'Option C', val: optC, set: setOptC },
+                          { label: 'Option D', val: optD, set: setOptD }
+                        ].map((opt, idx) => (
+                          <div key={idx} className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-500 uppercase block">{opt.label}</label>
+                            <input
+                              type="text"
+                              value={opt.val}
+                              onChange={e => opt.set(e.target.value)}
+                              placeholder={`Choice ${String.fromCharCode(65 + idx)}`}
+                              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-500 uppercase block">Correct Key</label>
+                          <select
+                            value={correctIdx}
+                            onChange={e => setCorrectIdx(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                          >
+                            <option value="0">Option A</option>
+                            <option value="1">Option B</option>
+                            <option value="2">Option C</option>
+                            <option value="3">Option D</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-500 uppercase block">Positive Marks</label>
+                          <input
+                            type="number"
+                            value={posMarks}
+                            onChange={e => setPosMarks(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[9px] font-bold text-slate-500 uppercase block">Negative Marks</label>
+                          <input
+                            type="number"
+                            value={negMarks}
+                            onChange={e => setNegMarks(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isAddingQuestion}
+                        className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 text-white rounded-2xl text-xs font-bold shadow-sm cursor-pointer transition select-none flex items-center justify-center gap-2 border border-slate-800 hover:scale-[1.01] active:scale-[0.99] tactile-press"
+                      >
+                        {isAddingQuestion ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Plus className="w-3.5 h-3.5 text-slate-300" />
+                        )}
+                        <span>Append Question to Exam</span>
+                      </button>
+                    </form>
+                  ) : (
+                    <div className="space-y-4 flex-1 flex flex-col min-h-0 justify-between">
+                      {draftQuestions.length === 0 ? (
+                        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-3xl p-6 bg-slate-50 text-center relative hover:bg-slate-100/55 hover:bg-slate-100/50 transition min-h-[280px]">
+                          {pdfLoading ? (
+                            <div className="space-y-3">
+                              <RefreshCw className="w-8 h-8 text-indigo-650 animate-spin mx-auto" />
+                              <p className="text-xs font-bold text-slate-600 font-sans">Extracting and parsing assessment questions...</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <FileUp className="w-10 h-10 text-indigo-500 mx-auto animate-bounce" />
+                              <div>
+                                <p className="text-xs font-black text-slate-700">Upload Assessment PDF</p>
+                                <p className="text-[10px] text-slate-450 mt-1 max-w-[220px] mx-auto leading-relaxed font-bold">
+                                  Select a PDF file with JEE multiple-choice questions. It will extract questions, choices, and answer keys.
+                                </p>
+                              </div>
+                              <label className="inline-block px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition cursor-pointer select-none shadow-xs mt-2 border border-slate-950">
+                                <span>Choose PDF File</span>
+                                <input
+                                  type="file"
+                                  accept=".pdf"
+                                  onChange={handlePdfUpload}
+                                  className="hidden"
+                                />
+                              </label>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex-1 flex flex-col min-h-0 justify-between">
+                          <div className="flex-1 overflow-y-auto space-y-4 pr-1 custom-scrollbar max-h-[380px]">
+                            {draftQuestions.map((q, idx) => (
+                              <div key={q.id} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3 relative group shadow-sm">
+                                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Question {idx + 1}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteDraftQuestion(q.id)}
+                                    className="p-1.5 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded-lg transition cursor-pointer shrink-0"
+                                    title="Discard this question"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+
+                                <div className="space-y-1">
+                                  <label className="text-[9px] font-bold text-slate-500 uppercase">Question Content</label>
+                                  <textarea
+                                    value={q.content}
+                                    onChange={e => handleUpdateDraftQuestion(q.id, { content: e.target.value })}
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 outline-none focus:border-indigo-500 transition resize-none font-bold"
+                                    rows={2}
+                                  />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                  {q.options.map((opt, optIdx) => (
+                                    <div key={optIdx} className="space-y-0.5">
+                                      <label className="text-[8px] font-bold text-slate-400 uppercase">Option {String.fromCharCode(65 + optIdx)}</label>
+                                      <input
+                                        type="text"
+                                        value={opt}
+                                        onChange={e => {
+                                          const newOpts = [...q.options];
+                                          newOpts[optIdx] = e.target.value;
+                                          handleUpdateDraftQuestion(q.id, { options: newOpts });
+                                        }}
+                                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 outline-none focus:border-indigo-500 transition font-bold"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <div className="grid grid-cols-3 gap-2 pt-1 border-t border-slate-100">
+                                  <div className="space-y-0.5">
+                                    <label className="text-[8px] font-bold text-slate-450 uppercase">Correct Key</label>
+                                    <select
+                                      value={q.correct_option_index}
+                                      onChange={e => handleUpdateDraftQuestion(q.id, { correct_option_index: parseInt(e.target.value) })}
+                                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                                    >
+                                      <option value={0}>Option A</option>
+                                      <option value={1}>Option B</option>
+                                      <option value={2}>Option C</option>
+                                      <option value={3}>Option D</option>
+                                    </select>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[8px] font-bold text-slate-450 uppercase">Pos Marks</label>
+                                    <input
+                                      type="number"
+                                      value={q.marks_positive}
+                                      onChange={e => handleUpdateDraftQuestion(q.id, { marks_positive: parseInt(e.target.value) || 4 })}
+                                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 outline-none focus:border-indigo-500 transition font-bold"
+                                    />
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <label className="text-[8px] font-bold text-slate-450 uppercase">Neg Marks</label>
+                                    <input
+                                      type="number"
+                                      value={q.marks_negative}
+                                      onChange={e => handleUpdateDraftQuestion(q.id, { marks_negative: parseInt(e.target.value) || 0 })}
+                                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-800 outline-none focus:border-indigo-500 transition font-bold"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-3 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setDraftQuestions([])}
+                              className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-wider transition cursor-pointer select-none"
+                            >
+                              Discard All
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleBulkSaveQuestions}
+                              disabled={isAddingQuestion}
+                              className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-750 disabled:bg-slate-100 disabled:text-slate-400 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 border border-indigo-650 font-bold"
+                            >
+                              {isAddingQuestion ? (
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Plus className="w-3.5 h-3.5" />
+                              )}
+                              <span>Bulk Save {draftQuestions.length} Questions</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right panel: Questions list */}
+                <div className="flex flex-col h-full overflow-hidden">
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-2 mb-3 shrink-0">
+                    Existing Questions ({builderQuestions.length})
+                  </h4>
+
+                  {isFetchingQuestions ? (
+                    <div className="flex-1 flex items-center justify-center py-20">
+                      <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
+                    </div>
+                  ) : builderQuestions.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-slate-50 border border-slate-250 border-dashed rounded-2xl min-h-[300px]">
+                      <ClipboardList className="w-12 h-12 text-slate-200 mb-3 mx-auto animate-pulse" />
+                      <h5 className="font-bold text-xs text-slate-700">Empty Question Bank</h5>
+                      <p className="text-[10px] text-slate-500 mt-1 max-w-xs leading-relaxed">
+                        Add mock exam questions using the configuration tool on the left column.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex-1 overflow-y-auto space-y-4 pr-1 custom-scrollbar max-h-[460px]">
+                      {builderQuestions.map((q, idx) => (
+                        <div key={q.id} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3 relative group hover:border-slate-300 transition">
+                          <button
+                            onClick={() => handleDeleteQuestion(q.id)}
+                            className="absolute top-3 right-3 text-slate-350 hover:text-rose-600 transition opacity-0 group-hover:opacity-100 p-1 bg-white rounded border border-slate-200 hover:border-rose-200 shadow-xs cursor-pointer"
+                            title="Remove Question"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-indigo-50 text-indigo-755 rounded-lg text-[9px] font-black uppercase border border-indigo-100">
+                              Question {idx + 1}
+                            </span>
+                            <span className="text-[9px] text-slate-400 font-bold">
+                              Marks: +{q.marks_positive} / -{q.marks_negative}
+                            </span>
+                          </div>
+
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: compileMarkdownToHtml(q.content) }}
+                            className="text-xs text-slate-800 leading-relaxed font-bold break-words pr-8"
+                          />
+
+                          <div className="grid grid-cols-2 gap-2.5 pt-1.5 border-t border-slate-200/50">
+                            {q.options && q.options.map((opt, oIdx) => {
+                              const isCorrect = oIdx === q.correct_option_index;
+                              return (
+                                <div 
+                                  key={oIdx} 
+                                  className={`p-2 rounded-xl text-[10px] font-bold border truncate ${
+                                    isCorrect 
+                                      ? 'bg-emerald-50 border-emerald-300 text-emerald-700 font-extrabold' 
+                                      : 'bg-white border-slate-150 text-slate-600'
+                                  }`}
+                                >
+                                  {String.fromCharCode(65 + oIdx)}. {opt}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
+
+              {/* Footer */}
+              <div className="border-t border-slate-200 p-5 shrink-0 bg-slate-50 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setActiveBuilderExam(null)}
+                  className="px-5 py-2.5 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition select-none cursor-pointer"
+                >
+                  Close Builder
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Detailed Scorecard Overlay Modal */}
       <AnimatePresence>

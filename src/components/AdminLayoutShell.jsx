@@ -1,12 +1,120 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { 
-  LayoutDashboard, BookOpen, LogOut, Loader2, User, ChevronRight, Menu, X
+  LayoutDashboard, GraduationCap, Loader2, ChevronRight, Menu, X, Award, LogOut, BookOpen
 } from 'lucide-react';
+
+function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
+  const searchParams = useSearchParams();
+  const activeItemId = searchParams?.get('id') || searchParams?.get('courseId') || searchParams?.get('batchId');
+
+  const navItems = [
+    { label: 'Overview Console', href: '/dashboard', icon: LayoutDashboard },
+    { label: 'Course Studio', href: '/courses', icon: BookOpen },
+    { label: 'Cohort Gradebook', href: '/gradebook', icon: GraduationCap }
+  ];
+
+  return (
+    <nav className="flex-1 px-4 py-6 space-y-4 overflow-y-auto custom-scrollbar">
+      <div className="space-y-1.5">
+        {navItems.map(item => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center justify-between p-3.5 rounded-2xl text-xs font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] tactile-press ${
+                isActive 
+                  ? 'bg-indigo-50 text-indigo-700 font-bold border-r-4 border-indigo-600 shadow-xs' 
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <item.icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <span>{item.label}</span>
+              </div>
+              <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Dynamic Courses Sub-Section */}
+      <div className="pt-2 border-t border-slate-100">
+        <span className="px-3.5 text-[9px] font-black text-slate-450 uppercase tracking-widest block mb-2.5">
+          Course blueprints
+        </span>
+        <div className="space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar px-1">
+          {loadingSidebarData ? (
+            <div className="px-3.5 py-2 text-[10px] text-slate-400 font-bold animate-pulse flex items-center gap-2">
+              <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
+              <span>Loading Courses...</span>
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="px-3.5 py-2 text-[10px] text-slate-400 italic">No courses registered</div>
+          ) : (
+            courses.map(c => {
+              const isActive = pathname === '/courses' && activeItemId === c.id;
+              return (
+                <Link
+                  key={c.id}
+                  href={`/courses?id=${c.id}`}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+                    isActive
+                      ? 'bg-indigo-50/80 text-indigo-700 font-bold shadow-2xs border-l-2 border-indigo-600'
+                      : 'text-slate-500 hover:text-slate-850 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="truncate max-w-[170px]">{c.title}</span>
+                  <ChevronRight className={`w-3 h-3 text-indigo-600 transition ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                </Link>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Dynamic Batches Sub-Section */}
+      <div className="pt-2 border-t border-slate-100">
+        <span className="px-3.5 text-[9px] font-black text-slate-455 uppercase tracking-widest block mb-2.5">
+          Batch Telemetry
+        </span>
+        <div className="space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar px-1">
+          {loadingSidebarData ? (
+            <div className="px-3.5 py-2 text-[10px] text-slate-400 font-bold animate-pulse flex items-center gap-2">
+              <Loader2 className="w-3 h-3 animate-spin text-emerald-600" />
+              <span>Loading Batches...</span>
+            </div>
+          ) : batches.length === 0 ? (
+            <div className="px-3.5 py-2 text-[10px] text-slate-400 italic">No batches registered</div>
+          ) : (
+            batches.map(b => {
+              const isActive = pathname === '/batches' && activeItemId === b.id;
+              return (
+                <Link
+                  key={b.id}
+                  href={`/batches?id=${b.id}`}
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+                    isActive
+                      ? 'bg-emerald-50 text-emerald-700 font-bold shadow-2xs border-l-2 border-emerald-600'
+                      : 'text-slate-500 hover:text-slate-850 hover:bg-slate-50'
+                  }`}
+                >
+                  <span className="truncate max-w-[170px]">{b.title}</span>
+                  <ChevronRight className={`w-3 h-3 text-emerald-600 transition ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+                </Link>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </nav>
+  );
+}
 
 export default function AdminLayoutShell({ children, title, subtitle }) {
   const pathname = usePathname();
@@ -17,6 +125,10 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [adminUser, setAdminUser] = useState(null);
 
+  const [courses, setCourses] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [loadingSidebarData, setLoadingSidebarData] = useState(true);
+
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -24,6 +136,18 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
         router.replace('/login');
       } else {
         setAdminUser(user);
+        try {
+          const [coursesRes, batchesRes] = await Promise.all([
+            supabase.from('courses').select('id, title').order('title', { ascending: true }),
+            supabase.from('batches').select('id, title').order('title', { ascending: true })
+          ]);
+          if (coursesRes.data) setCourses(coursesRes.data);
+          if (batchesRes.data) setBatches(batchesRes.data);
+        } catch (err) {
+          console.error('[Sidebar Data Load Failed]:', err);
+        } finally {
+          setLoadingSidebarData(false);
+        }
       }
     };
     fetchUser();
@@ -41,11 +165,6 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
       setLoggingOut(false);
     }
   };
-
-  const navItems = [
-    { label: 'Overview Console', href: '/dashboard', icon: LayoutDashboard },
-    { label: 'Syllabus Manager', href: '/courses', icon: BookOpen }
-  ];
 
   const userInitials = adminUser?.email?.substring(0, 2).toUpperCase() || 'AD';
 
@@ -78,29 +197,24 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
           </button>
         </div>
 
-        {/* Navigation list */}
-        <nav className="flex-1 px-4 py-6 space-y-2">
-          {navItems.map(item => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center justify-between p-3.5 rounded-2xl text-xs font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] tactile-press ${
-                  isActive 
-                    ? 'bg-indigo-50 text-indigo-700 font-bold border-r-4 border-indigo-600 shadow-xs' 
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <item.icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
-                  <span>{item.label}</span>
-                </div>
-                <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition ${isActive ? 'opacity-100' : 'opacity-0'}`} />
-              </Link>
-            );
-          })}
-        </nav>
+        {/* Suspense Wrapped Navigation List */}
+        <Suspense fallback={
+          <div className="flex-1 px-4 py-6 space-y-4">
+            <div className="animate-pulse space-y-3">
+              <div className="h-10 bg-slate-100 rounded-xl" />
+              <div className="h-10 bg-slate-100 rounded-xl" />
+              <div className="h-24 bg-slate-50 rounded-xl" />
+              <div className="h-24 bg-slate-50 rounded-xl" />
+            </div>
+          </div>
+        }>
+          <SidebarNav 
+            pathname={pathname}
+            courses={courses}
+            batches={batches}
+            loadingSidebarData={loadingSidebarData}
+          />
+        </Suspense>
 
         {/* User Session profile and Sign Out */}
         <div className="p-4 border-t border-slate-200 space-y-3 shrink-0 bg-slate-50/50">

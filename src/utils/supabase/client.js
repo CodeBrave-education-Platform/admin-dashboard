@@ -30,8 +30,19 @@ export function createClient() {
     }
   }
 
+  const cookieOptions = {}
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname
+    if (hostname.endsWith('institute.com') || hostname.includes('institute.com')) {
+      cookieOptions.domain = '.institute.com'
+    }
+  }
+
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookieOptions
+    }
   )
 }
