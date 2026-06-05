@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3001",
     "build": "next build",
+    "dev": "next dev -p 3001",
     "start": "next start",
     "lint": "next lint",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload"
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.3",
@@ -23,10 +24,12 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@opennextjs/cloudflare": "^1.19.11",
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
-    "vite": "^6.4.3"
+    "vite": "^6.4.3",
+    "wrangler": "^4.98.0"
   }
 }
