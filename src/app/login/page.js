@@ -1,20 +1,29 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { motion } from 'framer-motion'
 import { Loader2, Mail, Key, ShieldAlert, CheckCircle2 } from 'lucide-react'
+import Script from 'next/script'
+
+const GOOGLE_CLIENT_ID = '259431848841-k354jedd55sllpojicha3uq6on8524k9.apps.googleusercontent.com'
 
 export default function AdminLoginPage() {
   const router = useRouter()
   const supabase = createClient()
+  const googleBtnContainerRef = useRef(null)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [gsiReady, setGsiReady] = useState(false)
+
+  // Store latest callback in ref to avoid stale closures
+  const credentialCallbackRef = useRef(null)
 
   // Sync login page errors from callback redirects
   useEffect(() => {
@@ -25,31 +34,92 @@ export default function AdminLoginPage() {
     }
   }, [])
 
-  const handleGoogleLogin = async () => {
+  // Google credential handler — uses signInWithIdToken (NO redirects!)
+  const handleGoogleCredential = useCallback(async (response) => {
+    setGoogleLoading(true)
     setErrorMsg('')
     setSuccessMsg('')
-    try {
-      const origin = window.location.origin
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${origin}/auth/callback`,
-          skipBrowserRedirect: true,
-          queryParams: {
-            prompt: 'select_account'
-          }
-        }
-      })
-      if (error) throw error
-      if (data?.url) {
-        // Manually redirect to ensure Supabase uses our redirectTo
-        window.location.href = data.url
-      }
-    } catch (err) {
-      setErrorMsg(err.message || 'Google authentication failed.')
-    }
-  }
 
+    try {
+      // Exchange Google ID token directly with Supabase — no redirect needed
+      const { data, error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: 'google',
+        token: response.credential,
+      })
+
+      if (signInError) throw signInError
+
+      const user = data?.user
+      if (!user) throw new Error('Authentication returned no user.')
+
+      // Fetch user profile role to verify Admin status
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError || !profile) {
+        await supabase.auth.signOut()
+        throw new Error('Associated profile not found in ASENTRA registry.')
+      }
+
+      const isAuthorized = ['admin', 'teacher', 'instructor'].includes(profile.role)
+      if (!isAuthorized) {
+        await supabase.auth.signOut()
+        throw new Error('Forbidden: Account lacks administrative privileges.')
+      }
+
+      setSuccessMsg('Successfully authenticated! Synchronizing console...')
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 1000)
+    } catch (err) {
+      console.error('Google ID Token auth error:', err)
+      setErrorMsg(err.message || 'Google authentication failed.')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }, [supabase, router])
+
+  // Keep ref in sync with latest callback
+  useEffect(() => {
+    credentialCallbackRef.current = handleGoogleCredential
+  }, [handleGoogleCredential])
+
+  // Initialize Google Identity Services once the script loads
+  const initializeGsi = useCallback(() => {
+    if (!window.google?.accounts?.id) return
+
+    window.google.accounts.id.initialize({
+      client_id: GOOGLE_CLIENT_ID,
+      callback: (response) => {
+        // Use ref to always call the latest version of the handler
+        if (credentialCallbackRef.current) {
+          credentialCallbackRef.current(response)
+        }
+      },
+      auto_select: false,
+      cancel_on_tap_outside: true,
+    })
+
+    // Render the invisible Google button inside the container
+    if (googleBtnContainerRef.current) {
+      window.google.accounts.id.renderButton(
+        googleBtnContainerRef.current,
+        {
+          type: 'standard',
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'pill',
+          width: googleBtnContainerRef.current.offsetWidth || 380,
+        }
+      )
+    }
+
+    setGsiReady(true)
+  }, [])
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault()
@@ -98,6 +168,13 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none font-sans">
+      {/* Google Identity Services Script */}
+      <Script
+        src="https://accounts.google.com/gsi/client"
+        strategy="afterInteractive"
+        onLoad={initializeGsi}
+      />
+
       {/* Dynamic ambient gradients */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-[110px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/5 rounded-full blur-[100px] pointer-events-none" />
@@ -178,31 +255,31 @@ export default function AdminLoginPage() {
           <div className="flex-grow border-t border-slate-200"></div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          className="w-full py-3.5 bg-white hover:bg-slate-50 border border-slate-200 hover:border-slate-350 text-slate-700 rounded-2.5xl text-xs font-bold shadow-xs cursor-pointer transition select-none flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-[0.99] tactile-press"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24">
-            <path
-              fill="#EA4335"
-              d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.55 14.97 1 12 1 7.24 1 3.2 3.73 1.24 7.72l3.86 3C6.03 7.8 8.78 5.04 12 5.04z"
-            />
-            <path
-              fill="#4285F4"
-              d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.29 1.48-1.14 2.73-2.42 3.58l3.76 2.91c2.2-2.03 3.49-5.02 3.49-8.64z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.1 14.28a7.11 7.11 0 0 1 0-4.56l-3.86-3a11.96 11.96 0 0 0 0 10.56l3.86-3z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.76-2.91c-1.1.74-2.5 1.18-4.2 1.18-3.22 0-5.97-2.76-6.9-6.68l-3.86 3A11.95 11.95 0 0 0 12 23z"
-            />
-          </svg>
-          <span>Sign In with Google</span>
-        </button>
+        {/* Google Sign-In Button — rendered by Google Identity Services */}
+        {/* This uses ID token flow: Google popup → ID token → Supabase (NO redirects) */}
+        <div className="relative w-full">
+          {/* Google's rendered button (visible, handles click + popup) */}
+          <div
+            ref={googleBtnContainerRef}
+            className="w-full flex justify-center items-center"
+            style={{ minHeight: '44px' }}
+          />
+
+          {/* Loading overlay */}
+          {googleLoading && (
+            <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center z-20">
+              <Loader2 className="w-5 h-5 animate-spin text-slate-600" />
+            </div>
+          )}
+
+          {/* Fallback if GSI hasn't loaded yet */}
+          {!gsiReady && (
+            <div className="w-full py-3.5 bg-white border border-slate-200 text-slate-400 rounded-2xl text-xs font-bold flex items-center justify-center gap-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span>Loading Google Sign-In...</span>
+            </div>
+          )}
+        </div>
       </motion.div>
     </div>
   )
