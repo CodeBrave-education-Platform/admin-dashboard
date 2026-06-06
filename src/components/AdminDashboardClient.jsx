@@ -338,7 +338,7 @@ export default function AdminDashboardClient() {
                           <div className="text-right shrink-0">
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block leading-none">Joined</span>
                             <span className="text-[10px] text-slate-600 font-bold block mt-1.5 font-mono leading-none">
-                              {new Date(student.created_at).toLocaleDateString()}
+                              {new Date(student.created_at).toLocaleDateString('en-US')}
                             </span>
                           </div>
                         </div>

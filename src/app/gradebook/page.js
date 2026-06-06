@@ -345,7 +345,7 @@ export default function GradebookPage() {
                           <span className="font-bold text-slate-700">{roster.assessments?.title || 'Chapter Assessment'}</span>
                         </td>
                         <td className="py-3.5 px-4 text-slate-500 font-bold">
-                          {new Date(roster.submitted_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(roster.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </td>
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-600">
                           {roster.timeStr}

@@ -955,7 +955,7 @@ function BatchesContent() {
                   <span className="text-[10px] font-bold text-slate-450 uppercase tracking-widest">Cohort Launch</span>
                   <span className="text-sm font-extrabold text-slate-200 mt-0.5 flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-indigo-400" />
-                    {new Date(batchDetails.start_date).toLocaleDateString()}
+                    {new Date(batchDetails.start_date).toLocaleDateString('en-US')}
                   </span>
                 </div>
 
@@ -1171,7 +1171,7 @@ function BatchesContent() {
                       <div className="space-y-3.5 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
                         {batchLiveSessions.map(session => {
                           const dateObj = new Date(session.scheduled_start);
-                          const formattedDate = dateObj.toLocaleDateString();
+                          const formattedDate = dateObj.toLocaleDateString('en-US');
                           const formattedTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                           return (
                             <div key={session.id} className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex items-center justify-between gap-4">
