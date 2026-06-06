@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 // Hardcoded whitelist of allowed domains/hosts for redirection post-auth
 export const ALLOWED_REDIRECT_DOMAINS = [
+  'adminasentra.netlify.app',
   'animated-cocada-cb9b93.netlify.app',
   'learn.institute.com',
   'admin.institute.com',
@@ -36,6 +37,7 @@ export function getSafeRedirectUrl(targetUrlString, defaultFallback = '/dashboar
 
 // Whitelist of allowed origins for cross-origin resource sharing (CORS)
 export const ALLOWED_CORS_ORIGINS = [
+  'https://adminasentra.netlify.app',
   'https://animated-cocada-cb9b93.netlify.app',
   'https://learn.institute.com',
   'https://admin.institute.com',
