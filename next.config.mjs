@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Enforce standalone build compilation
-  output: 'standalone',
   
   // Disable source maps in production to limit output size
   productionBrowserSourceMaps: false,
@@ -43,16 +41,5 @@ const nextConfig = {
     return config;
   }
 };
-
-// INITIALIZE EDGE PLATFORM BRIDGE: Wire up local environment mock hooks for development
-if (process.env.NODE_ENV !== "production") {
-  try {
-    const { initOpenNextCloudflareForDev } = await import("@opennextjs/cloudflare");
-    initOpenNextCloudflareForDev();
-  } catch (e) {
-    // Graceful fallback if @opennextjs/cloudflare is not yet installed in local workspace
-    console.warn("OpenNext Cloudflare developer bridge not initialized (package not found):", e.message);
-  }
-}
 
 export default nextConfig;

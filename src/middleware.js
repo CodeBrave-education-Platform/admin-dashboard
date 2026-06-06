@@ -4,9 +4,7 @@ export async function middleware(request) {
   return await updateSession(request)
 }
 
-// THE CRITICAL OPENNEXT COMPILER SHIELD
 export const config = {
-  runtime: 'experimental-edge', // Bypasses the Node.js middleware restriction error cleanly
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
