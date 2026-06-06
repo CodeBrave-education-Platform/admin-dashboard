@@ -29,18 +29,22 @@ export default function AdminLoginPage() {
     setErrorMsg('')
     setSuccessMsg('')
     try {
-      // Use explicit origin to ensure redirect stays on admin dashboard
       const origin = window.location.origin
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${origin}/auth/callback`,
+          skipBrowserRedirect: true,
           queryParams: {
             prompt: 'select_account'
           }
         }
       })
       if (error) throw error
+      if (data?.url) {
+        // Manually redirect to ensure Supabase uses our redirectTo
+        window.location.href = data.url
+      }
     } catch (err) {
       setErrorMsg(err.message || 'Google authentication failed.')
     }
