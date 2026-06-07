@@ -25,6 +25,7 @@ export default function AdminDashboardClient() {
   const [currentUserRole, setCurrentUserRole] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [roleFilter, setRoleFilter] = useState('all');
+  const [studentPortalUrl, setStudentPortalUrl] = useState('https://animated-cocada-cb9b93.netlify.app/dashboard?tab=learning');
 
   const fetchDashboardData = async () => {
     setRefreshing(true);
@@ -367,7 +368,7 @@ export default function AdminDashboardClient() {
                   </button>
 
                   <a
-                    href="http://localhost:3000"
+                    href={studentPortalUrl}
                     target="_blank"
                     className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs text-slate-800 font-bold transition select-none cursor-pointer hover:bg-slate-100/50 group"
                   >

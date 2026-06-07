@@ -58,19 +58,65 @@ export async function updateSession(request) {
   } = await supabase.auth.getUser()
 
   // Route Protection Rules
-  const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard')
-  const isLoginRoute = request.nextUrl.pathname.startsWith('/login')
+  const pathname = request.nextUrl.pathname
+  const isPublicRoute = 
+    pathname.startsWith('/login') || 
+    pathname.startsWith('/forgot-password') || 
+    pathname.startsWith('/reset-password') || 
+    pathname.startsWith('/auth')
 
-  if (isDashboardRoute && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+  if (!isPublicRoute) {
+    // If not logged in, redirect to login
+    if (!user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
+    }
+    
+    // Fetch user profile role to verify Instructor/Admin/Teacher privileges
+    let userRole = null
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+      userRole = profile?.role
+    } catch (err) {
+      console.error('[Middleware] Failed to fetch user role:', err)
+    }
+
+    const isAuthorizedAdmin = userRole === 'admin' || userRole === 'teacher' || userRole === 'instructor'
+    if (!isAuthorizedAdmin) {
+      // Sign out unauthorized user and redirect to login with error message
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      url.searchParams.set('error', 'Forbidden: Account lacks administrative privileges.')
+      return NextResponse.redirect(url)
+    }
   }
 
-  if (isLoginRoute && user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
-    return NextResponse.redirect(url)
+  if (isPublicRoute && user) {
+    // Check role before redirecting to dashboard
+    let userRole = null
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+      userRole = profile?.role
+    } catch (err) {
+      console.error('[Middleware] Failed to fetch user role:', err)
+    }
+
+    const isAuthorizedAdmin = userRole === 'admin' || userRole === 'teacher' || userRole === 'instructor'
+    if (isAuthorizedAdmin && (pathname.startsWith('/login') || pathname.startsWith('/auth'))) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse

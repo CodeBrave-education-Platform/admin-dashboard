@@ -46,15 +46,20 @@ export async function invalidateCache(type, courseId, batchId = null) {
     console.log('[Cache Invalidation] Purging Redis keys directly:', purgedKeys);
     await Promise.allSettled(purgedKeys.map(key => redisCommand(['DEL', key])));
 
-    // 2. Backup webhook dispatch to student portal (port 3000)
-    fetch('http://localhost:3000/api/cache/invalidate', {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer asentra-secret-drm-key-2026'
-      },
-      body: JSON.stringify({ type, courseId, batchId }),
-    }).catch(() => {});
+    const secureKey = process.env.RAZORPAY_KEY_SECRET;
+    if (secureKey) {
+      // 2. Backup webhook dispatch to student portal (port 3000)
+      fetch('http://localhost:3000/api/cache/invalidate', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${secureKey}`
+        },
+        body: JSON.stringify({ type, courseId, batchId }),
+      }).catch(() => {});
+    } else {
+      console.warn('[Cache Invalidation] RAZORPAY_KEY_SECRET environment variable is missing; skipping backup webhook dispatch.');
+    }
   } catch (err) {
     console.warn('[Cache Invalidation Webhook Exception]:', err.message);
   }

@@ -1,5 +1,31 @@
 import { NextResponse } from 'next/server'
 import { getCorsHeaders } from '@/utils/security'
+import { createClient } from '@/utils/supabase/server'
+
+async function checkAdminAuth(responseHeaders) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return { authorized: false, errorResponse: NextResponse.json({ error: 'Unauthorized: Session expired' }, { status: 401, headers: responseHeaders }) }
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const isAuthorized = profile?.role === 'admin' || profile?.role === 'teacher' || profile?.role === 'instructor'
+    if (!isAuthorized) {
+      return { authorized: false, errorResponse: NextResponse.json({ error: 'Forbidden: Administrative access required' }, { status: 403, headers: responseHeaders }) }
+    }
+
+    return { authorized: true }
+  } catch (err) {
+    return { authorized: false, errorResponse: NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: responseHeaders }) }
+  }
+}
 
 async function redisCommand(command) {
   const url = process.env.UPSTASH_REDIS_REST_URL;
@@ -59,6 +85,9 @@ export async function OPTIONS(request) {
 export async function GET(request) {
   const responseHeaders = getCorsHeaders(request)
   try {
+    const auth = await checkAdminAuth(responseHeaders)
+    if (!auth.authorized) return auth.errorResponse
+
     const customPoll = await redisGet('asentra:live:poll');
     if (!customPoll) {
       return NextResponse.json({ poll: null }, { headers: responseHeaders });
@@ -79,13 +108,16 @@ export async function GET(request) {
     }, { headers: responseHeaders });
   } catch (err) {
     console.error('Error in poll GET:', err);
-    return NextResponse.json({ error: err.message }, { status: 500, headers: responseHeaders });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: responseHeaders });
   }
 }
 
 export async function POST(request) {
   const responseHeaders = getCorsHeaders(request)
   try {
+    const auth = await checkAdminAuth(responseHeaders)
+    if (!auth.authorized) return auth.errorResponse
+
     const body = await request.json();
     const { action, question, options, correctAnswerIndex, durationSeconds } = body;
 
@@ -94,6 +126,11 @@ export async function POST(request) {
       await redisDel('asentra:live:poll:results');
       await redisDel('asentra:live:poll:votes');
       return NextResponse.json({ success: true }, { headers: responseHeaders });
+    }
+
+    // Input Validation
+    if (!question || !options || !Array.isArray(options) || options.length < 2) {
+      return NextResponse.json({ error: 'Invalid poll parameters: question and options (at least 2) are required.' }, { status: 400, headers: responseHeaders })
     }
 
     // Launch poll
@@ -126,6 +163,6 @@ export async function POST(request) {
     }, { headers: responseHeaders });
   } catch (err) {
     console.error('Error in poll POST:', err);
-    return NextResponse.json({ error: err.message }, { status: 500, headers: responseHeaders });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: responseHeaders });
   }
 }
