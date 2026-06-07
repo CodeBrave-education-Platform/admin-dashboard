@@ -98,6 +98,12 @@ export default function AdminDashboardClient() {
 
   useEffect(() => {
     fetchDashboardData();
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+        setStudentPortalUrl('http://localhost:3000');
+      }
+    }
   }, []);
 
   const filteredStudents = students.filter(s => {
