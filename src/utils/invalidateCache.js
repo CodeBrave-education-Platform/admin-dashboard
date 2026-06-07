@@ -1,3 +1,5 @@
+'use server'
+
 /**
  * Cross-Origin Cache Invalidation Bridge
  * Purges keys directly in Upstash Redis and sends a backup invalidation POST request
