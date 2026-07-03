@@ -221,6 +221,74 @@ const parseExtractedText = (text) => {
   return parsedQuestions;
 };
 
+const loadMammoth = () => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('Mammoth can only be loaded in a browser context'));
+      return;
+    }
+    if (window.mammoth) {
+      resolve(window.mammoth);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    script.onload = () => {
+      resolve(window.mammoth);
+    };
+    script.onerror = (err) => reject(new Error('Failed to load Mammoth docx parser from CDN'));
+    document.head.appendChild(script);
+  });
+};
+
+const parseRosterText = (text) => {
+  if (!text) return [];
+  const lines = text.split('\n');
+  const roster = [];
+  let tempId = 1;
+
+  const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    if (/^(?:name|email|student|roster|list|phone|class|stream|focus)/i.test(trimmed)) continue;
+
+    const emailMatch = trimmed.match(emailRegex);
+    if (emailMatch) {
+      const email = emailMatch[0].toLowerCase();
+      
+      let namePart = trimmed.replace(email, '');
+      const phoneRegex = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
+      namePart = namePart.replace(phoneRegex, '');
+      namePart = namePart.replace(/[,;:\(\)\[\]\-]+/g, ' ');
+      
+      let name = namePart.replace(/\s+/g, ' ').trim();
+
+      if (!name) {
+        name = email.split('@')[0].replace(/[._\-]+/g, ' ');
+        name = name.replace(/\b\w/g, c => c.toUpperCase());
+      }
+
+      let targetFocus = 'JEE';
+      if (/neet/i.test(trimmed) || /medical/i.test(trimmed) || /bio/i.test(trimmed)) {
+        targetFocus = 'NEET';
+      }
+
+      roster.push({
+        id: `roster-draft-${tempId++}-${Date.now()}`,
+        full_name: name,
+        email: email,
+        target_focus: targetFocus,
+        academic_batch: targetFocus
+      });
+    }
+  }
+
+  return roster;
+};
+
 function BatchesContent() {
   const supabase = createClient();
   const searchParams = useSearchParams();
@@ -250,6 +318,12 @@ function BatchesContent() {
   const [batchLiveSessions, setBatchLiveSessions] = useState([]);
   const [batchExams, setBatchExams] = useState([]);
   const [allAssessments, setAllAssessments] = useState([]);
+
+  // Student Roster PDF/Word Importer states
+  const [showImportRosterModal, setShowImportRosterModal] = useState(false);
+  const [draftRoster, setDraftRoster] = useState([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const [isImportingRoster, setIsImportingRoster] = useState(false);
 
   const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [loadingLiveSessions, setLoadingLiveSessions] = useState(false);
@@ -509,6 +583,92 @@ function BatchesContent() {
       alert('Failed to establish PDF assessment: ' + err.message);
     } finally {
       setIsCreatingPdfExam(false);
+    }
+  };
+
+  const handleRosterFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRosterLoading(true);
+    setDraftRoster([]);
+
+    try {
+      const fileName = file.name.toLowerCase();
+      let text = '';
+
+      if (fileName.endsWith('.pdf')) {
+        const pdfjsLib = await loadPdfJs();
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let extractedText = '';
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const pageText = await extractTextWithLayout(page);
+          extractedText += pageText + '\n';
+        }
+
+        text = cleanExtractedText(extractedText);
+      } else if (fileName.endsWith('.docx')) {
+        const mammoth = await loadMammoth();
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        text = result.value || '';
+      } else if (fileName.endsWith('.txt') || fileName.endsWith('.csv')) {
+        text = await file.text();
+      } else {
+        throw new Error('Unsupported file format. Please upload PDF, Word (.docx), or Text (.txt/.csv) files.');
+      }
+
+      const rosterList = parseRosterText(text);
+      if (rosterList.length === 0) {
+        alert('No students detected in the uploaded file. Please make sure the document contains email addresses.');
+      } else {
+        setDraftRoster(rosterList);
+      }
+    } catch (err) {
+      console.error('[Roster Parsing Error]:', err.message);
+      alert('Failed to parse document: ' + err.message);
+    } finally {
+      setRosterLoading(false);
+      e.target.value = ''; // Reset file input
+    }
+  };
+
+  const handleCommitRoster = async () => {
+    if (draftRoster.length === 0) return alert('No students to import');
+    if (!selectedBatchId) return alert('No batch selected');
+
+    setIsImportingRoster(true);
+    try {
+      const emails = draftRoster.map(x => x.email);
+      const names = draftRoster.map(x => x.full_name);
+      const focuses = draftRoster.map(x => x.academic_batch);
+
+      // Call the stored procedure import_batch_roster
+      const { data, error } = await supabase.rpc('import_batch_roster', {
+        _batch_id: selectedBatchId,
+        _emails: emails,
+        _names: names,
+        _focuses: focuses
+      });
+
+      if (error) throw error;
+
+      // Output details
+      const successCount = data.filter(x => x.status === 'success').length;
+      const skippedCount = data.filter(x => x.status === 'skipped').length;
+      alert(`Import completed successfully! Registered/Enrolled: ${successCount}, Skipped (Already Enrolled): ${skippedCount}`);
+
+      // Refresh data
+      await fetchBatchTelemetry();
+      setShowImportRosterModal(false);
+      setDraftRoster([]);
+    } catch (err) {
+      console.error('[Import Roster Error]:', err.message);
+      alert('Failed to import roster: ' + err.message);
+    } finally {
+      setIsImportingRoster(false);
     }
   };
 
@@ -995,9 +1155,18 @@ function BatchesContent() {
 
               {activeTab === 'students' && (
                 <div className="space-y-6">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4.5 h-4.5 text-indigo-600" />
-                    <h4 className="font-extrabold text-xs uppercase text-slate-700 tracking-wider">Enrolled Student Profiles ({enrolledStudents.length})</h4>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4.5 h-4.5 text-indigo-600" />
+                      <h4 className="font-extrabold text-xs uppercase text-slate-700 tracking-wider">Enrolled Student Profiles ({enrolledStudents.length})</h4>
+                    </div>
+                    <button
+                      onClick={() => setShowImportRosterModal(true)}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-750 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>Import Roster (PDF/Word)</span>
+                    </button>
                   </div>
 
                   {enrolledStudents.length === 0 ? (
@@ -1900,6 +2069,170 @@ function BatchesContent() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Student Roster Import Modal Overlay */}
+      <AnimatePresence>
+        {showImportRosterModal && (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 md:p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowImportRosterModal(false)}
+              className="absolute inset-0 cursor-pointer"
+            />
+
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              transition={{ type: 'spring', duration: 0.3 }}
+              className="bg-white border border-slate-200 rounded-3xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl relative text-slate-800 overflow-hidden z-10 p-6 md:p-8"
+            >
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600">
+                    <Users className="w-4.5 h-4.5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Import Batch Roster</h3>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Upload a PDF, Word, CSV, or Text file with student details</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowImportRosterModal(false)}
+                  className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-650 transition cursor-pointer"
+                >
+                  <X className="w-4.5 h-4.5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto py-4 space-y-4 custom-scrollbar font-sans">
+                {draftRoster.length === 0 ? (
+                  <div className="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-2xl p-8 text-center transition cursor-pointer relative group">
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.txt,.csv"
+                      onChange={handleRosterFileUpload}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      disabled={rosterLoading}
+                    />
+                    <div className="space-y-3">
+                      {rosterLoading ? (
+                        <>
+                          <Loader2 className="w-10 h-10 mx-auto text-indigo-600 animate-spin" />
+                          <p className="text-xs font-bold text-indigo-600">Parsing document contents...</p>
+                          <p className="text-[10px] text-slate-400">Extracting names, email accounts, and program focuses</p>
+                        </>
+                      ) : (
+                        <>
+                          <FileText className="w-10 h-10 mx-auto text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                          <div>
+                            <p className="text-xs font-black text-slate-700">Click or Drag Roster File Here</p>
+                            <p className="text-[10px] text-slate-400 mt-1">Supports PDF, Word (.docx), CSV, or Plain Text (.txt)</p>
+                          </div>
+                          <div className="pt-2">
+                            <span className="inline-block px-3 py-1 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-wider">
+                              Choose File
+                            </span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-3 rounded-2xl">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse" />
+                        <span className="text-xs font-black text-slate-750">
+                          Extracted Roster Preview ({draftRoster.length} students)
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setDraftRoster([])}
+                        className="text-[10px] font-black uppercase text-rose-600 hover:text-rose-700 hover:underline transition cursor-pointer"
+                      >
+                        Clear File
+                      </button>
+                    </div>
+
+                    <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                      <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10">
+                            <tr>
+                              <th className="px-4 py-3 font-extrabold text-[9px] uppercase tracking-wider text-slate-500">Name</th>
+                              <th className="px-4 py-3 font-extrabold text-[9px] uppercase tracking-wider text-slate-500">Email Address</th>
+                              <th className="px-4 py-3 font-extrabold text-[9px] uppercase tracking-wider text-slate-500">Academic Focus</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-150">
+                            {draftRoster.map((student, idx) => (
+                              <tr key={idx} className="hover:bg-slate-50/50">
+                                <td className="px-4 py-3 font-bold text-slate-800">{student.full_name || '—'}</td>
+                                <td className="px-4 py-3 font-mono text-slate-600 text-[11px]">{student.email}</td>
+                                <td className="px-4 py-3">
+                                  <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
+                                    student.academic_batch === 'NEET'
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-150'
+                                      : 'bg-indigo-50 text-indigo-700 border border-indigo-150'
+                                  }`}>
+                                    {student.academic_batch}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-indigo-50/40 border border-indigo-100/50 rounded-2xl p-4 flex gap-3 text-slate-600">
+                  <Info className="w-4.5 h-4.5 text-indigo-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1 text-[11px] leading-relaxed">
+                    <span className="font-extrabold text-indigo-900 block">Roster File Processing Rules:</span>
+                    <ul className="list-disc pl-4 space-y-0.5">
+                      <li>The parser detects valid email addresses, name patterns, and course target cues (JEE / NEET).</li>
+                      <li>Any students that are not registered will have user accounts provisioned automatically.</li>
+                      <li>Duplicate enrollments in this batch will be ignored.</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowImportRosterModal(false)}
+                  className="px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCommitRoster}
+                  disabled={draftRoster.length === 0 || isImportingRoster}
+                  className="px-5 py-2.5 bg-indigo-650 hover:bg-indigo-700 disabled:bg-slate-100 text-white disabled:text-slate-400 rounded-xl text-xs font-bold shadow-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {isImportingRoster ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Importing Registry...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Commit and Register ({draftRoster.length})</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}

@@ -15,14 +15,15 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
   const navItems = [
     { label: 'Overview Console', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Course Studio', href: '/courses', icon: BookOpen },
-    { label: 'Cohort Gradebook', href: '/gradebook', icon: GraduationCap }
+    { label: 'Cohort Gradebook', href: '/gradebook', icon: GraduationCap },
+    { label: 'Test Series Hub', href: '/admin/test-series', icon: Award }
   ];
 
   return (
     <nav className="flex-1 px-4 py-6 space-y-4 overflow-y-auto custom-scrollbar">
       <div className="space-y-1.5">
         {navItems.map(item => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href === '/admin/test-series' && pathname.startsWith('/admin/test-series'));
           return (
             <Link
               key={item.href}
