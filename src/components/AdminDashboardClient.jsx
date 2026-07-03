@@ -25,7 +25,7 @@ export default function AdminDashboardClient() {
   const [currentUserRole, setCurrentUserRole] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [roleFilter, setRoleFilter] = useState('all');
-  const [studentPortalUrl, setStudentPortalUrl] = useState('https://animated-cocada-cb9b93.netlify.app/dashboard?tab=learning');
+  const [studentPortalUrl, setStudentPortalUrl] = useState('http://localhost:3000');
 
   const fetchDashboardData = async () => {
     setRefreshing(true);
