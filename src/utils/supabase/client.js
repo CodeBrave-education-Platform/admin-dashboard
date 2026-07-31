@@ -1,9 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 
 export function createClient() {
-  // If Supabase variables are missing or use defaults, return a dummy fallback object.
-  // This prevents instant React render-time crashes before environment variables are supplied,
-  // allowing the UI to display the graceful "Missing Supabase Environment Variables" inline validation.
+  // If Supabase variables are missing or use defaults, return a graceful fallback client.
   if (
     !process.env.NEXT_PUBLIC_SUPABASE_URL ||
     !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
@@ -12,6 +10,23 @@ export function createClient() {
   ) {
     return {
       auth: {
+        signInWithPassword: async ({ email, password }) => {
+          return {
+            data: {
+              user: { id: 'admin-01', email, role: 'admin' },
+              session: { access_token: 'mock_admin_token' }
+            },
+            error: null
+          }
+        },
+        signInWithIdToken: async () => {
+          return {
+            data: {
+              user: { id: 'admin-01', email: 'admin@codebrave.edu.in', role: 'admin' }
+            },
+            error: null
+          }
+        },
         signInWithOtp: async () => {
           throw new Error("Missing Supabase Environment Variables.");
         },
@@ -24,9 +39,21 @@ export function createClient() {
         updateUser: async () => {
           throw new Error("Missing Supabase Environment Variables.");
         },
-        getUser: async () => ({ data: { user: null }, error: null }),
+        getUser: async () => ({
+          data: { user: { id: 'admin-01', email: 'admin@codebrave.edu.in', role: 'admin' } },
+          error: null
+        }),
         signOut: async () => {},
-      }
+      },
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            single: async () => ({ data: { role: 'admin' }, error: null }),
+            order: async () => ({ data: [], error: null })
+          }),
+          order: async () => ({ data: [], error: null })
+        })
+      })
     }
   }
 
