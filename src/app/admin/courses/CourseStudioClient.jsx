@@ -133,51 +133,51 @@ export default function CourseStudioClient({ user }) {
   )
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans p-6 md:p-10 space-y-8 select-none">
-      {/* Top Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-md">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-6 md:p-10 space-y-8 select-none">
+      {/* Top Header - Light Theme */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Link href="/dashboard" className="text-xs text-slate-400 hover:text-white flex items-center gap-1 font-bold">
+            <Link href="/dashboard" className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 font-bold">
               <ArrowLeft className="w-4 h-4" /> Admin Console
             </Link>
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Course & Batch Blueprint Studio</h1>
-          <p className="text-xs text-slate-400 font-medium mt-1">
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Course & Batch Blueprint Studio</h1>
+          <p className="text-xs text-slate-500 font-medium mt-1">
             Create, edit, price, and manage competitive course syllabi and bundled physical textbook kits.
           </p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="px-5 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
+          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>Publish New Course</span>
         </button>
       </div>
 
-      {/* Search Toolbar */}
-      <div className="flex justify-between items-center bg-slate-950 p-4 rounded-2xl border border-slate-800">
+      {/* Search Toolbar - Light Theme */}
+      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
         <div className="relative w-80">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search course title, subject or instructor..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-11 pr-4 py-2 text-xs text-white outline-none focus:border-teal-500 font-bold"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2 text-xs text-slate-900 outline-none focus:border-indigo-600 font-bold"
           />
         </div>
 
-        <span className="text-xs text-slate-400 font-bold">{filteredCourses.length} Published Blueprints</span>
+        <span className="text-xs text-slate-500 font-bold">{filteredCourses.length} Published Blueprints</span>
       </div>
 
-      {/* Course Catalog Table */}
-      <div className="bg-slate-950 rounded-3xl border border-slate-800 overflow-hidden shadow-md">
+      {/* Course Catalog Table - Light Theme */}
+      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-sans">
-            <thead className="bg-slate-900 text-slate-400 font-black uppercase text-[10px] tracking-wider border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
               <tr>
                 <th className="p-4">Course Blueprint</th>
                 <th className="p-4">Subject & Level</th>
@@ -187,33 +187,33 @@ export default function CourseStudioClient({ user }) {
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium text-slate-300">
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
               {filteredCourses.map((course) => (
-                <tr key={course.id} className="hover:bg-slate-900/50 transition">
+                <tr key={course.id} className="hover:bg-slate-50/80 transition">
                   <td className="p-4">
                     <div className="space-y-0.5">
-                      <h4 className="font-bold text-white text-sm">{course.title}</h4>
+                      <h4 className="font-bold text-slate-900 text-sm">{course.title}</h4>
                       <p className="text-slate-400 text-[11px]">Instructor: {course.instructor}</p>
                     </div>
                   </td>
 
                   <td className="p-4">
-                    <span className="px-2.5 py-1 bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded-lg font-bold">
+                    <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg font-bold">
                       {course.subject} • {course.level}
                     </span>
                   </td>
 
-                  <td className="p-4 font-bold text-white font-mono">
-                    ₹{course.price} <span className="text-slate-500 text-[11px] line-through">₹{course.originalPrice}</span>
+                  <td className="p-4 font-bold text-slate-900 font-mono">
+                    ₹{course.price} <span className="text-slate-400 text-[11px] line-through">₹{course.originalPrice}</span>
                   </td>
 
                   <td className="p-4">
-                    <span className="px-2.5 py-1 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-lg font-bold">
+                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-bold">
                       {course.studentsCount} Students
                     </span>
                   </td>
 
-                  <td className="p-4 text-slate-400 text-[11px]">
+                  <td className="p-4 text-slate-500 text-[11px]">
                     {course.bookKit}
                   </td>
 
@@ -221,7 +221,7 @@ export default function CourseStudioClient({ user }) {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleOpenEdit(course)}
-                        className="p-1.5 bg-slate-900 hover:bg-slate-800 text-teal-400 border border-slate-800 rounded-lg transition cursor-pointer"
+                        className="p-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 border border-slate-200 rounded-lg transition cursor-pointer"
                         title="Edit Course"
                       >
                         <Edit className="w-3.5 h-3.5" />
@@ -229,7 +229,7 @@ export default function CourseStudioClient({ user }) {
 
                       <button
                         onClick={() => handleDeleteCourse(course.id, course.title)}
-                        className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg transition cursor-pointer"
+                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg transition cursor-pointer"
                         title="Delete Course"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -243,37 +243,37 @@ export default function CourseStudioClient({ user }) {
         </div>
       </div>
 
-      {/* Create / Edit Modal */}
+      {/* Create / Edit Modal - Light Theme */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <form onSubmit={handleSaveCourse} className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-lg w-full space-y-6 shadow-2xl">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-black text-white">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <form onSubmit={handleSaveCourse} className="bg-white border border-slate-200 p-8 rounded-3xl max-w-lg w-full space-y-6 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <h3 className="text-lg font-black text-slate-900">
                 {editingCourse ? `Edit ${editingCourse.title}` : 'Publish New Course Blueprint'}
               </h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white font-bold text-sm">✕</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
             </div>
 
             <div className="space-y-4 text-xs font-medium">
               <div className="space-y-1">
-                <label className="text-slate-400 font-bold block uppercase text-[10px]">Course Title</label>
+                <label className="text-slate-500 font-bold block uppercase text-[10px]">Course Title</label>
                 <input
                   type="text"
                   value={formTitle}
                   onChange={e => setFormTitle(e.target.value)}
                   placeholder="e.g. JEE Mains & Advanced Complete Physics Mastery 2026"
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-teal-500 font-bold"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-slate-400 font-bold block uppercase text-[10px]">Subject</label>
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Subject</label>
                   <select
                     value={formSubject}
                     onChange={e => setFormSubject(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-teal-500 font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
                   >
                     <option value="Physics">Physics</option>
                     <option value="Chemistry">Chemistry</option>
@@ -283,11 +283,11 @@ export default function CourseStudioClient({ user }) {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-400 font-bold block uppercase text-[10px]">Target Level</label>
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Target Level</label>
                   <select
                     value={formLevel}
                     onChange={e => setFormLevel(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-teal-500 font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
                   >
                     <option value="JEE Advanced">JEE Advanced</option>
                     <option value="JEE Mains">JEE Mains</option>
@@ -299,62 +299,62 @@ export default function CourseStudioClient({ user }) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-slate-400 font-bold block uppercase text-[10px]">Course Fee (₹)</label>
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Course Fee (₹)</label>
                   <input
                     type="number"
                     value={formPrice}
                     onChange={e => setFormPrice(e.target.value)}
                     required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-teal-500 font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-400 font-bold block uppercase text-[10px]">Original MRP (₹)</label>
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Original MRP (₹)</label>
                   <input
                     type="number"
                     value={formOriginalPrice}
                     onChange={e => setFormOriginalPrice(e.target.value)}
                     required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-teal-500 font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-400 font-bold block uppercase text-[10px]">Instructor Name & Role</label>
+                <label className="text-slate-500 font-bold block uppercase text-[10px]">Instructor Name & Role</label>
                 <input
                   type="text"
                   value={formInstructor}
                   onChange={e => setFormInstructor(e.target.value)}
                   placeholder="e.g. Dr. H.C. Verma & CodeBrave Team"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-teal-500 font-medium"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-medium"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-400 font-bold block uppercase text-[10px]">Included Bundled Book Kit Title</label>
+                <label className="text-slate-500 font-bold block uppercase text-[10px]">Included Bundled Book Kit Title</label>
                 <input
                   type="text"
                   value={formBookKit}
                   onChange={e => setFormBookKit(e.target.value)}
                   placeholder="e.g. Mechanics 2-Vol Printed Hardcopy Kit"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-teal-500 font-medium"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-medium"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl transition cursor-pointer"
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl transition cursor-pointer"
               >
                 Save Course Blueprint
               </button>

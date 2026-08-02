@@ -12,7 +12,7 @@ import {
 
 export default function BookInventoryClient({ user, profile, initialBooks }) {
   const supabase = createClient()
-  const [books, setBooks] = useState(initialBooks)
+  const [books, setBooks] = useState(initialBooks || [])
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTag, setActiveTag] = useState('ALL')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -53,39 +53,35 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
   const openEditModal = (book) => {
     setEditingBook(book)
     setFormData({
-      title: book.title,
+      title: book.title || '',
       subtitle: book.subtitle || '',
       author: book.author || '',
       target_exam_tag: book.target_exam_tag || 'JEE MAINS',
-      price: String(book.price),
-      original_price: String(book.original_price || ''),
-      stock_quantity: String(book.stock_quantity),
+      price: book.price || '',
+      original_price: book.original_price || '',
+      stock_quantity: book.stock_quantity || 0,
       cover_url: book.cover_url || '',
       sample_pdf_url: book.sample_pdf_url || '',
-      is_active: book.is_active !== false
+      is_active: book.is_active ?? true
     })
     setIsModalOpen(true)
   }
 
   const handleSaveBook = async (e) => {
     e.preventDefault()
-    if (!formData.title || !formData.price || !formData.stock_quantity) {
-      alert('Please fill all required book fields.')
-      return
-    }
-
     setLoading(true)
+
     try {
       const payload = {
-        title: formData.title,
-        subtitle: formData.subtitle,
-        author: formData.author,
+        title: formData.title.trim(),
+        subtitle: formData.subtitle.trim(),
+        author: formData.author.trim(),
         target_exam_tag: formData.target_exam_tag,
         price: Number(formData.price),
-        original_price: Number(formData.original_price || 0),
+        original_price: Number(formData.original_price),
         stock_quantity: Number(formData.stock_quantity),
-        cover_url: formData.cover_url,
-        sample_pdf_url: formData.sample_pdf_url,
+        cover_url: formData.cover_url.trim(),
+        sample_pdf_url: formData.sample_pdf_url.trim(),
         is_active: formData.is_active
       }
 
@@ -95,112 +91,112 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
           .update(payload)
           .eq('id', editingBook.id)
           .select()
-          .single()
 
         if (error) throw error
-        setBooks(books.map(b => b.id === editingBook.id ? data : b))
-        setToastMsg('Book updated successfully!')
+        setBooks(books.map(b => b.id === editingBook.id ? { ...b, ...payload } : b))
+        setToastMsg(`🎉 Updated textbook "${payload.title}"`)
       } else {
         const { data, error } = await supabase
           .from('books')
-          .insert(payload)
+          .insert([payload])
           .select()
-          .single()
 
         if (error) throw error
-        setBooks([data, ...books])
-        setToastMsg('New study book published!')
+        if (data) setBooks([data[0], ...books])
+        setToastMsg(`🎉 Added new textbook "${payload.title}"`)
       }
 
       setIsModalOpen(false)
-      setTimeout(() => setToastMsg(''), 3000)
+      setTimeout(() => setToastMsg(''), 4000)
     } catch (err) {
-      console.error('Error saving book:', err)
+      console.error('[BOOK_SAVE_ERROR]:', err)
       alert('Failed to save book: ' + err.message)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleToggleActive = async (book) => {
-    try {
-      const updated = !book.is_active
-      const { error } = await supabase
-        .from('books')
-        .update({ is_active: updated })
-        .eq('id', book.id)
+  const handleDeleteBook = async (id, title) => {
+    if (!confirm(`⚠️ Are you sure you want to remove textbook "${title}"?`)) return
 
+    try {
+      const { error } = await supabase.from('books').delete().eq('id', id)
       if (error) throw error
-      setBooks(books.map(b => b.id === book.id ? { ...b, is_active: updated } : b))
+      setBooks(books.filter(b => b.id !== id))
+      setToastMsg(`🗑️ Removed "${title}"`)
+      setTimeout(() => setToastMsg(''), 4000)
     } catch (err) {
-      alert('Failed to update status: ' + err.message)
+      alert('Failed to delete book: ' + err.message)
     }
   }
 
-  const filteredBooks = books.filter(b => {
-    const matchTag = activeTag === 'ALL' || (b.target_exam_tag && b.target_exam_tag.toUpperCase() === activeTag)
-    const matchSearch = b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        (b.author || '').toLowerCase().includes(searchQuery.toLowerCase())
-    return matchTag && matchSearch
+  const filteredBooks = (books || []).filter(b => {
+    const matchesTag = activeTag === 'ALL' || b.target_exam_tag === activeTag
+    const term = searchQuery.trim().toLowerCase()
+    const matchesSearch = !term || 
+      b.title.toLowerCase().includes(term) ||
+      b.author.toLowerCase().includes(term) ||
+      b.target_exam_tag.toLowerCase().includes(term)
+
+    return matchesTag && matchesSearch
   })
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-6 md:p-10 select-none">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-6 md:p-10 select-none">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Header Console Banner */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-slate-900/40 border border-slate-800 p-8 rounded-[2.5rem] backdrop-blur-xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-teal-500/10 rounded-full blur-[80px]" />
+        {/* Header - Light Theme */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white border border-slate-200 p-8 rounded-3xl shadow-sm relative overflow-hidden">
           <div className="space-y-2 z-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[10px] font-black tracking-widest uppercase">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[10px] font-black tracking-widest uppercase">
               <Book className="w-3.5 h-3.5" />
-              <span>Study Material Inventory</span>
+              <span>Textbook Inventory Catalog</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">
-              CodeBrave Book Publications Manager
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              Physical Textbook & Module Inventory
             </h1>
-            <p className="text-xs text-slate-400 max-w-xl">
-              Publish theory modules, PYQ workbooks, and formula handbooks for students. Manage pricing, stock counts, and sample PDFs.
+            <p className="text-xs text-slate-500 font-medium max-w-xl">
+              Add new hardcopy solution handbooks, adjust pricing, update stock counts, and link sample PDF previews.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 z-10">
+          <div className="flex items-center gap-3 z-10">
             <Link
               href="/admin/books/orders"
-              className="flex items-center gap-2 px-5 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 rounded-2xl text-xs font-bold uppercase tracking-wider transition"
+              className="flex items-center gap-2 px-5 py-3 bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition"
             >
-              <Truck className="w-4 h-4 text-teal-400" />
-              <span>Order Fulfillment</span>
+              <Truck className="w-4 h-4 text-teal-600" />
+              <span>View Book Fulfillments</span>
             </Link>
 
             <button
               onClick={openCreateModal}
-              className="flex items-center gap-2 px-5 py-3 bg-teal-600 hover:bg-teal-500 text-slate-950 font-black rounded-2xl text-xs uppercase tracking-wider transition shadow-lg shadow-teal-500/10 cursor-pointer"
+              className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-2xl transition shadow-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Add New Book</span>
+              <span>Add New Textbook</span>
             </button>
           </div>
         </div>
 
         {toastMsg && (
-          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-2xl text-xs font-bold flex items-center gap-2">
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-bold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
             <span>{toastMsg}</span>
           </div>
         )}
 
-        {/* Filter Toolbar */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-slate-900/30 border border-slate-900 p-4 rounded-2xl backdrop-blur-sm">
+        {/* Filter Toolbar - Light Theme */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
           <div className="flex flex-wrap gap-2 w-full md:w-auto">
-            {['ALL', 'JEE MAINS', 'JEE ADVANCED', 'FOUNDATION'].map(tag => (
+            {['ALL', 'JEE MAINS', 'JEE ADVANCED', 'NEET UG', 'FOUNDATION'].map(tag => (
               <button
                 key={tag}
                 onClick={() => setActiveTag(tag)}
                 className={`px-4 py-2 rounded-xl text-xs font-bold tracking-wider uppercase transition select-none cursor-pointer border ${
                   activeTag === tag
-                    ? 'bg-teal-500 text-slate-950 font-black border-teal-400'
-                    : 'bg-slate-900/50 text-slate-400 border-slate-800 hover:text-slate-200'
+                    ? 'bg-indigo-600 text-white font-black border-indigo-600 shadow-sm'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
                 }`}
               >
                 {tag}
@@ -209,79 +205,58 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
           </div>
 
           <div className="relative w-full md:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search Books..."
-              className="w-full bg-slate-900/60 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-200 outline-none focus:border-teal-500 transition font-bold"
+              placeholder="Search title, author, target exam..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-800 outline-none focus:border-indigo-600 transition font-bold"
             />
           </div>
         </div>
 
-        {/* Grid of Books */}
+        {/* Books Grid - Light Theme */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredBooks.map(book => (
-            <div
-              key={book.id}
-              className="bg-slate-900/40 border border-slate-900 hover:border-slate-800 rounded-[2rem] overflow-hidden flex flex-col justify-between transition-all duration-300 relative group"
-            >
-              <div className="relative aspect-[4/3] bg-slate-950 p-6 flex flex-col justify-between overflow-hidden border-b border-slate-900">
-                <img
-                  src={book.cover_url || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80'}
-                  alt={book.title}
-                  className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500 opacity-60"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent z-10" />
-
-                <div className="flex justify-between items-start z-20">
-                  <span className="px-3 py-1 bg-slate-900/90 text-teal-400 border border-teal-500/20 text-[9px] font-black uppercase tracking-wider rounded-full backdrop-blur-md">
-                    {book.target_exam_tag || 'JEE PREP'}
+            <div key={book.id} className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-start">
+                  <span className="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-black rounded-lg uppercase tracking-wider">
+                    {book.target_exam_tag}
                   </span>
-
-                  <button
-                    onClick={() => handleToggleActive(book)}
-                    className={`px-3 py-1 text-[9px] font-black uppercase tracking-wider rounded-full border transition cursor-pointer ${
-                      book.is_active 
-                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                    }`}
-                  >
-                    {book.is_active ? 'Active' : 'Disabled'}
-                  </button>
-                </div>
-
-                <div className="z-20">
-                  <span className="text-[10px] text-slate-300 font-bold uppercase tracking-wider bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800">
-                    Stock: {book.stock_quantity} units
+                  <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase ${
+                    book.stock_quantity > 0 ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'
+                  }`}>
+                    {book.stock_quantity > 0 ? `${book.stock_quantity} in stock` : 'Out of stock'}
                   </span>
                 </div>
+
+                <h3 className="text-base font-black text-slate-900 leading-snug">{book.title}</h3>
+                <p className="text-xs text-slate-500 font-medium line-clamp-2">{book.subtitle}</p>
+                <p className="text-[11px] text-slate-400 font-bold">Author: {book.author}</p>
               </div>
 
-              <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
-                <div className="space-y-1.5">
-                  <h3 className="font-extrabold text-sm text-white">{book.title}</h3>
-                  <p className="text-[11px] text-slate-400 leading-relaxed line-clamp-2">{book.subtitle}</p>
-                  <p className="text-[10px] text-teal-400 font-bold uppercase">Author: {book.author || 'CodeBrave Faculty'}</p>
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div>
+                  <span className="text-lg font-black text-slate-900 font-mono">₹{book.price}</span>
+                  {book.original_price && (
+                    <span className="text-xs text-slate-400 line-through font-mono ml-2">₹{book.original_price}</span>
+                  )}
                 </div>
 
-                <div className="flex items-baseline justify-between pt-2 border-t border-slate-900">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-lg font-black text-white">₹{Number(book.price).toLocaleString('en-IN')}</span>
-                    {book.original_price > book.price && (
-                      <span className="text-xs text-slate-500 line-through">₹{Number(book.original_price).toLocaleString('en-IN')}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => openEditModal(book)}
-                    className="flex-1 flex items-center justify-center gap-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-[10px] font-bold uppercase tracking-wider transition cursor-pointer"
+                    className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-xl transition cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
-                    <span>Edit Details</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteBook(book.id, book.title)}
+                    className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
@@ -289,149 +264,115 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
           ))}
         </div>
 
-        {/* Create / Edit Modal */}
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] max-w-xl w-full p-8 space-y-6 shadow-2xl my-8">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-extrabold text-white">
-                  {editingBook ? 'Edit Book Details' : 'Publish New Study Material'}
-                </h3>
-                <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
+      </div>
+
+      {/* Modal - Light Theme */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <form onSubmit={handleSaveBook} className="bg-white border border-slate-200 p-8 rounded-3xl max-w-lg w-full space-y-6 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <h3 className="text-base font-black text-slate-900">
+                {editingBook ? `Edit ${editingBook.title}` : 'Add New Physical Textbook'}
+              </h3>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
+            </div>
+
+            <div className="space-y-4 text-xs font-medium">
+              <div className="space-y-1">
+                <label className="text-slate-500 font-bold block uppercase text-[10px]">Textbook Title</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g. Physics 20-Year Chapterwise PYQ Handbook"
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
+                />
               </div>
 
-              <form onSubmit={handleSaveBook} className="space-y-4">
-                <div>
-                  <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Book Title *</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Target Exam Tag</label>
+                  <select
+                    value={formData.target_exam_tag}
+                    onChange={e => setFormData({ ...formData, target_exam_tag: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
+                  >
+                    <option value="JEE MAINS">JEE MAINS</option>
+                    <option value="JEE ADVANCED">JEE ADVANCED</option>
+                    <option value="NEET UG">NEET UG</option>
+                    <option value="FOUNDATION">FOUNDATION</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Stock Count</label>
                   <input
-                    type="text"
+                    type="number"
+                    value={formData.stock_quantity}
+                    onChange={e => setFormData({ ...formData, stock_quantity: e.target.value })}
                     required
-                    value={formData.title}
-                    onChange={e => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="e.g. JEE Advanced Physics Blueprint"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-bold"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Subtitle / Description</label>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Selling Price (₹)</label>
                   <input
-                    type="text"
-                    value={formData.subtitle}
-                    onChange={e => setFormData({ ...formData, subtitle: e.target.value })}
-                    placeholder="Brief syllabus topics covered"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white"
+                    type="number"
+                    value={formData.price}
+                    onChange={e => setFormData({ ...formData, price: e.target.value })}
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Author / Faculty</label>
-                    <input
-                      type="text"
-                      value={formData.author}
-                      onChange={e => setFormData({ ...formData, author: e.target.value })}
-                      placeholder="e.g. Dr. Sarah Jenkins"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Target Exam Tag</label>
-                    <select
-                      value={formData.target_exam_tag}
-                      onChange={e => setFormData({ ...formData, target_exam_tag: e.target.value })}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-bold"
-                    >
-                      <option value="JEE MAINS">JEE MAINS</option>
-                      <option value="JEE ADVANCED">JEE ADVANCED</option>
-                      <option value="FOUNDATION">FOUNDATION</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Price (₹) *</label>
-                    <input
-                      type="number"
-                      required
-                      value={formData.price}
-                      onChange={e => setFormData({ ...formData, price: e.target.value })}
-                      placeholder="549"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">MRP Price (₹)</label>
-                    <input
-                      type="number"
-                      value={formData.original_price}
-                      onChange={e => setFormData({ ...formData, original_price: e.target.value })}
-                      placeholder="799"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Initial Stock *</label>
-                    <input
-                      type="number"
-                      required
-                      value={formData.stock_quantity}
-                      onChange={e => setFormData({ ...formData, stock_quantity: e.target.value })}
-                      placeholder="50"
-                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-bold"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Cover Image URL</label>
+                <div className="space-y-1">
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Original MRP (₹)</label>
                   <input
-                    type="text"
-                    value={formData.cover_url}
-                    onChange={e => setFormData({ ...formData, cover_url: e.target.value })}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono"
+                    type="number"
+                    value={formData.original_price}
+                    onChange={e => setFormData({ ...formData, original_price: e.target.value })}
+                    required
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-1">Sample PDF Preview URL</label>
-                  <input
-                    type="text"
-                    value={formData.sample_pdf_url}
-                    onChange={e => setFormData({ ...formData, sample_pdf_url: e.target.value })}
-                    placeholder="https://domain.com/sample.pdf"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white font-mono"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <input
-                    type="checkbox"
-                    id="is_active_cb"
-                    checked={formData.is_active}
-                    onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
-                    className="rounded bg-slate-950 border-slate-800 text-teal-500"
-                  />
-                  <label htmlFor="is_active_cb" className="text-xs font-bold text-slate-300">Active and visible in Student Store</label>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 bg-teal-500 hover:bg-teal-400 disabled:opacity-50 text-slate-950 font-black uppercase tracking-wider text-xs rounded-xl transition cursor-pointer flex items-center justify-center gap-2"
-                >
-                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-                  <span>{editingBook ? 'Save Book Changes' : 'Publish Study Material'}</span>
-                </button>
-              </form>
+              <div className="space-y-1">
+                <label className="text-slate-500 font-bold block uppercase text-[10px]">Author / Editorial Board</label>
+                <input
+                  type="text"
+                  value={formData.author}
+                  onChange={e => setFormData({ ...formData, author: e.target.value })}
+                  placeholder="e.g. CodeBrave Academic Board"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-medium"
+                />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2"
+              >
+                {loading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                <span>Save Textbook Item</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
