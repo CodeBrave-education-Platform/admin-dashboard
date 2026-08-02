@@ -12,42 +12,63 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
   const searchParams = useSearchParams();
   const activeItemId = searchParams?.get('id') || searchParams?.get('courseId') || searchParams?.get('batchId');
 
-  const navItems = [
-    { label: 'Overview Console', href: '/dashboard', icon: LayoutDashboard },
+  const mainSection = [
+    { label: 'Overview Console', href: '/dashboard', icon: LayoutDashboard }
+  ];
+
+  const academicsSection = [
     { label: 'Student Directory', href: '/admin/students', icon: GraduationCap },
-    { label: 'Discount Coupons', href: '/admin/coupons', icon: Award },
     { label: 'Course & Materials Studio', href: '/courses', icon: BookOpen },
     { label: 'Live Batches & Class Upload', href: '/batches', icon: Radio },
-    { label: 'Cohort Gradebook', href: '/gradebook', icon: GraduationCap },
-    { label: 'Book Fulfillments', href: '/admin/books/orders', icon: BookOpen },
-    { label: 'Book Inventory', href: '/admin/books', icon: BookOpen },
+    { label: 'Cohort Gradebook', href: '/gradebook', icon: GraduationCap }
+  ];
+
+  const storeSection = [
+    { label: 'Discount Coupons', href: '/admin/coupons', icon: Award },
+    { label: 'Book Fulfillments', href: '/admin/books/orders', icon: Package },
+    { label: 'Book Inventory', href: '/admin/books', icon: BookOpen }
+  ];
+
+  const testingSection = [
     { label: 'Test Series Compiler', href: '/admin/test-series/compiler', icon: Award }
   ];
 
+  const renderNavGroup = (title, items) => (
+    <div className="space-y-1">
+      {title && (
+        <span className="px-3 text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 mt-3">
+          {title}
+        </span>
+      )}
+      {items.map(item => {
+        const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+              isActive 
+                ? 'bg-indigo-600 text-white font-bold shadow-md' 
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <item.icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+              <span>{item.label}</span>
+            </div>
+            <ChevronRight className={`w-3.5 h-3.5 text-slate-300 transition ${isActive ? 'opacity-100' : 'opacity-0'}`} />
+          </Link>
+        );
+      })}
+    </div>
+  );
+
   return (
-    <nav className="flex-1 px-4 py-6 space-y-4 overflow-y-auto custom-scrollbar">
-      <div className="space-y-1.5">
-        {navItems.map(item => {
-          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center justify-between p-3.5 rounded-2xl text-xs font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] tactile-press ${
-                isActive 
-                  ? 'bg-indigo-50 text-indigo-700 font-bold border-r-4 border-indigo-600 shadow-xs' 
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <item.icon className={`w-4 h-4 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
-                <span>{item.label}</span>
-              </div>
-              <ChevronRight className={`w-3.5 h-3.5 text-slate-400 transition ${isActive ? 'opacity-100' : 'opacity-0'}`} />
-            </Link>
-          );
-        })}
-      </div>
+    <nav className="flex-1 px-4 py-4 space-y-4 overflow-y-auto custom-scrollbar">
+      {renderNavGroup(null, mainSection)}
+      {renderNavGroup('Academic & Classrooms', academicsSection)}
+      {renderNavGroup('Store & Shipments', storeSection)}
+      {renderNavGroup('Exams & Testing', testingSection)}
 
       {/* Dynamic Courses Sub-Section */}
       <div className="pt-2 border-t border-slate-100">
