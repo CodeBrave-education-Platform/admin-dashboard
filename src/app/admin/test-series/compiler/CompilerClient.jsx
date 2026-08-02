@@ -9,19 +9,20 @@ import {
   HelpCircle, Settings, Layers, Calendar, Loader2, Sparkles
 } from 'lucide-react'
 
-export default function CompilerClient({ packages }) {
+export default function CompilerClient({ packages = [], initialPackages = [] }) {
+  const pkgs = packages.length > 0 ? packages : initialPackages
   return (
     <Suspense fallback={
       <div className="flex justify-center items-center py-20 bg-white border border-slate-200 rounded-3xl">
         <Loader2 className="w-8 h-8 text-indigo-650 animate-spin" />
       </div>
     }>
-      <CompilerClientContent packages={packages} />
+      <CompilerClientContent packages={pkgs || []} />
     </Suspense>
   )
 }
 
-function CompilerClientContent({ packages }) {
+function CompilerClientContent({ packages = [] }) {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const packageIdParam = searchParams?.get('packageId') || searchParams?.get('id')

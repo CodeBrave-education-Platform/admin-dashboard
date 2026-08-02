@@ -28,6 +28,7 @@ export default async function CompilerPage() {
     >
       <CompilerClient 
         user={authenticatedUser}
+        packages={packages}
         initialPackages={packages}
       />
     </AdminLayoutShell>
