@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -130,14 +131,51 @@ export default function AdminDashboardClient() {
           <p className="text-xs text-slate-500 mt-1">High-fidelity cohort monitoring, syllabus blueprinting, and real-time polling telemetry</p>
         </div>
 
-        <button
-          onClick={fetchDashboardData}
-          disabled={refreshing}
-          className="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition flex items-center gap-2 select-none cursor-pointer disabled:opacity-50 shadow-sm"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchDashboardData}
+            disabled={refreshing}
+            className="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition flex items-center gap-2 select-none cursor-pointer disabled:opacity-50 shadow-sm"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>Sync Real-Time Telemetry</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Executive Quick Actions Toolbar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Link
+          href="/admin/students"
+          className="p-4 bg-slate-900 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-slate-800 shadow-md group"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-          <span>Sync Real-Time Telemetry</span>
-        </button>
+          <span>👥 Student Directory</span>
+          <ArrowRight className="w-4 h-4 text-teal-400 group-hover:translate-x-1 transition" />
+        </Link>
+
+        <Link
+          href="/admin/coupons"
+          className="p-4 bg-teal-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-teal-700 shadow-md group"
+        >
+          <span>🏷️ Discount Coupons</span>
+          <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
+        </Link>
+
+        <Link
+          href="/admin/books/orders"
+          className="p-4 bg-indigo-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-indigo-700 shadow-md group"
+        >
+          <span>📦 Book Fulfillments</span>
+          <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
+        </Link>
+
+        <Link
+          href="/admin/test-series/compiler"
+          className="p-4 bg-slate-800 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-slate-700 shadow-md group"
+        >
+          <span>⚙️ CBT Test Compiler</span>
+          <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition" />
+        </Link>
       </div>
 
       {loading ? (

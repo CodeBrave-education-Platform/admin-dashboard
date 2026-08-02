@@ -14,9 +14,12 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
 
   const navItems = [
     { label: 'Overview Console', href: '/dashboard', icon: LayoutDashboard },
+    { label: 'Student Directory', href: '/admin/students', icon: GraduationCap },
+    { label: 'Discount Coupons', href: '/admin/coupons', icon: Award },
     { label: 'Course Studio', href: '/courses', icon: BookOpen },
-    { label: 'Cohort Gradebook', href: '/gradebook', icon: GraduationCap },
-    { label: 'Test Series Hub', href: '/admin/test-series', icon: Award }
+    { label: 'Book Fulfillments', href: '/admin/books/orders', icon: BookOpen },
+    { label: 'Book Inventory', href: '/admin/books', icon: BookOpen },
+    { label: 'Test Series Compiler', href: '/admin/test-series/compiler', icon: Award }
   ];
 
   return (
