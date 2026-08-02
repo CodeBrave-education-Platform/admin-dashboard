@@ -70,6 +70,7 @@ export default function AdminLoginPage() {
         throw new Error('Forbidden: Account lacks administrative privileges.')
       }
 
+      document.cookie = "admin_session=true; path=/; max-age=86400"
       setSuccessMsg('Successfully authenticated! Synchronizing console...')
       setTimeout(() => {
         window.location.href = '/dashboard'
@@ -159,6 +160,7 @@ export default function AdminLoginPage() {
         throw new Error('Forbidden: Account lacks administrative privileges.')
       }
 
+      document.cookie = "admin_session=true; path=/; max-age=86400"
       setSuccessMsg('Successfully authenticated! Synchronizing console...')
       setTimeout(() => {
         window.location.href = '/dashboard'

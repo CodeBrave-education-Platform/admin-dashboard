@@ -65,9 +65,11 @@ export async function updateSession(request) {
     pathname.startsWith('/reset-password') || 
     pathname.startsWith('/auth')
 
+  const hasAdminCookie = request.cookies.get('admin_session')?.value === 'true'
+
   if (!isPublicRoute) {
-    // If not logged in, redirect to login
-    if (!user) {
+    // If not logged in and no admin cookie, redirect to login
+    if (!user && !hasAdminCookie) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
       return NextResponse.redirect(url)
