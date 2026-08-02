@@ -16,7 +16,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
     { label: 'Overview Console', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Student Directory', href: '/admin/students', icon: GraduationCap },
     { label: 'Discount Coupons', href: '/admin/coupons', icon: Award },
-    { label: 'Course Studio', href: '/courses', icon: BookOpen },
+    { label: 'Course Studio', href: '/admin/courses', icon: BookOpen },
     { label: 'Book Fulfillments', href: '/admin/books/orders', icon: BookOpen },
     { label: 'Book Inventory', href: '/admin/books', icon: BookOpen },
     { label: 'Test Series Compiler', href: '/admin/test-series/compiler', icon: Award }
@@ -26,7 +26,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
     <nav className="flex-1 px-4 py-6 space-y-4 overflow-y-auto custom-scrollbar">
       <div className="space-y-1.5">
         {navItems.map(item => {
-          const isActive = pathname === item.href || (item.href === '/admin/test-series' && pathname.startsWith('/admin/test-series'));
+          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
@@ -62,11 +62,11 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
             <div className="px-3.5 py-2 text-[10px] text-slate-400 italic">No courses registered</div>
           ) : (
             courses.map(c => {
-              const isActive = pathname === '/courses' && activeItemId === c.id;
+              const isActive = pathname === '/admin/courses' && activeItemId === c.id;
               return (
                 <Link
                   key={c.id}
-                  href={`/courses?id=${c.id}`}
+                  href={`/admin/courses?id=${c.id}`}
                   className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                     isActive
                       ? 'bg-indigo-50/80 text-indigo-700 font-bold shadow-2xs border-l-2 border-indigo-600'
@@ -97,11 +97,11 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
             <div className="px-3.5 py-2 text-[10px] text-slate-400 italic">No batches registered</div>
           ) : (
             batches.map(b => {
-              const isActive = pathname === '/batches' && activeItemId === b.id;
+              const isActive = pathname === '/admin/courses' && activeItemId === b.id;
               return (
                 <Link
                   key={b.id}
-                  href={`/batches?id=${b.id}`}
+                  href={`/admin/courses?id=${b.id}`}
                   className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                     isActive
                       ? 'bg-emerald-50 text-emerald-700 font-bold shadow-2xs border-l-2 border-emerald-600'
