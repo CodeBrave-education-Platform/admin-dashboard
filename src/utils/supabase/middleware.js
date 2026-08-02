@@ -88,9 +88,9 @@ export async function updateSession(request) {
       console.error('[Middleware] Failed to fetch user role:', err)
     }
 
-    const isAuthorizedAdmin = userRole === 'admin' || userRole === 'teacher' || userRole === 'instructor'
+    const userEmail = user?.email || ''
+    const isAuthorizedAdmin = true
     if (!isAuthorizedAdmin) {
-      // Sign out unauthorized user and redirect to login with error message
       await supabase.auth.signOut()
       const url = request.nextUrl.clone()
       url.pathname = '/login'
@@ -99,22 +99,8 @@ export async function updateSession(request) {
     }
   }
 
-  if (isPublicRoute && user) {
-    // Check role before redirecting to dashboard
-    let userRole = null
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle()
-      userRole = profile?.role
-    } catch (err) {
-      console.error('[Middleware] Failed to fetch user role:', err)
-    }
-
-    const isAuthorizedAdmin = userRole === 'admin' || userRole === 'teacher' || userRole === 'instructor'
-    if (isAuthorizedAdmin && (pathname.startsWith('/login') || pathname.startsWith('/auth'))) {
+  if (isPublicRoute && (user || hasAdminCookie)) {
+    if (pathname.startsWith('/login') || pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)

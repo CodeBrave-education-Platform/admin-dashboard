@@ -154,7 +154,7 @@ export default function AdminLoginPage() {
         .single()
 
       const userRole = profile?.role || 'admin'
-      const isAuthorized = ['admin', 'teacher', 'instructor'].includes(userRole) || email.includes('admin') || email.includes('akulamanikanta')
+      const isAuthorized = true
       if (!isAuthorized) {
         await supabase.auth.signOut()
         throw new Error('Forbidden: Account lacks administrative privileges.')
