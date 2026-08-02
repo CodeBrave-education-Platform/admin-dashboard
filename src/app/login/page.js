@@ -72,8 +72,8 @@ export default function AdminLoginPage() {
 
       setSuccessMsg('Successfully authenticated! Synchronizing console...')
       setTimeout(() => {
-        router.push('/dashboard')
-      }, 1000)
+        window.location.href = '/dashboard'
+      }, 300)
     } catch (err) {
       console.error('Google ID Token auth error:', err)
       setErrorMsg(err.message || 'Google authentication failed.')
@@ -161,8 +161,8 @@ export default function AdminLoginPage() {
 
       setSuccessMsg('Successfully authenticated! Synchronizing console...')
       setTimeout(() => {
-        router.push('/dashboard')
-      }, 800)
+        window.location.href = '/dashboard'
+      }, 300)
     } catch (err) {
       setErrorMsg(err.message || 'Authentication failed. Please verify credentials.')
     } finally {
