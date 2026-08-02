@@ -78,12 +78,14 @@ export async function updateSession(request) {
     // Fetch user profile role to verify Instructor/Admin/Teacher privileges
     let userRole = null
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle()
-      userRole = profile?.role
+      if (user?.id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
+        userRole = profile?.role
+      }
     } catch (err) {
       console.error('[Middleware] Failed to fetch user role:', err)
     }
