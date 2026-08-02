@@ -144,36 +144,52 @@ export default function AdminDashboardClient() {
       </div>
 
       {/* Executive Quick Actions Toolbar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <Link
           href="/admin/students"
-          className="p-4 bg-slate-900 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-slate-800 shadow-md group"
+          className="p-3.5 bg-slate-900 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-slate-800 shadow-md group"
         >
-          <span>👥 Student Directory</span>
+          <span>👥 Students</span>
           <ArrowRight className="w-4 h-4 text-teal-400 group-hover:translate-x-1 transition" />
         </Link>
 
         <Link
-          href="/admin/coupons"
-          className="p-4 bg-teal-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-teal-700 shadow-md group"
+          href="/courses"
+          className="p-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-indigo-700 shadow-md group"
         >
-          <span>🏷️ Discount Coupons</span>
+          <span>📚 Course & PDFs</span>
+          <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
+        </Link>
+
+        <Link
+          href="/batches"
+          className="p-3.5 bg-emerald-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-emerald-700 shadow-md group"
+        >
+          <span>📡 Live Classes</span>
+          <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
+        </Link>
+
+        <Link
+          href="/admin/coupons"
+          className="p-3.5 bg-teal-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-teal-700 shadow-md group"
+        >
+          <span>🏷️ Coupons</span>
           <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
         </Link>
 
         <Link
           href="/admin/books/orders"
-          className="p-4 bg-indigo-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-indigo-700 shadow-md group"
+          className="p-3.5 bg-purple-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-purple-700 shadow-md group"
         >
-          <span>📦 Book Fulfillments</span>
+          <span>📦 Books</span>
           <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
         </Link>
 
         <Link
           href="/admin/test-series/compiler"
-          className="p-4 bg-slate-800 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-slate-700 shadow-md group"
+          className="p-3.5 bg-slate-800 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-slate-700 shadow-md group"
         >
-          <span>⚙️ CBT Test Compiler</span>
+          <span>⚙️ CBT Compiler</span>
           <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition" />
         </Link>
       </div>

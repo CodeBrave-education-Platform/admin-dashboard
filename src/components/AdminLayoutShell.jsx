@@ -16,7 +16,9 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
     { label: 'Overview Console', href: '/dashboard', icon: LayoutDashboard },
     { label: 'Student Directory', href: '/admin/students', icon: GraduationCap },
     { label: 'Discount Coupons', href: '/admin/coupons', icon: Award },
-    { label: 'Course Studio', href: '/admin/courses', icon: BookOpen },
+    { label: 'Course & Materials Studio', href: '/courses', icon: BookOpen },
+    { label: 'Live Batches & Class Upload', href: '/batches', icon: Radio },
+    { label: 'Cohort Gradebook', href: '/gradebook', icon: GraduationCap },
     { label: 'Book Fulfillments', href: '/admin/books/orders', icon: BookOpen },
     { label: 'Book Inventory', href: '/admin/books', icon: BookOpen },
     { label: 'Test Series Compiler', href: '/admin/test-series/compiler', icon: Award }
