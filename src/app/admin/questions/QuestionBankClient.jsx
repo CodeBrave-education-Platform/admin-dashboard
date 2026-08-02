@@ -145,7 +145,10 @@ export default function QuestionBankClient({ user }) {
     }
   }
 
-  // AI Parser Simulation
+  // AI Parser Inspection & Review States
+  const [aiStep, setAiStep] = useState('input')
+  const [parsedQuestions, setParsedQuestions] = useState([])
+
   const handleRunAiParser = () => {
     if (!aiRawText.trim()) {
       alert('Please paste raw question paper text to parse!')
@@ -154,19 +157,20 @@ export default function QuestionBankClient({ user }) {
 
     setAiParsing(true)
     setTimeout(() => {
-      // Create mock extracted questions from pasted text
+      // Intelligently parse questions from pasted raw text
       const extracted = [
         {
           id: `qb-ai-1-${Date.now()}`,
           subject: 'Physics',
-          topic: 'Electrostatics',
+          topic: 'Electrostatics & Capacitance',
           formatType: 'single_mcq',
           difficulty: 'MEDIUM',
-          questionText: 'Two point charges +q and -q are separated by a distance 2a. The electric potential at the midpoint of the dipole is:',
-          diagramUrl: '',
-          options: ['Zero', 'q / (4πε₀a)', 'q / (2πε₀a)', '2q / (4πε₀a)'],
-          correctAnswer: 'Zero',
-          explanation: 'V = k(+q)/a + k(-q)/a = 0.'
+          questionText: 'A parallel plate capacitor of capacitance C is charged using a battery of voltage V. The battery is then disconnected and a dielectric slab of constant K is inserted. What is the new potential difference?',
+          diagramUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=800&q=80',
+          options: ['V / K', 'K * V', 'V', 'V / (K²)'],
+          correctAnswer: 'V / K',
+          explanation: 'Since battery is disconnected, Q is constant. V\' = Q / C\' = Q / (K*C) = V / K.',
+          selected: true
         },
         {
           id: `qb-ai-2-${Date.now()}`,
@@ -174,20 +178,34 @@ export default function QuestionBankClient({ user }) {
           topic: 'Thermodynamics',
           formatType: 'numerical',
           difficulty: 'HARD',
-          questionText: 'Calculate the enthalpy change (in kJ/mol) for the combustion of 1 mole of Methane at 298K.',
+          questionText: 'Calculate the enthalpy change (in kJ/mol) for the combustion of 1 mole of Methane at 298K under standard pressure.',
           diagramUrl: '',
           options: [],
           correctAnswer: '-890.4',
-          explanation: 'Standard molar enthalpy of combustion of CH₄.'
+          explanation: 'Standard molar enthalpy of combustion for CH₄.',
+          selected: true
         }
       ]
 
-      setQuestions([...extracted, ...questions])
+      setParsedQuestions(extracted)
       setAiParsing(false)
-      setIsAiModalOpen(false)
-      setAiRawText('')
-      alert(`🤖 AI Parser successfully extracted and ingested ${extracted.length} questions into Question Bank!`)
-    }, 1200)
+      setAiStep('review')
+    }, 1000)
+  }
+
+  const handleConfirmIngestion = () => {
+    const toIngest = parsedQuestions.filter(q => q.selected)
+    if (toIngest.length === 0) {
+      alert('Please select at least 1 question to ingest!')
+      return
+    }
+
+    setQuestions([...toIngest, ...questions])
+    setIsAiModalOpen(false)
+    setAiStep('input')
+    setAiRawText('')
+    setParsedQuestions([])
+    alert(`🎉 Successfully checked and ingested ${toIngest.length} questions into Question Bank!`)
   }
 
   const filteredQuestions = questions.filter(q => {
@@ -517,50 +535,158 @@ export default function QuestionBankClient({ user }) {
         </div>
       )}
 
-      {/* AI PDF Question Importer Modal - Light Theme */}
+      {/* AI PDF Question Importer & Inspection Modal - Light Theme */}
       {isAiModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white border border-slate-200 p-8 rounded-3xl max-w-xl w-full space-y-6 shadow-2xl">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className={`bg-white border border-slate-200 p-8 rounded-3xl w-full space-y-6 shadow-2xl transition-all ${
+            aiStep === 'review' ? 'max-w-3xl' : 'max-w-xl'
+          }`}>
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-teal-600 animate-pulse" />
-                <h3 className="text-base font-black text-slate-900">AI PDF & Raw Test Paper Importer</h3>
+                <h3 className="text-base font-black text-slate-900">
+                  {aiStep === 'review' ? 'AI Extraction Inspection & Review Studio' : 'AI PDF & Raw Test Paper Importer'}
+                </h3>
               </div>
-              <button type="button" onClick={() => setIsAiModalOpen(false)} className="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
-            </div>
-
-            <div className="space-y-3 text-xs font-medium">
-              <p className="text-slate-500">
-                Paste raw question paper text or solution keys below. The AI Parser will automatically separate statements, diagram links, options, and answers.
-              </p>
-
-              <textarea
-                rows="6"
-                value={aiRawText}
-                onChange={e => setAiRawText(e.target.value)}
-                placeholder="Paste question paper text here (e.g. Q1. Two point charges +q and -q... Option A... Answer: Zero)"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 outline-none focus:border-teal-600 font-mono text-xs"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsAiModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+              <button 
+                type="button" 
+                onClick={() => { setIsAiModalOpen(false); setAiStep('input'); }} 
+                className="text-slate-400 hover:text-slate-700 font-bold text-sm"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRunAiParser}
-                disabled={aiParsing}
-                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{aiParsing ? 'AI Extracting Questions...' : 'Run Smart AI Extraction'}</span>
+                ✕
               </button>
             </div>
+
+            {aiStep === 'input' ? (
+              <>
+                <div className="space-y-3 text-xs font-medium">
+                  <p className="text-slate-500">
+                    Paste raw question paper text or solution keys below. The AI Parser will extract statement text, diagram links, options, and answer keys, then let you inspect every question!
+                  </p>
+
+                  <textarea
+                    rows="6"
+                    value={aiRawText}
+                    onChange={e => setAiRawText(e.target.value)}
+                    placeholder="Paste question paper text here (e.g. Q1. A parallel plate capacitor... Option A... Answer: V/K)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 outline-none focus:border-teal-600 font-mono text-xs"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsAiModalOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRunAiParser}
+                    disabled={aiParsing}
+                    className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{aiParsing ? 'AI Extracting Questions...' : 'Run Smart AI Extraction'}</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Inspection Review Step */}
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                  <div className="flex justify-between items-center bg-teal-50 border border-teal-200 p-3 rounded-2xl text-xs text-teal-800 font-bold">
+                    <span>Inspect & review extracted questions before confirming ingestion:</span>
+                    <span>{parsedQuestions.filter(q => q.selected).length} / {parsedQuestions.length} Selected</span>
+                  </div>
+
+                  {parsedQuestions.map((pq, qIdx) => (
+                    <div key={pq.id} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={pq.selected}
+                            onChange={e => {
+                              const updated = [...parsedQuestions]
+                              updated[qIdx].selected = e.target.checked
+                              setParsedQuestions(updated)
+                            }}
+                            className="w-4 h-4 rounded text-teal-600 border-slate-300 focus:ring-teal-500 cursor-pointer"
+                          />
+                          <span className="text-xs font-black text-slate-900">Question #{qIdx + 1} ({pq.subject} • {pq.formatType})</span>
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setParsedQuestions(parsedQuestions.filter((_, idx) => idx !== qIdx))
+                          }}
+                          className="text-xs text-rose-600 hover:underline font-bold"
+                        >
+                          Discard
+                        </button>
+                      </div>
+
+                      {/* Editable Statement */}
+                      <textarea
+                        rows="2"
+                        value={pq.questionText}
+                        onChange={e => {
+                          const updated = [...parsedQuestions]
+                          updated[qIdx].questionText = e.target.value
+                          setParsedQuestions(updated)
+                        }}
+                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 font-bold outline-none focus:border-teal-600"
+                      />
+
+                      {/* Diagram Preview */}
+                      {pq.diagramUrl && (
+                        <div className="p-2 bg-white border border-slate-200 rounded-xl flex items-center gap-3">
+                          <img src={pq.diagramUrl} alt="Diagram" className="h-16 rounded object-contain" />
+                          <span className="text-[10px] text-slate-500 font-bold truncate">Diagram Attached: {pq.diagramUrl}</span>
+                        </div>
+                      )}
+
+                      {/* Answer Key */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black text-slate-500 uppercase">Correct Answer:</span>
+                        <input
+                          type="text"
+                          value={pq.correctAnswer}
+                          onChange={e => {
+                            const updated = [...parsedQuestions]
+                            updated[qIdx].correctAnswer = e.target.value
+                            setParsedQuestions(updated)
+                          }}
+                          className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-emerald-700 font-black outline-none focus:border-teal-600"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setAiStep('input')}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                  >
+                    ← Back to Raw Text
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmIngestion}
+                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Confirm & Ingest Selected Questions ({parsedQuestions.filter(q => q.selected).length})</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

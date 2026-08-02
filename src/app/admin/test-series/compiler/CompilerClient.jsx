@@ -56,10 +56,12 @@ function CompilerClientContent({ packages = [] }) {
   const [activationTimestamp, setActivationTimestamp] = useState('')
   const [isCompiling, setIsCompiling] = useState(false)
 
-  // AI PDF Question Importer State
+  // AI PDF Question Importer & Review State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false)
   const [aiRawText, setAiRawText] = useState('')
   const [aiParsing, setAiParsing] = useState(false)
+  const [aiStep, setAiStep] = useState('input')
+  const [parsedQuestions, setParsedQuestions] = useState([])
 
   const handleRunAiParser = () => {
     if (!aiRawText.trim()) return alert('Please paste PDF question text or test paper content!')
@@ -73,7 +75,8 @@ function CompilerClientContent({ packages = [] }) {
           difficulty: 'HARD',
           content: 'A parallel plate capacitor is charged and then disconnected from the battery. If the distance between plates is doubled, the potential difference across plates will:',
           options: ['Double', 'Halve', 'Remain Same', 'Quadruple'],
-          correct_option_index: 0
+          correct_option_index: 0,
+          selected: true
         },
         {
           id: `q-ai-2-${Date.now()}`,
@@ -82,16 +85,28 @@ function CompilerClientContent({ packages = [] }) {
           difficulty: 'MEDIUM',
           content: 'Which of the following molecules has a linear shape according to VSEPR theory?',
           options: ['CO₂', 'H₂O', 'SO₂', 'O₃'],
-          correct_option_index: 0
+          correct_option_index: 0,
+          selected: true
         }
       ]
-      setPoolQuestions(prev => [...extracted, ...prev])
-      setSelectedQuestions(prev => [...prev, ...extracted])
+
+      setParsedQuestions(extracted)
       setAiParsing(false)
-      setIsAiModalOpen(false)
-      setAiRawText('')
-      alert(`🤖 AI Extractor successfully ingested ${extracted.length} questions into your CBT exam blueprint!`)
-    }, 1200)
+      setAiStep('review')
+    }, 1000)
+  }
+
+  const handleConfirmIngestion = () => {
+    const toIngest = parsedQuestions.filter(q => q.selected)
+    if (toIngest.length === 0) return alert('Please select at least 1 question to ingest!')
+
+    setPoolQuestions(prev => [...toIngest, ...prev])
+    setSelectedQuestions(prev => [...prev, ...toIngest])
+    setIsAiModalOpen(false)
+    setAiStep('input')
+    setAiRawText('')
+    setParsedQuestions([])
+    alert(`🤖 Checked and ingested ${toIngest.length} questions into your CBT exam blueprint!`)
   }
 
   // Fetch pool questions based on filters with mock fallback
@@ -656,50 +671,144 @@ function CompilerClientContent({ packages = [] }) {
 
       </div>
 
-      {/* AI PDF Question Importer Modal */}
+      {/* AI PDF Question Importer & Inspection Modal */}
       {isAiModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <div className="bg-white border border-slate-200 p-8 rounded-3xl max-w-xl w-full space-y-6 shadow-2xl">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className={`bg-white border border-slate-200 p-8 rounded-3xl w-full space-y-6 shadow-2xl transition-all ${
+            aiStep === 'review' ? 'max-w-3xl' : 'max-w-xl'
+          }`}>
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-teal-600 animate-pulse" />
-                <h3 className="text-base font-black text-slate-900">AI PDF & Raw Test Paper Importer</h3>
+                <h3 className="text-base font-black text-slate-900">
+                  {aiStep === 'review' ? 'AI Extraction Inspection & Review Studio' : 'AI PDF & Raw Test Paper Importer'}
+                </h3>
               </div>
-              <button type="button" onClick={() => setIsAiModalOpen(false)} className="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
-            </div>
-
-            <div className="space-y-3 text-xs font-medium">
-              <p className="text-slate-500">
-                Paste raw question paper text or PDF solution keys below. The AI Parser will automatically separate question statements, options, and answer keys, then import them directly into your exam blueprint!
-              </p>
-
-              <textarea
-                rows="6"
-                value={aiRawText}
-                onChange={e => setAiRawText(e.target.value)}
-                placeholder="Paste question paper text here (e.g. Q1. A parallel plate capacitor... Option A: Double... Answer: Double)"
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 outline-none focus:border-teal-600 font-mono text-xs"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsAiModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+              <button 
+                type="button" 
+                onClick={() => { setIsAiModalOpen(false); setAiStep('input'); }} 
+                className="text-slate-400 hover:text-slate-700 font-bold text-sm"
               >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRunAiParser}
-                disabled={aiParsing}
-                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{aiParsing ? 'AI Extracting Questions...' : 'Run Smart AI Extraction'}</span>
+                ✕
               </button>
             </div>
+
+            {aiStep === 'input' ? (
+              <>
+                <div className="space-y-3 text-xs font-medium">
+                  <p className="text-slate-500">
+                    Paste raw question paper text or PDF solution keys below. The AI Parser will extract question statements, options, and answer keys, then let you inspect every question!
+                  </p>
+
+                  <textarea
+                    rows="6"
+                    value={aiRawText}
+                    onChange={e => setAiRawText(e.target.value)}
+                    placeholder="Paste question paper text here (e.g. Q1. A parallel plate capacitor... Option A: Double... Answer: Double)"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 outline-none focus:border-teal-600 font-mono text-xs"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsAiModalOpen(false)}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRunAiParser}
+                    disabled={aiParsing}
+                    className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{aiParsing ? 'AI Extracting Questions...' : 'Run Smart AI Extraction'}</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Inspection Review Step */}
+                <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                  <div className="flex justify-between items-center bg-teal-50 border border-teal-200 p-3 rounded-2xl text-xs text-teal-800 font-bold">
+                    <span>Inspect & review extracted questions before compiling:</span>
+                    <span>{parsedQuestions.filter(q => q.selected).length} / {parsedQuestions.length} Selected</span>
+                  </div>
+
+                  {parsedQuestions.map((pq, qIdx) => (
+                    <div key={pq.id} className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={pq.selected}
+                            onChange={e => {
+                              const updated = [...parsedQuestions]
+                              updated[qIdx].selected = e.target.checked
+                              setParsedQuestions(updated)
+                            }}
+                            className="w-4 h-4 rounded text-teal-600 border-slate-300 focus:ring-teal-500 cursor-pointer"
+                          />
+                          <span className="text-xs font-black text-slate-900">Question #{qIdx + 1} ({pq.subject} • {pq.sub_topic})</span>
+                        </label>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setParsedQuestions(parsedQuestions.filter((_, idx) => idx !== qIdx))
+                          }}
+                          className="text-xs text-rose-600 hover:underline font-bold"
+                        >
+                          Discard
+                        </button>
+                      </div>
+
+                      {/* Editable Statement */}
+                      <textarea
+                        rows="2"
+                        value={pq.content}
+                        onChange={e => {
+                          const updated = [...parsedQuestions]
+                          updated[qIdx].content = e.target.value
+                          setParsedQuestions(updated)
+                        }}
+                        className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 font-bold outline-none focus:border-teal-600"
+                      />
+
+                      {/* Options */}
+                      <div className="grid grid-cols-2 gap-2">
+                        {pq.options.map((opt, oIdx) => (
+                          <div key={oIdx} className="p-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800">
+                            <span className="font-bold text-slate-500 mr-1">{String.fromCharCode(65 + oIdx)}:</span> {opt}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => setAiStep('input')}
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                  >
+                    ← Back to Raw Text
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmIngestion}
+                    className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Confirm & Import Selected Questions ({parsedQuestions.filter(q => q.selected).length})</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
