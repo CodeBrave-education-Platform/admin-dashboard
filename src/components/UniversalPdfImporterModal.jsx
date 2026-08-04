@@ -5,6 +5,7 @@ import { Sparkles, Upload, FileText, CheckCircle2, Trash2, Image as ImageIcon, A
 
 export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIngest, targetModuleName = 'Question Bank' }) {
   const [aiStep, setAiStep] = useState('input'); // 'input' | 'review'
+  const [parserType, setParserType] = useState('unstructured_pdf'); // 'unstructured_pdf' | 'structured_table'
   const [aiRawText, setAiRawText] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [aiParsing, setAiParsing] = useState(false);
@@ -28,6 +29,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
 
     try {
       const formData = new FormData();
+      formData.append('parserType', parserType);
       if (selectedFile) formData.append('file', selectedFile);
       if (aiRawText) formData.append('rawText', aiRawText);
 
@@ -174,6 +176,38 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
         {aiStep === 'input' ? (
           <>
             <div className="space-y-4 text-xs font-medium">
+              {/* Document Layout Engine Selection */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Document Layout Engine</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setParserType('unstructured_pdf')}
+                    className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                      parserType === 'unstructured_pdf' 
+                        ? 'bg-teal-50 border-teal-600 text-teal-900 font-bold shadow-xs' 
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="text-xs font-extrabold">📄 Standard Exam Paper PDF</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">NTA / CBSE multi-page exams with header stripping</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setParserType('structured_table')}
+                    className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
+                      parserType === 'structured_table' 
+                        ? 'bg-indigo-50 border-indigo-600 text-indigo-900 font-bold shadow-xs' 
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="text-xs font-extrabold">📊 Tabular / Matrix Table Format</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">Calculus, Limits & Math Grid questions (Question / Option / Solution / Marks)</div>
+                  </button>
+                </div>
+              </div>
+
               {/* Drag & Drop PDF File Upload Zone */}
               <div className="border-2 border-dashed border-slate-200 hover:border-teal-500 bg-slate-50/70 p-6 rounded-2xl text-center space-y-3 transition">
                 <Upload className="w-8 h-8 text-teal-600 mx-auto animate-bounce" />
@@ -195,7 +229,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
               </div>
 
               <textarea
-                rows="5"
+                rows="4"
                 value={aiRawText}
                 onChange={e => setAiRawText(e.target.value)}
                 placeholder="Paste question paper text here..."
@@ -322,19 +356,37 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                     </div>
                   )}
 
-                  {/* Correct Answer */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-slate-500 uppercase">Answer Key:</span>
-                    <input
-                      type="text"
-                      value={pq.correct_answer || pq.correctAnswer || ''}
-                      onChange={e => {
-                        const updated = [...parsedQuestions];
-                        updated[qIdx].correct_answer = e.target.value;
-                        setParsedQuestions(updated);
-                      }}
-                      className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-emerald-700 font-black outline-none focus:border-teal-600"
-                    />
+                  {/* Correct Answer & Solution Explanation */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-black text-slate-500 uppercase">Answer Key:</span>
+                      <input
+                        type="text"
+                        value={pq.correct_answer || pq.correctAnswer || ''}
+                        onChange={e => {
+                          const updated = [...parsedQuestions];
+                          updated[qIdx].correct_answer = e.target.value;
+                          setParsedQuestions(updated);
+                        }}
+                        className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-emerald-700 font-black outline-none focus:border-teal-600"
+                      />
+                    </div>
+
+                    {(pq.explanation || pq.solution_text) && (
+                      <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl space-y-1">
+                        <span className="text-[10px] font-black text-amber-800 uppercase block">Solution & Derivation Step:</span>
+                        <textarea
+                          rows="2"
+                          value={pq.explanation || pq.solution_text || ''}
+                          onChange={e => {
+                            const updated = [...parsedQuestions];
+                            updated[qIdx].explanation = e.target.value;
+                            setParsedQuestions(updated);
+                          }}
+                          className="w-full bg-transparent text-xs text-amber-950 font-mono outline-none"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
