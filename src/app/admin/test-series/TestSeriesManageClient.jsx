@@ -29,8 +29,9 @@ export default function TestSeriesManageClient({
 
   // Modal Triggers
   const [showAddPackageModal, setShowAddPackageModal] = useState(false);
+  const [editingPackage, setEditingPackage] = useState(null);
 
-  // Form States: New Test Package
+  // Form States: New / Edit Test Package
   const [pkgTitle, setPkgTitle] = useState('');
   const [pkgTag, setPkgTag] = useState('JEE Main');
   const [drillsCount, setDrillsCount] = useState('0');
@@ -60,45 +61,79 @@ export default function TestSeriesManageClient({
     }
   };
 
-  // Create package handler
-  const handleCreatePackage = async (e) => {
+  const handleOpenEditPackage = (pkg) => {
+    setEditingPackage(pkg);
+    setPkgTitle(pkg.title || '');
+    setPkgTag(pkg.target_exam_tag || 'JEE Main');
+    setDrillsCount(String(pkg.test_distribution?.chapter_drills || 0));
+    setMocksCount(String(pkg.test_distribution?.full_mocks || 0));
+    setLiveCount(String(pkg.test_distribution?.live_papers || 0));
+    setIsPremium(pkg.price_ledger?.status === 'premium');
+    setPkgPrice(String(pkg.price_ledger?.price || 499));
+    setShowAddPackageModal(true);
+  };
+
+  const handleOpenCreatePackage = () => {
+    setEditingPackage(null);
+    setPkgTitle('');
+    setPkgTag('JEE Main');
+    setDrillsCount('0');
+    setMocksCount('0');
+    setLiveCount('0');
+    setIsPremium(false);
+    setPkgPrice('499');
+    setShowAddPackageModal(true);
+  };
+
+  // Create or Update package handler
+  const handleSavePackage = async (e) => {
     e.preventDefault();
     if (!pkgTitle.trim()) return alert('Package title is required.');
 
     setIsCreatingPackage(true);
     try {
-      const { data, error } = await supabase
-        .from('test_packages')
-        .insert([{
-          title: pkgTitle.trim(),
-          target_exam_tag: pkgTag.trim(),
-          total_tests_count: 0,
-          test_distribution: {
-            chapter_drills: parseInt(drillsCount) || 0,
-            full_mocks: parseInt(mocksCount) || 0,
-            live_papers: parseInt(liveCount) || 0
-          },
-          price_ledger: {
-            status: isPremium ? 'premium' : 'free',
-            price: isPremium ? (parseFloat(pkgPrice) || 0) : 0
-          }
-        }])
-        .select()
-        .single();
+      const payload = {
+        title: pkgTitle.trim(),
+        target_exam_tag: pkgTag.trim(),
+        test_distribution: {
+          chapter_drills: parseInt(drillsCount) || 0,
+          full_mocks: parseInt(mocksCount) || 0,
+          live_papers: parseInt(liveCount) || 0
+        },
+        price_ledger: {
+          status: isPremium ? 'premium' : 'free',
+          price: isPremium ? (parseFloat(pkgPrice) || 0) : 0
+        }
+      };
 
-      if (error) throw error;
+      if (editingPackage) {
+        const { data, error } = await supabase
+          .from('test_packages')
+          .update(payload)
+          .eq('id', editingPackage.id)
+          .select()
+          .single();
 
-      alert('Test package successfully created!');
-      setPackages(prev => [data, ...prev]);
+        if (error) throw error;
+        alert('Test package updated successfully!');
+        setPackages(prev => prev.map(p => p.id === editingPackage.id ? (data || { ...p, ...payload }) : p));
+      } else {
+        const { data, error } = await supabase
+          .from('test_packages')
+          .insert([{ ...payload, total_tests_count: 0 }])
+          .select()
+          .single();
+
+        if (error) throw error;
+        alert('Test package successfully created!');
+        setPackages(prev => [data, ...prev]);
+      }
+
       setPkgTitle('');
-      setDrillsCount('0');
-      setMocksCount('0');
-      setLiveCount('0');
-      setIsPremium(false);
-      setPkgPrice('499');
       setShowAddPackageModal(false);
+      setEditingPackage(null);
     } catch (err) {
-      alert('Failed to establish package: ' + err.message);
+      alert('Save failed: ' + err.message);
     } finally {
       setIsCreatingPackage(false);
     }
@@ -188,7 +223,7 @@ export default function TestSeriesManageClient({
           </button>
 
           <button
-            onClick={() => setShowAddPackageModal(true)}
+            onClick={handleOpenCreatePackage}
             className="px-4 py-2.5 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-sm border border-indigo-700 hover:scale-[1.01] active:scale-[0.99]"
           >
             <PlusCircle className="w-4 h-4 shrink-0" />
@@ -273,6 +308,17 @@ export default function TestSeriesManageClient({
                         </span>
                         
                         <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditPackage(pkg);
+                            }}
+                            className="p-1.5 bg-white border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-slate-400 hover:text-indigo-600 rounded-lg transition"
+                            title="Edit Package Details"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </button>
+
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -460,7 +506,9 @@ export default function TestSeriesManageClient({
               <div className="flex justify-between items-center border-b border-slate-100 pb-3 shrink-0">
                 <div className="flex items-center gap-2">
                   <PlusCircle className="w-5 h-5 text-indigo-600" />
-                  <h3 className="font-black text-sm uppercase text-slate-800 tracking-wider">New Test Package</h3>
+                  <h3 className="font-black text-sm uppercase text-slate-800 tracking-wider">
+                    {editingPackage ? 'Edit Test Series Package' : 'New Test Series Package'}
+                  </h3>
                 </div>
                 <button
                   onClick={() => setShowAddPackageModal(false)}
@@ -470,7 +518,7 @@ export default function TestSeriesManageClient({
                 </button>
               </div>
 
-              <form onSubmit={handleCreatePackage} className="space-y-4">
+              <form onSubmit={handleSavePackage} className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-500 uppercase block">Package Title</label>
                   <input
