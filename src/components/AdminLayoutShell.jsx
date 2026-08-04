@@ -30,6 +30,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
   ];
 
   const testingSection = [
+    { label: 'Test Packages & Mocks', href: '/admin/test-series', icon: Award },
     { label: 'Question Bank Studio', href: '/admin/questions', icon: HelpCircle },
     { label: 'Test Series Compiler', href: '/admin/test-series/compiler', icon: Award }
   ];
