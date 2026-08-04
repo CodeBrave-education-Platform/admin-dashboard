@@ -2,12 +2,14 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
+import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal'
 import { 
   BookOpen, Plus, Edit, Trash2, Search, CheckCircle2, 
-  Package, GraduationCap, ArrowLeft, Star, Users, DollarSign 
+  Package, GraduationCap, ArrowLeft, Star, Users, DollarSign, Sparkles 
 } from 'lucide-react'
 
 export default function CourseStudioClient({ user }) {
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false)
   const [courses, setCourses] = useState([
     {
       id: 'c1',
@@ -148,13 +150,24 @@ export default function CourseStudioClient({ user }) {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreate}
-          className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Publish New Course</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsPdfModalOpen(true)}
+            className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>Import Course Quiz from PDF</span>
+          </button>
+
+          <button
+            onClick={handleOpenCreate}
+            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Publish New Course</span>
+          </button>
+        </div>
       </div>
 
       {/* Search Toolbar - Light Theme */}
@@ -362,6 +375,16 @@ export default function CourseStudioClient({ user }) {
           </form>
         </div>
       )}
+
+      {/* Universal AI PDF & Document Importer Modal */}
+      <UniversalPdfImporterModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        targetModuleName="Course Quiz & Practice Sets"
+        onConfirmIngest={(newQuestions) => {
+          alert(`🎉 Ingested ${newQuestions.length} practice questions with diagrams into Course Modules!`);
+        }}
+      />
     </div>
   )
 }
