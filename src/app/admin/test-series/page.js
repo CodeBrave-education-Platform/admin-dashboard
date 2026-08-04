@@ -32,6 +32,16 @@ export default async function TestSeriesDashboardPage() {
     if (dbAttempts) recentAttempts = dbAttempts
   } catch (e) {}
 
+  // Fetch compiled exams
+  let exams = []
+  try {
+    const { data: dbExams } = await supabase
+      .from('test_exams')
+      .select('id, package_id, title, duration_minutes, total_questions, is_live_ranking, activation_timestamp, created_at')
+      .order('created_at', { ascending: false })
+    if (dbExams) exams = dbExams
+  } catch (e) {}
+
   return (
     <AdminLayoutShell
       title="Test Series & Assessment Studio"
@@ -39,8 +49,9 @@ export default async function TestSeriesDashboardPage() {
     >
       <TestSeriesManageClient 
         user={authenticatedUser}
-        initialPackages={packages}
-        initialAttempts={recentAttempts}
+        initialPackages={packages || []}
+        initialExams={exams || []}
+        initialAttempts={recentAttempts || []}
       />
     </AdminLayoutShell>
   )

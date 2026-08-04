@@ -11,18 +11,18 @@ import {
 } from 'lucide-react';
 
 export default function TestSeriesManageClient({
-  initialPackages,
-  initialExams,
-  initialAttempts
+  initialPackages = [],
+  initialExams = [],
+  initialAttempts = []
 }) {
   const router = useRouter();
   const supabase = createClient();
   const [isPending, startTransition] = useTransition();
 
   // Primary states
-  const [packages, setPackages] = useState(initialPackages);
-  const [exams, setExams] = useState(initialExams);
-  const [attempts, setAttempts] = useState(initialAttempts);
+  const [packages, setPackages] = useState(initialPackages || []);
+  const [exams, setExams] = useState(initialExams || []);
+  const [attempts, setAttempts] = useState(initialAttempts || []);
   
   const [selectedPackageId, setSelectedPackageId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -196,8 +196,8 @@ export default function TestSeriesManageClient({
   };
 
   // Filtered exams for selected package
-  const activeExams = exams.filter(e => e.package_id === selectedPackageId);
-  const selectedPackage = packages.find(p => p.id === selectedPackageId);
+  const activeExams = (exams || []).filter(e => e.package_id === selectedPackageId);
+  const selectedPackage = (packages || []).find(p => p.id === selectedPackageId);
 
   return (
     <div className="space-y-8 animate-fade-in font-sans text-slate-800">
