@@ -61,6 +61,8 @@ export default function CourseStudioClient({ user }) {
   const [formPrice, setFormPrice] = useState(2999)
   const [formOriginalPrice, setFormOriginalPrice] = useState(4999)
   const [formBookKit, setFormBookKit] = useState('')
+  const [formThumbnail, setFormThumbnail] = useState('')
+  const [formDescription, setFormDescription] = useState('')
 
   const handleOpenCreate = () => {
     setEditingCourse(null)
@@ -99,9 +101,10 @@ export default function CourseStudioClient({ user }) {
         level: formLevel,
         price: Number(formPrice),
         originalPrice: Number(formOriginalPrice),
-        bookKit: formBookKit.trim()
+        bookKit: formBookKit.trim(),
+        thumbnail_url: formThumbnail.trim() || c.thumbnail_url,
+        description: formDescription.trim() || c.description
       } : c))
-      alert(`🎉 Course blueprint "${formTitle}" updated!`)
     } else {
       const newCourse = {
         id: `c-${Date.now()}`,
@@ -113,10 +116,11 @@ export default function CourseStudioClient({ user }) {
         originalPrice: Number(formOriginalPrice),
         studentsCount: 0,
         badge: '⚡ New Release',
-        bookKit: formBookKit.trim() || 'Standard Textbook Kit'
+        bookKit: formBookKit.trim() || 'Standard Textbook Kit',
+        thumbnail_url: formThumbnail.trim() || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
+        description: formDescription.trim() || 'Complete syllabus breakdown with textbook kit.'
       }
       setCourses([newCourse, ...courses])
-      alert(`🎉 New Course "${formTitle}" published!`)
     }
 
     setIsModalOpen(false)
