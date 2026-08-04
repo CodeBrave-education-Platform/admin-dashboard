@@ -11,6 +11,16 @@ import {
   HelpCircle, Settings, Layers, Calendar, Loader2, Sparkles, X, Plus, AlertCircle, Image as ImageIcon
 } from 'lucide-react';
 
+const formatDate = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 export default function TestSeriesManageClient({
   initialPackages = [],
   initialExams = [],
@@ -316,8 +326,8 @@ export default function TestSeriesManageClient({
                       </div>
 
                       <div className="flex justify-between items-center border-t border-slate-150/60 pt-3 mt-3">
-                        <span className="text-[9px] text-slate-400 font-bold">
-                          Created {new Date(pkg.created_at).toLocaleDateString()}
+                        <span className="text-[9px] text-slate-400 font-bold" suppressHydrationWarning>
+                          Created {formatDate(pkg.created_at)}
                         </span>
                         
                         <div className="flex items-center gap-1.5">
@@ -487,7 +497,7 @@ export default function TestSeriesManageClient({
 
                       <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold border-t border-slate-150/60 pt-1.5 mt-1.5">
                         <span>Duration: {minutes}m {seconds}s</span>
-                        <span>{new Date(att.completed_at).toLocaleDateString()}</span>
+                        <span suppressHydrationWarning>{formatDate(att.completed_at)}</span>
                       </div>
                     </div>
                   );
