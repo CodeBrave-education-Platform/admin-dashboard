@@ -53,6 +53,7 @@ export default function TestSeriesManageClient({
   // Form States: New / Edit Test Package
   const [pkgTitle, setPkgTitle] = useState('');
   const [pkgTag, setPkgTag] = useState('JEE Main');
+  const [pkgBranch, setPkgBranch] = useState('Hyderabad Main Campus');
   const [pkgDescription, setPkgDescription] = useState('');
   const [pkgThumbnail, setPkgThumbnail] = useState('');
   const [drillsCount, setDrillsCount] = useState('0');
@@ -554,19 +555,36 @@ export default function TestSeriesManageClient({
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block">Target Competitive Tag</label>
-                  <select
-                    value={pkgTag}
-                    onChange={e => setPkgTag(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
-                  >
-                    <option value="JEE Main">JEE Main</option>
-                    <option value="JEE Advanced">JEE Advanced</option>
-                    <option value="NEET">NEET Focus</option>
-                    <option value="KVPY">KVPY / Olympiad</option>
-                    <option value="Foundation">Foundation Drills</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase block">Target Competitive Tag</label>
+                    <select
+                      value={pkgTag}
+                      onChange={e => setPkgTag(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                    >
+                      <option value="JEE Main">JEE Main</option>
+                      <option value="JEE Advanced">JEE Advanced</option>
+                      <option value="NEET">NEET Focus</option>
+                      <option value="KVPY">KVPY / Olympiad</option>
+                      <option value="Foundation">Foundation Drills</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase block">Campus Branch</label>
+                    <select
+                      value={pkgBranch}
+                      onChange={e => setPkgBranch(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                    >
+                      <option value="Hyderabad Main Campus">Hyderabad Main Campus</option>
+                      <option value="Vijayawada Center">Vijayawada Center</option>
+                      <option value="Vizag Branch">Vizag Branch</option>
+                      <option value="Bengaluru Hub">Bengaluru Hub</option>
+                      <option value="Online Pan-India">Online Pan-India</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Distribution setup */}
