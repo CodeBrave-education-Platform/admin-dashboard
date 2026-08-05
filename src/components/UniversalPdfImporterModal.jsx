@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react';
+import KatexRenderer from '@/components/KatexRenderer';
 import { Sparkles, Upload, FileText, CheckCircle2, Trash2, Image as ImageIcon, AlertCircle } from 'lucide-react';
 
 export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIngest, targetModuleName = 'Question Bank' }) {
@@ -299,7 +300,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                     </button>
                   </div>
 
-                  {/* Editable Question Content */}
+                  {/* Editable Question Content & KaTeX Math Preview */}
                   <textarea
                     rows="2"
                     value={pq.content || pq.questionText || ''}
@@ -310,6 +311,14 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                     }}
                     className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 font-bold outline-none focus:border-teal-600"
                   />
+
+                  {/* KaTeX Vector Math Preview */}
+                  {(pq.content || pq.questionText) && (
+                    <div className="p-2.5 bg-indigo-50/60 border border-indigo-100 rounded-xl text-xs font-semibold text-slate-800 flex items-start gap-2">
+                      <span className="text-[10px] font-black uppercase text-indigo-700 bg-indigo-100 px-1.5 py-0.5 rounded shrink-0">LaTeX Math Preview</span>
+                      <KatexRenderer content={pq.content || pq.questionText} className="text-indigo-950 font-medium" />
+                    </div>
+                  )}
 
                   {/* Diagram Link & Live Preview */}
                   <div className="space-y-1.5">
