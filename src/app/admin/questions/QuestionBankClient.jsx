@@ -2,12 +2,20 @@
 
 import React, { useState } from 'react'
 import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal'
+import ConfirmDialogModal from '@/components/ConfirmDialogModal'
+import KatexRenderer from '@/components/KatexRenderer'
 import { 
   HelpCircle, Plus, Search, Filter, Image as ImageIcon, Sparkles, 
   CheckCircle2, Edit3, Trash2, FileText, ArrowRight, Layers, UploadCloud, Eye
 } from 'lucide-react'
 
 export default function QuestionBankClient({ user }) {
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
   const [questions, setQuestions] = useState([
     {
       id: 'qb-1',
@@ -137,13 +145,18 @@ export default function QuestionBankClient({ user }) {
     }
 
     setIsAuthorModalOpen(false)
-    alert(`🎉 Question saved to central Question Bank!`)
   }
 
   const handleDeleteQuestion = (id) => {
-    if (confirm('Are you sure you want to remove this question from the Question Bank?')) {
-      setQuestions(questions.filter(q => q.id !== id))
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Remove Question from Bank',
+      message: 'Are you sure you want to permanently delete this question entry from the central Question Bank repository?',
+      onConfirm: () => {
+        setQuestions(prev => prev.filter(q => q.id !== id));
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   }
 
   // AI Parser Inspection & Review States
@@ -330,10 +343,10 @@ export default function QuestionBankClient({ user }) {
                 </div>
               </div>
 
-              {/* Question Text */}
-              <p className="text-sm font-bold text-slate-900 leading-relaxed">
-                {q.questionText}
-              </p>
+              {/* Question Text with KaTeX Formula Engine */}
+              <div className="text-sm font-bold text-slate-900 leading-relaxed">
+                <KatexRenderer content={q.questionText} />
+              </div>
 
               {/* Question Diagram Image */}
               {q.diagramUrl && (
@@ -343,15 +356,15 @@ export default function QuestionBankClient({ user }) {
                 </div>
               )}
 
-              {/* Question Options */}
+              {/* Question Options with KaTeX */}
               {q.options && q.options.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pt-2">
                   {q.options.map((opt, i) => (
                     <div key={i} className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 flex items-center gap-2">
-                      <span className="w-6 h-6 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px]">
+                      <span className="w-6 h-6 rounded-lg bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0">
                         {String.fromCharCode(65 + i)}
                       </span>
-                      <span>{opt}</span>
+                      <span><KatexRenderer content={opt} /></span>
                     </div>
                   ))}
                 </div>
@@ -556,6 +569,14 @@ export default function QuestionBankClient({ user }) {
           }));
           setQuestions(prev => [...formatted, ...prev]);
         }}
+      />
+      {/* In-Website Confirmation Modal */}
+      <ConfirmDialogModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   )
