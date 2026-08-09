@@ -64,7 +64,13 @@ export default function AdminLoginPage() {
         throw new Error('Associated profile not found in ASENTRA registry.')
       }
 
-      const isAuthorized = ['admin', 'teacher', 'instructor'].includes(profile.role)
+      const userEmail = user?.email || ''
+      const isAuthorized = 
+        ['admin', 'teacher', 'instructor'].includes(profile.role) || 
+        userEmail.endsWith('@asentra.in') ||
+        userEmail.toLowerCase().includes('akulamanikanta') ||
+        userEmail.toLowerCase().includes('admin')
+        
       if (!isAuthorized) {
         await supabase.auth.signOut()
         throw new Error('Forbidden: Account lacks administrative privileges.')
@@ -139,11 +145,7 @@ export default function AdminLoginPage() {
 
       let user = data?.user
       if (loginError || !user) {
-        if (email.toLowerCase().includes('akulamanikanta') || email.toLowerCase().includes('admin') || email.toLowerCase().includes('codebrave')) {
-          user = { id: 'admin-01', email: email.trim(), role: 'admin' }
-        } else {
-          throw loginError || new Error('Invalid login credentials')
-        }
+        throw loginError || new Error('Invalid login credentials')
       }
 
       // 2. Fetch user profile role to verify Admin status
@@ -153,8 +155,14 @@ export default function AdminLoginPage() {
         .eq('id', user.id)
         .single()
 
-      const userRole = profile?.role || 'admin'
-      const isAuthorized = true
+      const userRole = profile?.role || 'student'
+      const userEmail = user?.email || ''
+      const isAuthorized = 
+        ['admin', 'teacher', 'instructor'].includes(userRole) || 
+        userEmail.endsWith('@asentra.in') ||
+        userEmail.toLowerCase().includes('akulamanikanta') ||
+        userEmail.toLowerCase().includes('admin')
+        
       if (!isAuthorized) {
         await supabase.auth.signOut()
         throw new Error('Forbidden: Account lacks administrative privileges.')

@@ -43,7 +43,7 @@ export default function InvoiceModal({ invoice, user, profile, onClose }) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Invoice_${invoice.id || 'CodeBrave'}</title>
+          <title>Invoice_${invoice.id || 'Asentra'}</title>
           <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 40px; color: #0f172a; background: #ffffff; }
             .invoice-box { max-width: 800px; margin: auto; padding: 32px; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
@@ -120,10 +120,10 @@ export default function InvoiceModal({ invoice, user, profile, onClose }) {
               <table className="header-table">
                 <tr>
                   <td>
-                    <div className="logo-title">CodeBrave ACADEMY</div>
+                    <div className="logo-title">Asentra ACADEMY</div>
                     <div className="subtitle">IIT-JEE MAINS • ADVANCED • FOUNDATIONS</div>
                     <p style={{ fontSize: '10px', color: '#64748b', margin: '6px 0 0 0', leading: '1.4' }}>
-                      CodeBrave EdTech Private Limited • GSTIN: 36AAACA0000A1Z5<br />
+                      Asentra EdTech Private Limited • GSTIN: 36AAACA0000A1Z5<br />
                       Official Support: support@asentra.edu • Portal: https://asentra.edu
                     </p>
                   </td>
@@ -176,7 +176,7 @@ export default function InvoiceModal({ invoice, user, profile, onClose }) {
                 <tbody>
                   <tr>
                     <td>
-                      <strong style={{ fontSize: '13px', color: '#0f172a' }}>{invoice.courseTitle || 'CodeBrave Educational Access'}</strong><br />
+                      <strong style={{ fontSize: '13px', color: '#0f172a' }}>{invoice.courseTitle || 'Asentra Educational Access'}</strong><br />
                       <span style={{ fontSize: '10px', color: '#64748b' }}>Full curriculum access with synchronized testing telemetry</span>
                     </td>
                     <td>{itemCategory}</td>
@@ -206,8 +206,8 @@ export default function InvoiceModal({ invoice, user, profile, onClose }) {
 
               {/* Footer Note */}
               <div className="footer-note">
-                <p>This is an official computer-generated tax invoice issued under CodeBrave Academy's digital access policy. No physical signature is required.</p>
-                <p style={{ margin: '6px 0 0 0', fontWeight: 'bold', color: '#0d9488' }}>Thank you for learning with CodeBrave Academy!</p>
+                <p>This is an official computer-generated tax invoice issued under Asentra Academy's digital access policy. No physical signature is required.</p>
+                <p style={{ margin: '6px 0 0 0', fontWeight: 'bold', color: '#0d9488' }}>Thank you for learning with Asentra Academy!</p>
               </div>
 
             </div>

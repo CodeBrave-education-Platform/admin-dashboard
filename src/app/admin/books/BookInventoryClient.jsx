@@ -38,7 +38,7 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
     setFormData({
       title: '',
       subtitle: '',
-      author: 'CodeBrave Academic Board',
+      author: 'Asentra Academic Board',
       target_exam_tag: 'JEE MAINS',
       price: '549',
       original_price: '799',
@@ -347,7 +347,7 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
                   type="text"
                   value={formData.author}
                   onChange={e => setFormData({ ...formData, author: e.target.value })}
-                  placeholder="e.g. CodeBrave Academic Board"
+                  placeholder="e.g. Asentra Academic Board"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-medium"
                 />
               </div>

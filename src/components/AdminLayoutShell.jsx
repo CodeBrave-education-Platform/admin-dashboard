@@ -166,7 +166,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
       if (!user && !hasAdminCookie) {
         router.replace('/login');
       } else {
-        setAdminUser(user || { email: 'admin@codebrave.edu.in' });
+        setAdminUser(user || { email: 'admin@Asentra.edu.in' });
         try {
           const [coursesRes, batchesRes] = await Promise.all([
             supabase.from('courses').select('id, title').order('title', { ascending: true }),
@@ -220,7 +220,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
         {/* Brand wordmark logo */}
         <div className="h-16 px-6 border-b border-slate-200 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <img src="/logo.png" alt="ASENTRA Logo" className="h-9 w-auto object-contain" />
+            <img src="/asentra-logo.png" alt="ASENTRA Logo" className="h-10 w-auto object-contain" />
           </Link>
 
           <button 

@@ -18,7 +18,7 @@ export default function InvoiceAuditClient({ user, profile, initialInvoices }) {
 
   // Map raw invoice DB rows into clean presentation format
   const formattedInvoices = invoices.map(inv => {
-    let title = 'CodeBrave Platform Subscription'
+    let title = 'Asentra Platform Subscription'
     let category = 'Course'
     if (inv.books?.title) {
       title = inv.books.title
@@ -82,7 +82,7 @@ export default function InvoiceAuditClient({ user, profile, initialInvoices }) {
               <span>Tax Invoices & Revenue Audit</span>
             </div>
             <h1 className="text-3xl font-extrabold text-white tracking-tight">
-              CodeBrave Financial Invoices & Tax Ledger
+              Asentra Financial Invoices & Tax Ledger
             </h1>
             <p className="text-xs text-slate-400 max-w-xl">
               Audit digital tax invoices, view GST calculations, and generate printable PDF receipts for Courses, Batches, Test Series, and Book Orders.

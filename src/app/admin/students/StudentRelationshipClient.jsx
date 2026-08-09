@@ -31,7 +31,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
     {
       id: 'stu-8219',
       name: 'Vikram Singh',
-      email: 'vikram.singh@codebrave.edu.in',
+      email: 'vikram.singh@Asentra.edu.in',
       joinedDate: '08 Feb 2026',
       status: 'Active',
       enrolledCourses: [

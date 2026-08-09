@@ -3,8 +3,10 @@
 import React, { useState } from 'react';
 import KatexRenderer from '@/components/KatexRenderer';
 import { Sparkles, Upload, FileText, CheckCircle2, Trash2, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { useToast } from '@/components/ToastProvider';
 
 export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIngest, targetModuleName = 'Question Bank' }) {
+  const { showToast } = useToast();
   const [aiStep, setAiStep] = useState('input'); // 'input' | 'review'
   const [parserType, setParserType] = useState('unstructured_pdf'); // 'unstructured_pdf' | 'structured_table'
   const [aiRawText, setAiRawText] = useState('');
@@ -22,7 +24,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
 
   const handleRunAiParser = async () => {
     if (!selectedFile && !aiRawText.trim()) {
-      alert('Please select a PDF file or paste question text!');
+      showToast('Please select a PDF file or paste question text!', 'error');
       return;
     }
 
@@ -45,11 +47,11 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
         setParsedQuestions(marked);
         setAiStep('review');
       } else {
-        alert('Extraction error: ' + (data.error || 'Failed to parse PDF content'));
+        showToast('Extraction error: ' + (data.error || 'Failed to parse PDF content'), 'error');
       }
     } catch (err) {
       console.error('PDF Parsing failed:', err);
-      alert('Parsing error. Using fallback extracted questions.');
+      showToast('Parsing error. Using fallback extracted questions.', 'error');
       
       // Smart fallback parser without header metadata
       const fallbackExtracted = [
@@ -132,20 +134,20 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
     }
   };
 
-  const handleConfirm = () => {
-    const toIngest = parsedQuestions.filter(q => q.selected);
-    if (toIngest.length === 0) {
-      alert('Please select at least 1 question to ingest!');
+  const handleFinalIngest = () => {
+    const selected = parsedQuestions.filter(q => q.selected);
+    if (selected.length === 0) {
+      showToast('Please select at least 1 question to ingest!', 'error');
       return;
     }
-
-    onConfirmIngest(toIngest);
+    
+    onConfirmIngest(selected);
     onClose();
     setAiStep('input');
     setAiRawText('');
     setSelectedFile(null);
     setParsedQuestions([]);
-    alert(`🎉 Successfully ingested ${toIngest.length} questions with diagrams into ${targetModuleName}!`);
+    showToast(`🎉 Successfully ingested ${selected.length} questions with diagrams into ${targetModuleName}!`, 'success');
   };
 
   return (
@@ -412,7 +414,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
 
               <button
                 type="button"
-                onClick={handleConfirm}
+                onClick={handleFinalIngest}
                 className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
               >
                 <CheckCircle2 className="w-4 h-4" />

@@ -9,7 +9,7 @@ export default async function CompilerPage() {
 
   // Authenticate user session gracefully
   const { data: { user } } = await supabase.auth.getUser()
-  const authenticatedUser = user || { id: 'admin-user-01', email: 'admin@codebrave.edu.in' }
+  const authenticatedUser = user || { id: 'admin-user-01', email: 'admin@Asentra.edu.in' }
 
   // Fetch all packages available to link the compiled exam
   let packages = []

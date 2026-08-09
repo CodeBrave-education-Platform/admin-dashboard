@@ -14,7 +14,7 @@ export default function CourseStudioClient({ user }) {
     {
       id: 'c1',
       title: 'JEE Mains & Advanced Complete Physics Mastery 2026',
-      instructor: 'Dr. H.C. Verma & CodeBrave Team',
+      instructor: 'Dr. H.C. Verma & Asentra Team',
       subject: 'Physics',
       level: 'JEE Advanced',
       price: 2999,
@@ -67,7 +67,7 @@ export default function CourseStudioClient({ user }) {
   const handleOpenCreate = () => {
     setEditingCourse(null)
     setFormTitle('')
-    setFormInstructor('CodeBrave Senior Faculty')
+    setFormInstructor('Asentra Senior Faculty')
     setFormSubject('Physics')
     setFormLevel('JEE Advanced')
     setFormPrice(2499)
@@ -344,7 +344,7 @@ export default function CourseStudioClient({ user }) {
                   type="text"
                   value={formInstructor}
                   onChange={e => setFormInstructor(e.target.value)}
-                  placeholder="e.g. Dr. H.C. Verma & CodeBrave Team"
+                  placeholder="e.g. Dr. H.C. Verma & Asentra Team"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-medium"
                 />
               </div>

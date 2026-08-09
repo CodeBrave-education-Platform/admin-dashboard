@@ -8,7 +8,7 @@ export default async function AdminBookOrdersPage() {
 
   // Authenticate user session gracefully
   const { data: { user } } = await supabase.auth.getUser()
-  const authenticatedUser = user || { id: 'admin-user-01', email: 'admin@codebrave.edu.in' }
+  const authenticatedUser = user || { id: 'admin-user-01', email: 'admin@Asentra.edu.in' }
 
   // Fetch all book orders with book title & student profile info
   let bookOrders = []

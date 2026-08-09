@@ -123,7 +123,6 @@ export async function POST(request) {
           marks: { positive: 1, negative: 0 }
         }
       ];
-
       return NextResponse.json({
         success: true,
         parserType: 'structured_table',

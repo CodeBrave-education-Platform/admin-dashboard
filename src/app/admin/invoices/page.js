@@ -8,7 +8,7 @@ export default async function AdminInvoicesPage() {
 
   // Authenticate user session gracefully
   const { data: { user } } = await supabase.auth.getUser()
-  const authenticatedUser = user || { id: 'admin-user-01', email: 'admin@codebrave.edu.in' }
+  const authenticatedUser = user || { id: 'admin-user-01', email: 'admin@Asentra.edu.in' }
 
   // Fetch all invoices from database
   let invoices = []

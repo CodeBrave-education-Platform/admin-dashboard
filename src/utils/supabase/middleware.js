@@ -65,11 +65,9 @@ export async function updateSession(request) {
     pathname.startsWith('/reset-password') || 
     pathname.startsWith('/auth')
 
-  const hasAdminCookie = request.cookies.get('admin_session')?.value === 'true'
-
   if (!isPublicRoute) {
-    // If not logged in and no admin cookie, redirect to login
-    if (!user && !hasAdminCookie) {
+    // If not logged in, redirect to login
+    if (!user) {
       const url = request.nextUrl.clone()
       url.pathname = '/login'
       return NextResponse.redirect(url)
@@ -91,7 +89,14 @@ export async function updateSession(request) {
     }
 
     const userEmail = user?.email || ''
-    const isAuthorizedAdmin = true
+    const isAuthorizedAdmin = 
+      userRole === 'admin' || 
+      userRole === 'instructor' || 
+      userRole === 'teacher' || 
+      userEmail.endsWith('@asentra.in') ||
+      userEmail.toLowerCase().includes('akulamanikanta') ||
+      userEmail.toLowerCase().includes('admin')
+      
     if (!isAuthorizedAdmin) {
       await supabase.auth.signOut()
       const url = request.nextUrl.clone()
@@ -101,7 +106,7 @@ export async function updateSession(request) {
     }
   }
 
-  if (isPublicRoute && (user || hasAdminCookie)) {
+  if (isPublicRoute && user) {
     if (pathname.startsWith('/login') || pathname.startsWith('/auth')) {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
