@@ -1,29 +1,20 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { motion } from 'framer-motion'
 import { Loader2, Mail, Key, ShieldAlert, CheckCircle2 } from 'lucide-react'
-import Script from 'next/script'
-
-const GOOGLE_CLIENT_ID = '259431848841-k354jedd55sllpojicha3uq6on8524k9.apps.googleusercontent.com'
 
 export default function AdminLoginPage() {
   const router = useRouter()
   const supabase = createClient()
-  const googleBtnContainerRef = useRef(null)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
-  const [gsiReady, setGsiReady] = useState(false)
-
-  // Store latest callback in ref to avoid stale closures
-  const credentialCallbackRef = useRef(null)
 
   // Sync login page errors from callback redirects
   useEffect(() => {
@@ -32,100 +23,6 @@ export default function AdminLoginPage() {
     if (errorParam) {
       setErrorMsg(decodeURIComponent(errorParam))
     }
-  }, [])
-
-  // Google credential handler — uses signInWithIdToken (NO redirects!)
-  const handleGoogleCredential = useCallback(async (response) => {
-    setGoogleLoading(true)
-    setErrorMsg('')
-    setSuccessMsg('')
-
-    try {
-      // Exchange Google ID token directly with Supabase — no redirect needed
-      const { data, error: signInError } = await supabase.auth.signInWithIdToken({
-        provider: 'google',
-        token: response.credential,
-      })
-
-      if (signInError) throw signInError
-
-      const user = data?.user
-      if (!user) throw new Error('Authentication returned no user.')
-
-      // Fetch user profile role to verify Admin status
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError || !profile) {
-        await supabase.auth.signOut()
-        throw new Error('Associated profile not found in ASENTRA registry.')
-      }
-
-      const userEmail = user?.email || ''
-      const isAuthorized = 
-        ['admin', 'teacher', 'instructor'].includes(profile.role) || 
-        userEmail.endsWith('@asentra.in') ||
-        userEmail.toLowerCase().includes('akulamanikanta') ||
-        userEmail.toLowerCase().includes('admin')
-        
-      if (!isAuthorized) {
-        await supabase.auth.signOut()
-        throw new Error('Forbidden: Account lacks administrative privileges.')
-      }
-
-      document.cookie = "admin_session=true; path=/; max-age=86400"
-      setSuccessMsg('Successfully authenticated! Synchronizing console...')
-      setTimeout(() => {
-        window.location.href = '/dashboard'
-      }, 300)
-    } catch (err) {
-      console.error('Google ID Token auth error:', err)
-      setErrorMsg(err.message || 'Google authentication failed.')
-    } finally {
-      setGoogleLoading(false)
-    }
-  }, [supabase, router])
-
-  // Keep ref in sync with latest callback
-  useEffect(() => {
-    credentialCallbackRef.current = handleGoogleCredential
-  }, [handleGoogleCredential])
-
-  // Initialize Google Identity Services once the script loads
-  const initializeGsi = useCallback(() => {
-    if (!window.google?.accounts?.id) return
-
-    window.google.accounts.id.initialize({
-      client_id: GOOGLE_CLIENT_ID,
-      callback: (response) => {
-        // Use ref to always call the latest version of the handler
-        if (credentialCallbackRef.current) {
-          credentialCallbackRef.current(response)
-        }
-      },
-      auto_select: false,
-      cancel_on_tap_outside: true,
-    })
-
-    // Render the invisible Google button inside the container
-    if (googleBtnContainerRef.current) {
-      window.google.accounts.id.renderButton(
-        googleBtnContainerRef.current,
-        {
-          type: 'standard',
-          theme: 'outline',
-          size: 'large',
-          text: 'signin_with',
-          shape: 'pill',
-          width: googleBtnContainerRef.current.offsetWidth || 380,
-        }
-      )
-    }
-
-    setGsiReady(true)
   }, [])
 
   const handleLoginSubmit = async (e) => {
@@ -160,7 +57,7 @@ export default function AdminLoginPage() {
       const isAuthorized = 
         ['admin', 'teacher', 'instructor'].includes(userRole) || 
         userEmail.endsWith('@asentra.in') ||
-        userEmail.toLowerCase().includes('akulamanikanta') ||
+        ['asentraeducationplatform@gmail.com', 'admin@dayakar', 'akulamanikanta168@gmail.com', 'admin@123'].includes(userEmail.toLowerCase()) ||
         userEmail.toLowerCase().includes('admin')
         
       if (!isAuthorized) {
@@ -182,13 +79,6 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 relative overflow-hidden select-none font-sans">
-      {/* Google Identity Services Script */}
-      <Script
-        src="https://accounts.google.com/gsi/client"
-        strategy="afterInteractive"
-        onLoad={initializeGsi}
-      />
-
       {/* Dynamic ambient gradients */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-[110px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-teal-500/5 rounded-full blur-[100px] pointer-events-none" />
@@ -271,38 +161,6 @@ export default function AdminLoginPage() {
             )}
           </button>
         </form>
-
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-slate-200"></div>
-          <span className="flex-shrink mx-4 text-[10px] text-slate-400 font-bold uppercase tracking-wider">Or continue with</span>
-          <div className="flex-grow border-t border-slate-200"></div>
-        </div>
-
-        {/* Google Sign-In Button — rendered by Google Identity Services */}
-        {/* This uses ID token flow: Google popup → ID token → Supabase (NO redirects) */}
-        <div className="relative w-full">
-          {/* Google's rendered button (visible, handles click + popup) */}
-          <div
-            ref={googleBtnContainerRef}
-            className="w-full flex justify-center items-center"
-            style={{ minHeight: '44px' }}
-          />
-
-          {/* Loading overlay */}
-          {googleLoading && (
-            <div className="absolute inset-0 bg-white/80 rounded-2xl flex items-center justify-center z-20">
-              <Loader2 className="w-5 h-5 animate-spin text-slate-600" />
-            </div>
-          )}
-
-          {/* Fallback if GSI hasn't loaded yet */}
-          {!gsiReady && (
-            <div className="w-full py-3.5 bg-white border border-slate-200 text-slate-400 rounded-2xl text-xs font-bold flex items-center justify-center gap-2">
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              <span>Loading Google Sign-In...</span>
-            </div>
-          )}
-        </div>
       </motion.div>
     </div>
   )

@@ -94,7 +94,7 @@ export async function updateSession(request) {
       userRole === 'instructor' || 
       userRole === 'teacher' || 
       userEmail.endsWith('@asentra.in') ||
-      userEmail.toLowerCase().includes('akulamanikanta') ||
+      ['asentraeducationplatform@gmail.com', 'admin@dayakar', 'akulamanikanta168@gmail.com', 'admin@123'].includes(userEmail.toLowerCase()) ||
       userEmail.toLowerCase().includes('admin')
       
     if (!isAuthorizedAdmin) {
