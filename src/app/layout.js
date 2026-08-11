@@ -3,6 +3,11 @@ import "./globals.css";
 export const metadata = {
   title: "ASENTRA • Admin Command Center",
   description: "High-precision administrative portal for ASENTRA learning platform",
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+  },
 };
 
 import { Inter } from "next/font/google";
