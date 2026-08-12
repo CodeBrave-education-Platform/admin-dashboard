@@ -125,10 +125,10 @@ export default function AdminDashboardClient() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-            <span>ASENTRA Administrative Command Center</span>
+            <span>Admin Dashboard</span>
             <Sparkles className="w-5 h-5 text-indigo-600 animate-pulse" />
           </h1>
-          <p className="text-xs text-slate-500 mt-1">High-fidelity cohort monitoring, syllabus blueprinting, and real-time polling telemetry</p>
+          <p className="text-xs text-slate-500 mt-1">Overview of students, courses, and platform activity</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -138,61 +138,12 @@ export default function AdminDashboardClient() {
             className="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition flex items-center gap-2 select-none cursor-pointer disabled:opacity-50 shadow-sm"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Sync Real-Time Telemetry</span>
+            <span>Refresh Data</span>
           </button>
         </div>
       </div>
 
-      {/* Executive Quick Actions Toolbar */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Link
-          href="/admin/students"
-          className="p-3.5 bg-slate-900 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-slate-800 shadow-md group"
-        >
-          <span>👥 Students</span>
-          <ArrowRight className="w-4 h-4 text-teal-400 group-hover:translate-x-1 transition" />
-        </Link>
 
-        <Link
-          href="/courses"
-          className="p-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-indigo-700 shadow-md group"
-        >
-          <span>📚 Course & PDFs</span>
-          <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
-        </Link>
-
-        <Link
-          href="/batches"
-          className="p-3.5 bg-emerald-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-emerald-700 shadow-md group"
-        >
-          <span>📡 Live Classes</span>
-          <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
-        </Link>
-
-        <Link
-          href="/admin/coupons"
-          className="p-3.5 bg-teal-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-teal-700 shadow-md group"
-        >
-          <span>🏷️ Coupons</span>
-          <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
-        </Link>
-
-        <Link
-          href="/admin/books/orders"
-          className="p-3.5 bg-purple-600 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-purple-700 shadow-md group"
-        >
-          <span>📦 Books</span>
-          <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
-        </Link>
-
-        <Link
-          href="/admin/test-series/compiler"
-          className="p-3.5 bg-slate-800 text-white rounded-2xl font-black text-xs transition flex items-center justify-between hover:bg-slate-700 shadow-md group"
-        >
-          <span>⚙️ CBT Compiler</span>
-          <ArrowRight className="w-4 h-4 text-amber-400 group-hover:translate-x-1 transition" />
-        </Link>
-      </div>
 
       {loading ? (
         <div className="space-y-8 animate-pulse">
@@ -261,7 +212,7 @@ export default function AdminDashboardClient() {
             {[
               { label: 'Active Courses', value: courses.length, icon: BookOpen, color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
               { label: 'Registered Students', value: students.filter(s => s.role === 'student' || !s.role).length, icon: Users, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-              { label: 'Live Poll Cycles', value: recentAttempts.length > 0 ? 'Active' : 'Inactive', icon: Radio, color: recentAttempts.length > 0 ? 'text-teal-600 bg-teal-50 border-teal-150 animate-pulse' : 'text-slate-400 bg-slate-50 border-slate-200' },
+              { label: 'Live Polls', value: recentAttempts.length > 0 ? 'Active' : 'Inactive', icon: Radio, color: recentAttempts.length > 0 ? 'text-teal-600 bg-teal-50 border-teal-150 animate-pulse' : 'text-slate-400 bg-slate-50 border-slate-200' },
               { label: 'Total Assessments', value: recentAttempts.length, icon: GraduationCap, color: 'text-cyan-600 bg-cyan-50 border-cyan-100' }
             ].map((stat, idx) => (
               <div
@@ -287,7 +238,7 @@ export default function AdminDashboardClient() {
                   <div className="flex items-center gap-2">
                     <Users className="w-5 h-5 text-indigo-600" />
                     <h3 className="font-extrabold text-sm uppercase text-slate-800 tracking-wider">
-                      {roleFilter === 'all' ? 'All User Directory' : roleFilter === 'student' ? 'Student Roster Directory' : roleFilter === 'teacher' ? 'Teacher/Instructor Directory' : 'Administrator Directory'}
+                      {roleFilter === 'all' ? 'Users' : roleFilter === 'student' ? 'Students' : roleFilter === 'teacher' ? 'Teachers' : 'Admins'}
                     </h3>
                   </div>
                   {/* Segmented control for role filtering */}
@@ -423,7 +374,15 @@ export default function AdminDashboardClient() {
                     onClick={() => router.push('/courses')}
                     className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs text-slate-800 font-bold transition select-none cursor-pointer hover:bg-slate-100/50 group"
                   >
-                    <span>Manage Course Curriculums</span>
+                    <span>Manage Courses</span>
+                    <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-slate-800 transition group-hover:translate-x-1" />
+                  </button>
+
+                  <button
+                    onClick={() => router.push('/admin/test-series')}
+                    className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs text-slate-800 font-bold transition select-none cursor-pointer hover:bg-slate-100/50 group"
+                  >
+                    <span>Manage Test Series</span>
                     <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-slate-800 transition group-hover:translate-x-1" />
                   </button>
 
@@ -441,7 +400,7 @@ export default function AdminDashboardClient() {
               <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
                   <TrendingUp className="w-4 h-4 text-indigo-600" />
-                  <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Recent CBT Telemetry</h3>
+                  <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Recent Test Results</h3>
                 </div>
 
                 <div className="space-y-3 text-xs leading-normal">

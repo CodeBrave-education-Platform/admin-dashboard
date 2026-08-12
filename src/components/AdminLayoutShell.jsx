@@ -13,26 +13,26 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
   const activeItemId = searchParams?.get('id') || searchParams?.get('courseId') || searchParams?.get('batchId');
 
   const mainSection = [
-    { label: 'Overview Console', href: '/dashboard', icon: LayoutDashboard }
+    { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }
   ];
 
   const academicsSection = [
-    { label: 'Student Directory', href: '/admin/students', icon: GraduationCap },
-    { label: 'Course & Materials Studio', href: '/courses', icon: BookOpen },
-    { label: 'Live Batches & Class Upload', href: '/batches', icon: Radio },
-    { label: 'Cohort Gradebook', href: '/gradebook', icon: GraduationCap }
+    { label: 'Students', href: '/admin/students', icon: GraduationCap },
+    { label: 'Courses', href: '/courses', icon: BookOpen },
+    { label: 'Live Classes', href: '/batches', icon: Radio },
+    { label: 'Gradebook', href: '/gradebook', icon: GraduationCap }
   ];
 
   const storeSection = [
-    { label: 'Discount Coupons', href: '/admin/coupons', icon: Award },
-    { label: 'Book Fulfillments', href: '/admin/books/orders', icon: Package },
+    { label: 'Coupons', href: '/admin/coupons', icon: Award },
+    { label: 'Book Orders', href: '/admin/books/orders', icon: Package },
     { label: 'Book Inventory', href: '/admin/books', icon: BookOpen }
   ];
 
   const testingSection = [
-    { label: 'Test Packages & Mocks', href: '/admin/test-series', icon: Award },
-    { label: 'Question Bank Studio', href: '/admin/questions', icon: HelpCircle },
-    { label: 'Test Series Compiler', href: '/admin/test-series/compiler', icon: Award }
+    { label: 'Test Packages', href: '/admin/test-series', icon: Award },
+    { label: 'Question Bank', href: '/admin/questions', icon: HelpCircle },
+    { label: 'Test Series', href: '/admin/test-series/compiler', icon: Award }
   ];
 
   const renderNavGroup = (title, items) => (
@@ -68,14 +68,14 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
   return (
     <nav className="flex-1 px-4 py-4 space-y-4 overflow-y-auto custom-scrollbar">
       {renderNavGroup(null, mainSection)}
-      {renderNavGroup('Academic & Classrooms', academicsSection)}
-      {renderNavGroup('Store & Shipments', storeSection)}
-      {renderNavGroup('Exams & Testing', testingSection)}
+      {renderNavGroup('Academics', academicsSection)}
+      {renderNavGroup('Store', storeSection)}
+      {renderNavGroup('Exams', testingSection)}
 
       {/* Dynamic Courses Sub-Section */}
       <div className="pt-2 border-t border-slate-100">
         <span className="px-3.5 text-[9px] font-black text-slate-450 uppercase tracking-widest block mb-2.5">
-          Course blueprints
+          Active Courses
         </span>
         <div className="space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar px-1">
           {loadingSidebarData ? (
@@ -110,7 +110,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
       {/* Dynamic Batches Sub-Section */}
       <div className="pt-2 border-t border-slate-100">
         <span className="px-3.5 text-[9px] font-black text-slate-455 uppercase tracking-widest block mb-2.5">
-          Batch Telemetry
+          Active Batches
         </span>
         <div className="space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar px-1">
           {loadingSidebarData ? (
@@ -272,7 +272,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
             ) : (
               <LogOut className="w-3.5 h-3.5" />
             )}
-            <span>Terminate Session</span>
+            <span>Sign Out</span>
           </button>
         </div>
       </aside>
