@@ -135,24 +135,24 @@ export default function CouponsStudioClient({ user }) {
   )
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans p-6 md:p-10 space-y-8 select-none">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-6 md:p-10 space-y-8 select-none">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-950 p-6 rounded-3xl border border-slate-800 shadow-md">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-md">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Link href="/dashboard" className="text-xs text-slate-400 hover:text-white flex items-center gap-1 font-bold">
+            <Link href="/dashboard" className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 font-bold">
               <ArrowLeft className="w-4 h-4" /> Admin Console
             </Link>
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Discount Coupon & Promo Code Studio</h1>
-          <p className="text-xs text-slate-400 font-medium mt-1">
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Discount Coupon & Promo Code Studio</h1>
+          <p className="text-xs text-slate-500 font-medium mt-1">
             Issue, edit, activate, or deactivate percentage & flat discount promo codes across courses, batches, and book kits.
           </p>
         </div>
 
         <button
           onClick={handleOpenCreate}
-          className="px-5 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
+          className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
         >
           <Plus className="w-4 h-4" />
           <span>Issue New Promo Code</span>
@@ -160,7 +160,7 @@ export default function CouponsStudioClient({ user }) {
       </div>
 
       {/* Search Toolbar */}
-      <div className="flex justify-between items-center bg-slate-950 p-4 rounded-2xl border border-slate-800">
+      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200">
         <div className="relative w-80">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input
@@ -168,18 +168,18 @@ export default function CouponsStudioClient({ user }) {
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search promo code or description..."
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-11 pr-4 py-2 text-xs text-white outline-none focus:border-teal-500 font-bold uppercase"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2 text-xs text-slate-900 outline-none focus:border-teal-500 font-bold uppercase"
           />
         </div>
 
-        <span className="text-xs text-slate-400 font-bold">{filteredCoupons.length} Active Codes</span>
+        <span className="text-xs text-slate-500 font-bold">{filteredCoupons.length} Active Codes</span>
       </div>
 
       {/* Table */}
-      <div className="bg-slate-950 rounded-3xl border border-slate-800 overflow-hidden shadow-md">
+      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-md">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-sans">
-            <thead className="bg-slate-900 text-slate-400 font-black uppercase text-[10px] tracking-wider border-b border-slate-800">
+            <thead className="bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
               <tr>
                 <th className="p-4">Promo Code</th>
                 <th className="p-4">Discount Rate</th>
@@ -189,23 +189,23 @@ export default function CouponsStudioClient({ user }) {
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-medium text-slate-300">
+            <tbody className="divide-y divide-slate-200 font-medium text-slate-600">
               {filteredCoupons.map((coupon) => (
-                <tr key={coupon.id} className="hover:bg-slate-900/50 transition">
+                <tr key={coupon.id} className="hover:bg-slate-50/50 transition">
                   <td className="p-4">
                     <div className="space-y-0.5">
-                      <span className="px-3 py-1 bg-teal-500/10 text-teal-400 border border-teal-500/20 rounded-lg font-black font-mono text-sm tracking-wide">
+                      <span className="px-3 py-1 bg-teal-500/10 text-teal-600 border border-teal-500/20 rounded-lg font-black font-mono text-sm tracking-wide">
                         {coupon.code}
                       </span>
-                      <p className="text-[11px] text-slate-400 mt-1">{coupon.description}</p>
+                      <p className="text-[11px] text-slate-500 mt-1">{coupon.description}</p>
                     </div>
                   </td>
 
-                  <td className="p-4 font-bold text-white">
+                  <td className="p-4 font-bold text-slate-900">
                     {coupon.discountType === 'percentage' ? `${coupon.discountValue}% OFF` : `Flat ₹${coupon.discountValue} OFF`}
                   </td>
 
-                  <td className="p-4 text-slate-400 font-mono">
+                  <td className="p-4 text-slate-500 font-mono">
                     ₹{coupon.minOrderValue}
                   </td>
 
@@ -218,7 +218,7 @@ export default function CouponsStudioClient({ user }) {
                   <td className="p-4">
                     <button
                       onClick={() => handleToggleStatus(coupon.id)}
-                      className={`px-3 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition ${coupon.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-slate-800 text-slate-400'}`}
+                      className={`px-3 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition ${coupon.status === 'Active' ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-slate-100 text-slate-500'}`}
                     >
                       {coupon.status}
                     </button>
@@ -228,7 +228,7 @@ export default function CouponsStudioClient({ user }) {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleOpenEdit(coupon)}
-                        className="p-1.5 bg-slate-900 hover:bg-slate-800 text-teal-400 border border-slate-800 rounded-lg transition cursor-pointer"
+                        className="p-1.5 bg-slate-50 hover:bg-slate-100 text-teal-600 border border-slate-200 rounded-lg transition cursor-pointer"
                         title="Edit Promo Code"
                       >
                         <Edit className="w-3.5 h-3.5" />
@@ -236,7 +236,7 @@ export default function CouponsStudioClient({ user }) {
 
                       <button
                         onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
-                        className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg transition cursor-pointer"
+                        className="p-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 border border-rose-500/20 rounded-lg transition cursor-pointer"
                         title="Delete Promo Code"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -252,35 +252,35 @@ export default function CouponsStudioClient({ user }) {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <form onSubmit={handleSaveCoupon} className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-md w-full space-y-6 shadow-2xl">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-              <h3 className="text-lg font-black text-white">
+        <div className="fixed inset-0 bg-white/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <form onSubmit={handleSaveCoupon} className="bg-slate-50 border border-slate-200 p-8 rounded-3xl max-w-md w-full space-y-6 shadow-2xl">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-4">
+              <h3 className="text-lg font-black text-slate-900">
                 {editingCoupon ? `Edit Coupon ${editingCoupon.code}` : 'Issue New Promo Code'}
               </h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-white font-bold text-sm">✕</button>
+              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-500 hover:text-slate-900 font-bold text-sm">✕</button>
             </div>
 
             <div className="space-y-4 text-xs font-medium">
               <div className="space-y-1">
-                <label className="text-slate-400 font-bold block uppercase text-[10px]">Promo Code String</label>
+                <label className="text-slate-500 font-bold block uppercase text-[10px]">Promo Code String</label>
                 <input
                   type="text"
                   value={formCode}
                   onChange={e => setFormCode(e.target.value)}
                   placeholder="e.g. JEE2026"
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-teal-500 font-black uppercase tracking-wider"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-teal-500 font-black uppercase tracking-wider"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-slate-400 font-bold block uppercase text-[10px]">Discount Type</label>
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Discount Type</label>
                   <select
                     value={formType}
                     onChange={e => setFormType(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-white outline-none focus:border-teal-500 font-bold"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 outline-none focus:border-teal-500 font-bold"
                   >
                     <option value="percentage">Percentage (%)</option>
                     <option value="flat">Flat Amount (₹)</option>
@@ -288,51 +288,51 @@ export default function CouponsStudioClient({ user }) {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-slate-400 font-bold block uppercase text-[10px]">Discount Value</label>
+                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Discount Value</label>
                   <input
                     type="number"
                     value={formValue}
                     onChange={e => setFormValue(e.target.value)}
                     required
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-teal-500 font-bold"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-teal-500 font-bold"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-400 font-bold block uppercase text-[10px]">Min. Order Requirement (₹)</label>
+                <label className="text-slate-500 font-bold block uppercase text-[10px]">Min. Order Requirement (₹)</label>
                 <input
                   type="number"
                   value={formMinOrder}
                   onChange={e => setFormMinOrder(e.target.value)}
                   required
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-teal-500 font-bold"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-teal-500 font-bold"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-slate-400 font-bold block uppercase text-[10px]">Public Description</label>
+                <label className="text-slate-500 font-bold block uppercase text-[10px]">Public Description</label>
                 <input
                   type="text"
                   value={formDescription}
                   onChange={e => setFormDescription(e.target.value)}
                   placeholder="e.g. 25% Special Discount on JEE Courses"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-teal-500 font-medium"
+                  className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-teal-500 font-medium"
                 />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl transition"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-xl transition"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl transition cursor-pointer"
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer"
               >
                 Save Promo Code
               </button>

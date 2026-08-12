@@ -3,6 +3,7 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal'
+import ConfirmDialogModal from '@/components/ConfirmDialogModal'
 import { 
   BookOpen, Plus, Edit, Trash2, Search, CheckCircle2, 
   Package, GraduationCap, ArrowLeft, Star, Users, DollarSign, Sparkles 
@@ -52,6 +53,12 @@ export default function CourseStudioClient({ user }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCourse, setEditingCourse] = useState(null)
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  })
 
   // Form fields
   const [formTitle, setFormTitle] = useState('')
@@ -127,9 +134,15 @@ export default function CourseStudioClient({ user }) {
   }
 
   const handleDeleteCourse = (id, title) => {
-    if (confirm(`⚠️ Are you sure you want to delete course blueprint "${title}"?`)) {
-      setCourses(courses.filter(c => c.id !== id))
-    }
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Course',
+      message: `⚠️ Are you sure you want to delete course blueprint "${title}"? This cannot be undone.`,
+      onConfirm: () => {
+        setCourses(courses.filter(c => c.id !== id))
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+      }
+    })
   }
 
   const filteredCourses = courses.filter(c => 
@@ -380,14 +393,19 @@ export default function CourseStudioClient({ user }) {
         </div>
       )}
 
-      {/* Universal AI PDF & Document Importer Modal */}
+      {/* PDF Importer Modal */}
       <UniversalPdfImporterModal
         isOpen={isPdfModalOpen}
         onClose={() => setIsPdfModalOpen(false)}
-        targetModuleName="Course Quiz & Practice Sets"
-        onConfirmIngest={(newQuestions) => {
-          alert(`🎉 Ingested ${newQuestions.length} practice questions with diagrams into Course Modules!`);
-        }}
+        contextType="course_material"
+      />
+
+      <ConfirmDialogModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   )

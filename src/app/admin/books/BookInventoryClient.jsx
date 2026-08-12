@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import ConfirmDialogModal from '@/components/ConfirmDialogModal'
 import { 
   Book, Plus, Search, Edit3, Trash2, CheckCircle2, 
   Truck, ArrowRight, ShieldAlert, Sparkles, X, Eye, PackageCheck, RefreshCw, Loader2
@@ -19,6 +20,12 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
   const [editingBook, setEditingBook] = useState(null)
   const [loading, setLoading] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  })
 
   const [formData, setFormData] = useState({
     title: '',
@@ -116,18 +123,25 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
     }
   }
 
-  const handleDeleteBook = async (id, title) => {
-    if (!confirm(`⚠️ Are you sure you want to remove textbook "${title}"?`)) return
-
-    try {
-      const { error } = await supabase.from('books').delete().eq('id', id)
-      if (error) throw error
-      setBooks(books.filter(b => b.id !== id))
-      setToastMsg(`🗑️ Removed "${title}"`)
-      setTimeout(() => setToastMsg(''), 4000)
-    } catch (err) {
-      alert('Failed to delete book: ' + err.message)
-    }
+  const handleDeleteBook = (id, title) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Textbook',
+      message: `⚠️ Are you sure you want to remove textbook "${title}"? This cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const { error } = await supabase.from('books').delete().eq('id', id)
+          if (error) throw error
+          setBooks(books.filter(b => b.id !== id))
+          setToastMsg(`🗑️ Removed "${title}"`)
+          setTimeout(() => setToastMsg(''), 4000)
+        } catch (err) {
+          alert('Failed to delete book: ' + err.message)
+        } finally {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+        }
+      }
+    })
   }
 
   const filteredBooks = (books || []).filter(b => {
@@ -373,6 +387,14 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
           </form>
         </div>
       )}
+
+      <ConfirmDialogModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   )
 }
