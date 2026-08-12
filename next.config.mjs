@@ -16,6 +16,36 @@ const nextConfig = {
     ]
   },
   
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.youtube.com; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; font-src 'self'; connect-src 'self' https: wss:; frame-src 'self' https://www.youtube.com https://codesandbox.io;"
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN' // Allows framing only on the same domain
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff' // Mitigates MIME-type sniffing XSS
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin' // Limits Referer header for privacy/CSRF
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=()' // Blocks unused APIs
+          }
+        ]
+      }
+    ]
+  },
+  
   webpack: (config, { isServer }) => {
     // PROTECT BROWSER CLIENT: Block Node modules from leaking into front-end bundles
     if (!isServer) {

@@ -45,20 +45,9 @@ export default function AdminLoginPage() {
         throw loginError || new Error('Invalid login credentials')
       }
 
-      // 2. Fetch user profile role to verify Admin status
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-      const userRole = profile?.role || 'student'
-      const userEmail = user?.email || ''
-      const isAuthorized = 
-        ['admin', 'teacher', 'instructor'].includes(userRole) || 
-        userEmail.endsWith('@asentra.in') ||
-        ['asentraeducationplatform@gmail.com', 'admin@dayakar', 'akulamanikanta168@gmail.com', 'admin@123'].includes(userEmail.toLowerCase()) ||
-        userEmail.toLowerCase().includes('admin')
+      // 2. Verify Admin status instantly via JWT metadata
+      const userRole = user?.app_metadata?.role || 'student'
+      const isAuthorized = ['admin', 'teacher', 'instructor'].includes(userRole)
         
       if (!isAuthorized) {
         await supabase.auth.signOut()

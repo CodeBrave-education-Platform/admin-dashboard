@@ -1,5 +1,19 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || '',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+})
+
+// Max 5 login attempts per 5 minutes
+const ratelimit = new Ratelimit({
+  redis: redis,
+  limiter: Ratelimit.slidingWindow(5, '5 m'),
+  ephemeralCache: new Map(),
+})
 
 export async function updateSession(request) {
   let supabaseResponse = NextResponse.next({
@@ -59,6 +73,16 @@ export async function updateSession(request) {
 
   // Route Protection Rules
   const pathname = request.nextUrl.pathname
+  const ip = request.ip || request.headers.get('x-forwarded-for') || '127.0.0.1'
+
+  // Apply Rate Limiting to Auth Routes
+  if (pathname.startsWith('/login') && request.method === 'POST') {
+    // Only rate limit POST requests (actual login attempts) to avoid blocking page loads
+    const { success } = await ratelimit.limit(`login_ratelimit_${ip}`)
+    if (!success) {
+      return new NextResponse('Too many login attempts. Please try again in 5 minutes.', { status: 429 })
+    }
+  }
   const isPublicRoute = 
     pathname.startsWith('/login') || 
     pathname.startsWith('/forgot-password') || 
@@ -73,29 +97,13 @@ export async function updateSession(request) {
       return NextResponse.redirect(url)
     }
     
-    // Fetch user profile role to verify Instructor/Admin/Teacher privileges
-    let userRole = null
-    try {
-      if (user?.id) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle()
-        userRole = profile?.role
-      }
-    } catch (err) {
-      console.error('[Middleware] Failed to fetch user role:', err)
-    }
-
-    const userEmail = user?.email || ''
+    // Verify Instructor/Admin/Teacher privileges instantly via JWT metadata
+    const userRole = user?.app_metadata?.role || 'student'
+    
     const isAuthorizedAdmin = 
       userRole === 'admin' || 
       userRole === 'instructor' || 
-      userRole === 'teacher' || 
-      userEmail.endsWith('@asentra.in') ||
-      ['asentraeducationplatform@gmail.com', 'admin@dayakar', 'akulamanikanta168@gmail.com', 'admin@123'].includes(userEmail.toLowerCase()) ||
-      userEmail.toLowerCase().includes('admin')
+      userRole === 'teacher'
       
     if (!isAuthorizedAdmin) {
       await supabase.auth.signOut()
