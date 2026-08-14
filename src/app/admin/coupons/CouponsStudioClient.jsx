@@ -1,59 +1,23 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
 import { 
   Tag, Plus, Edit, Trash2, Search, CheckCircle2, 
   AlertCircle, ShieldAlert, ArrowLeft, Percent, DollarSign, ToggleLeft, ToggleRight 
 } from 'lucide-react'
 
 export default function CouponsStudioClient({ user }) {
-  const [coupons, setCoupons] = useState([
-    {
-      id: 'c-101',
-      code: 'JEE2026',
-      discountType: 'percentage',
-      discountValue: 25,
-      minOrderValue: 999,
-      status: 'Active',
-      usagesCount: 142,
-      description: '25% Special Discount on JEE Mains & Advanced Courses'
-    },
-    {
-      id: 'c-102',
-      code: 'PWSTYLE',
-      discountType: 'percentage',
-      discountValue: 30,
-      minOrderValue: 1499,
-      status: 'Active',
-      usagesCount: 98,
-      description: 'PW Rankers Special 30% Discount'
-    },
-    {
-      id: 'c-103',
-      code: 'NEETRANK',
-      discountType: 'percentage',
-      discountValue: 20,
-      minOrderValue: 999,
-      status: 'Active',
-      usagesCount: 215,
-      description: '20% Special Discount on NEET Medical Courses'
-    },
-    {
-      id: 'c-104',
-      code: 'EARLYBIRD',
-      discountType: 'flat',
-      discountValue: 500,
-      minOrderValue: 1999,
-      status: 'Active',
-      usagesCount: 76,
-      description: 'Flat ₹500 Early Bird Savings'
-    }
-  ])
+  const supabase = createClient()
+  const [coupons, setCoupons] = useState([])
+  const [loading, setLoading] = useState(true)
+  // Data fetched from Supabase
 
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCoupon, setEditingCoupon] = useState(null)
+  const [selectedIds, setSelectedIds] = useState([])
 
   // Form fields
   const [formCode, setFormCode] = useState('')
@@ -61,6 +25,28 @@ export default function CouponsStudioClient({ user }) {
   const [formValue, setFormValue] = useState(20)
   const [formMinOrder, setFormMinOrder] = useState(999)
   const [formDescription, setFormDescription] = useState('')
+
+  const fetchCoupons = async () => {
+    setLoading(true)
+    const { data, error } = await supabase.from('coupons').select('*').order('created_at', { ascending: false })
+    if (data) {
+      setCoupons(data.map(c => ({
+        id: c.id,
+        code: c.code,
+        discountType: c.discount_type,
+        discountValue: c.discount_value,
+        minOrderValue: c.min_order_value,
+        status: c.status,
+        usagesCount: c.usages_count,
+        description: c.description
+      })))
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchCoupons()
+  }, [])
 
   const handleOpenCreate = () => {
     setEditingCoupon(null)
@@ -82,50 +68,96 @@ export default function CouponsStudioClient({ user }) {
     setIsModalOpen(true)
   }
 
-  const handleSaveCoupon = (e) => {
+  const handleSaveCoupon = async (e) => {
     e.preventDefault()
     if (!formCode.trim()) return
 
     const uppercaseCode = formCode.trim().toUpperCase()
 
     if (editingCoupon) {
-      setCoupons(coupons.map(c => c.id === editingCoupon.id ? {
-        ...c,
+      const { error } = await supabase.from('coupons').update({
         code: uppercaseCode,
-        discountType: formType,
-        discountValue: Number(formValue),
-        minOrderValue: Number(formMinOrder),
+        discount_type: formType,
+        discount_value: Number(formValue),
+        min_order_value: Number(formMinOrder),
         description: formDescription
-      } : c))
-      alert(`🎉 Promo Code "${uppercaseCode}" updated!`)
-    } else {
-      const newCoupon = {
-        id: `c-${Date.now()}`,
-        code: uppercaseCode,
-        discountType: formType,
-        discountValue: Number(formValue),
-        minOrderValue: Number(formMinOrder),
-        status: 'Active',
-        usagesCount: 0,
-        description: formDescription || `${uppercaseCode} Promo Discount`
+      }).eq('id', editingCoupon.id)
+
+      if (!error) {
+        fetchCoupons()
+        alert(`🎉 Promo Code "${uppercaseCode}" updated!`)
       }
-      setCoupons([newCoupon, ...coupons])
-      alert(`🎉 New Promo Code "${uppercaseCode}" issued!`)
+    } else {
+      const { error } = await supabase.from('coupons').insert([{
+        code: uppercaseCode,
+        discount_type: formType,
+        discount_value: Number(formValue),
+        min_order_value: Number(formMinOrder),
+        status: 'Active',
+        usages_count: 0,
+        description: formDescription || `${uppercaseCode} Promo Discount`
+      }])
+
+      if (!error) {
+        fetchCoupons()
+        alert(`🎉 New Promo Code "${uppercaseCode}" issued!`)
+      }
     }
 
     setIsModalOpen(false)
   }
 
-  const handleToggleStatus = (id) => {
-    setCoupons(coupons.map(c => c.id === id ? {
-      ...c,
-      status: c.status === 'Active' ? 'Inactive' : 'Active'
-    } : c))
+  const handleToggleStatus = async (id) => {
+    const coupon = coupons.find(c => c.id === id)
+    if (coupon) {
+      const newStatus = coupon.status === 'Active' ? 'Inactive' : 'Active'
+      const { error } = await supabase.from('coupons').update({ status: newStatus }).eq('id', id)
+      if (!error) fetchCoupons()
+    }
   }
 
-  const handleDeleteCoupon = (id, code) => {
+  const handleDeleteCoupon = async (id, code) => {
     if (confirm(`⚠️ Are you sure you want to delete promo code "${code}"?`)) {
-      setCoupons(coupons.filter(c => c.id !== id))
+      const { error } = await supabase.from('coupons').delete().eq('id', id)
+      if (!error) fetchCoupons()
+    }
+  }
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredCoupons.map(c => c.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const handleSelect = (id) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(sId => sId !== id))
+    } else {
+      setSelectedIds([...selectedIds, id])
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (confirm(`⚠️ Delete ${selectedIds.length} promo codes?`)) {
+      const { error } = await supabase.from('coupons').delete().in('id', selectedIds)
+      if (!error) {
+        fetchCoupons()
+        setSelectedIds([])
+      }
+    }
+  }
+
+  const handleBulkStatusToggle = async () => {
+    // Basic implementation: set all selected to Inactive
+    const { error } = await supabase.from('coupons')
+      .update({ status: 'Inactive' })
+      .in('id', selectedIds)
+      
+    if (!error) {
+      fetchCoupons()
+      setSelectedIds([])
     }
   }
 
@@ -181,6 +213,9 @@ export default function CouponsStudioClient({ user }) {
           <table className="w-full text-left text-xs font-sans">
             <thead className="bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
               <tr>
+                <th className="p-4 w-10">
+                  <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === filteredCoupons.length && filteredCoupons.length > 0} className="w-4 h-4 accent-teal-600 bg-white border-slate-200 rounded cursor-pointer" />
+                </th>
                 <th className="p-4">Promo Code</th>
                 <th className="p-4">Discount Rate</th>
                 <th className="p-4">Min. Order Value</th>
@@ -191,7 +226,10 @@ export default function CouponsStudioClient({ user }) {
             </thead>
             <tbody className="divide-y divide-slate-200 font-medium text-slate-600">
               {filteredCoupons.map((coupon) => (
-                <tr key={coupon.id} className="hover:bg-slate-50/50 transition">
+                <tr key={coupon.id} className={`hover:bg-slate-50/50 transition ${selectedIds.includes(coupon.id) ? 'bg-teal-50/50' : ''}`}>
+                  <td className="p-4 w-10">
+                    <input type="checkbox" checked={selectedIds.includes(coupon.id)} onChange={() => handleSelect(coupon.id)} className="w-4 h-4 accent-teal-600 bg-white border-slate-200 rounded cursor-pointer" />
+                  </td>
                   <td className="p-4">
                     <div className="space-y-0.5">
                       <span className="px-3 py-1 bg-teal-500/10 text-teal-600 border border-teal-500/20 rounded-lg font-black font-mono text-sm tracking-wide">
@@ -249,6 +287,23 @@ export default function CouponsStudioClient({ user }) {
           </table>
         </div>
       </div>
+
+      {/* Bulk Action Sticky Bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white border border-slate-200 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-6 z-50 animate-fade-in">
+          <div className="text-slate-900 font-bold text-sm">
+            <span className="text-teal-600">{selectedIds.length}</span> coupons selected
+          </div>
+          <div className="flex gap-3">
+            <button onClick={handleBulkStatusToggle} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition">
+              Toggle Status
+            </button>
+            <button onClick={handleBulkDelete} className="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-xs font-bold transition border border-rose-200">
+              Bulk Delete
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {isModalOpen && (

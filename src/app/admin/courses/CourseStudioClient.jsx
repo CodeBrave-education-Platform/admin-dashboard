@@ -1,54 +1,22 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal'
 import ConfirmDialogModal from '@/components/ConfirmDialogModal'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
+import { createClient } from '@/utils/supabase/client'
 import { 
-  BookOpen, Plus, Edit, Trash2, Search, CheckCircle2, 
+  BookOpen, Plus, Edit, Trash2, Search, CheckCircle2, GripVertical,
   Package, GraduationCap, ArrowLeft, Star, Users, DollarSign, Sparkles 
 } from 'lucide-react'
 
 export default function CourseStudioClient({ user }) {
+  const supabase = createClient()
   const [isPdfModalOpen, setIsPdfModalOpen] = useState(false)
-  const [courses, setCourses] = useState([
-    {
-      id: 'c1',
-      title: 'JEE Mains & Advanced Complete Physics Mastery 2026',
-      instructor: 'Dr. H.C. Verma & Asentra Team',
-      subject: 'Physics',
-      level: 'JEE Advanced',
-      price: 2999,
-      originalPrice: 4999,
-      studentsCount: 1420,
-      badge: '⭐ Bestseller',
-      bookKit: 'Mechanics & Wave Motion 2-Vol Hardcopy Kit'
-    },
-    {
-      id: 'c2',
-      title: 'Organic & Inorganic Chemistry Reaction Mechanics',
-      instructor: 'Prof. Ananya Ray',
-      subject: 'Chemistry',
-      level: 'JEE Mains',
-      price: 1999,
-      originalPrice: 3499,
-      studentsCount: 980,
-      badge: '🔥 42% Off',
-      bookKit: '20-Year Chapterwise Chemistry PYQ Solution Handbook'
-    },
-    {
-      id: 'c3',
-      title: 'NEET Medical Biology Complete NCERT Breakdown',
-      instructor: 'Dr. Vikram Sethi',
-      subject: 'Biology',
-      level: 'NEET UG',
-      price: 2499,
-      originalPrice: 3999,
-      studentsCount: 2150,
-      badge: '🏆 Top Rated',
-      bookKit: 'NEET Biology 10,000 MCQ Bank & Diagram Handbook'
-    }
-  ])
+  const [courses, setCourses] = useState([])
+  const [loading, setLoading] = useState(true)
+  // Data fetched from Supabase
 
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -70,6 +38,32 @@ export default function CourseStudioClient({ user }) {
   const [formBookKit, setFormBookKit] = useState('')
   const [formThumbnail, setFormThumbnail] = useState('')
   const [formDescription, setFormDescription] = useState('')
+
+  const fetchCourses = async () => {
+    setLoading(true)
+    const { data, error } = await supabase.from('courses').select('*').order('created_at', { ascending: false })
+    if (data) {
+      setCourses(data.map(c => ({
+        id: c.id,
+        title: c.title,
+        instructor: c.instructor_name || 'Instructor',
+        subject: c.subject || 'Subject',
+        level: c.level || 'Level',
+        price: c.price || 0,
+        originalPrice: c.original_price || c.price || 0,
+        studentsCount: c.students_count || 0,
+        badge: c.badge || '',
+        bookKit: c.book_kit || '',
+        thumbnail_url: c.thumbnail_url || '',
+        description: c.description || ''
+      })))
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchCourses()
+  }, [])
 
   const handleOpenCreate = () => {
     setEditingCourse(null)
@@ -95,39 +89,38 @@ export default function CourseStudioClient({ user }) {
     setIsModalOpen(true)
   }
 
-  const handleSaveCourse = (e) => {
+  const handleSaveCourse = async (e) => {
     e.preventDefault()
     if (!formTitle.trim()) return
 
     if (editingCourse) {
-      setCourses(courses.map(c => c.id === editingCourse.id ? {
-        ...c,
+      const { error } = await supabase.from('courses').update({
         title: formTitle.trim(),
-        instructor: formInstructor.trim(),
+        instructor_name: formInstructor.trim(),
         subject: formSubject,
         level: formLevel,
         price: Number(formPrice),
-        originalPrice: Number(formOriginalPrice),
-        bookKit: formBookKit.trim(),
-        thumbnail_url: formThumbnail.trim() || c.thumbnail_url,
-        description: formDescription.trim() || c.description
-      } : c))
+        book_kit: formBookKit.trim(),
+        thumbnail_url: formThumbnail.trim() || editingCourse.thumbnail_url,
+        description: formDescription.trim() || editingCourse.description
+      }).eq('id', editingCourse.id)
+
+      if (!error) fetchCourses()
     } else {
-      const newCourse = {
-        id: `c-${Date.now()}`,
+      const { error } = await supabase.from('courses').insert([{
         title: formTitle.trim(),
-        instructor: formInstructor.trim(),
+        instructor_name: formInstructor.trim(),
         subject: formSubject,
         level: formLevel,
         price: Number(formPrice),
-        originalPrice: Number(formOriginalPrice),
-        studentsCount: 0,
+        students_count: 0,
         badge: '⚡ New Release',
-        bookKit: formBookKit.trim() || 'Standard Textbook Kit',
+        book_kit: formBookKit.trim() || 'Standard Textbook Kit',
         thumbnail_url: formThumbnail.trim() || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
         description: formDescription.trim() || 'Complete syllabus breakdown with textbook kit.'
-      }
-      setCourses([newCourse, ...courses])
+      }])
+
+      if (!error) fetchCourses()
     }
 
     setIsModalOpen(false)
@@ -138,11 +131,22 @@ export default function CourseStudioClient({ user }) {
       isOpen: true,
       title: 'Delete Course',
       message: `⚠️ Are you sure you want to delete course blueprint "${title}"? This cannot be undone.`,
-      onConfirm: () => {
-        setCourses(courses.filter(c => c.id !== id))
+      onConfirm: async () => {
+        const { error } = await supabase.from('courses').delete().eq('id', id)
+        if (!error) fetchCourses()
         setConfirmDialog(prev => ({ ...prev, isOpen: false }))
       }
     })
+  }
+
+  const handleDragEnd = (result) => {
+    if (!result.destination) return
+
+    const items = Array.from(courses)
+    const [reorderedItem] = items.splice(result.source.index, 1)
+    items.splice(result.destination.index, 0, reorderedItem)
+
+    setCourses(items)
   }
 
   const filteredCourses = courses.filter(c => 
@@ -209,6 +213,7 @@ export default function CourseStudioClient({ user }) {
           <table className="w-full text-left text-xs font-sans">
             <thead className="bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
               <tr>
+                <th className="p-4 w-10"></th>
                 <th className="p-4">Course Blueprint</th>
                 <th className="p-4">Subject & Level</th>
                 <th className="p-4">Pricing</th>
@@ -217,58 +222,82 @@ export default function CourseStudioClient({ user }) {
                 <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {filteredCourses.map((course) => (
-                <tr key={course.id} className="hover:bg-slate-50/80 transition">
-                  <td className="p-4">
-                    <div className="space-y-0.5">
-                      <h4 className="font-bold text-slate-900 text-sm">{course.title}</h4>
-                      <p className="text-slate-400 text-[11px]">Instructor: {course.instructor}</p>
-                    </div>
-                  </td>
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="courses">
+                {(provided) => (
+                  <tbody 
+                    className="divide-y divide-slate-100 font-medium text-slate-700"
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                  >
+                    {filteredCourses.map((course, index) => (
+                      <Draggable key={course.id} draggableId={course.id} index={index}>
+                        {(provided, snapshot) => (
+                          <tr 
+                            className={`transition ${snapshot.isDragging ? 'bg-indigo-50/80 shadow-lg' : 'hover:bg-slate-50/80'}`}
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                          >
+                            <td className="p-4 w-10">
+                              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
+                                <GripVertical className="w-5 h-5" />
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <div className="space-y-0.5">
+                                <h4 className="font-bold text-slate-900 text-sm">{course.title}</h4>
+                                <p className="text-slate-400 text-[11px]">Instructor: {course.instructor}</p>
+                              </div>
+                            </td>
 
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg font-bold">
-                      {course.subject} • {course.level}
-                    </span>
-                  </td>
+                            <td className="p-4">
+                              <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg font-bold">
+                                {course.subject} • {course.level}
+                              </span>
+                            </td>
 
-                  <td className="p-4 font-bold text-slate-900 font-mono">
-                    ₹{course.price} <span className="text-slate-400 text-[11px] line-through">₹{course.originalPrice}</span>
-                  </td>
+                            <td className="p-4 font-bold text-slate-900 font-mono">
+                              ₹{course.price} <span className="text-slate-400 text-[11px] line-through">₹{course.originalPrice}</span>
+                            </td>
 
-                  <td className="p-4">
-                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-bold">
-                      {course.studentsCount} Students
-                    </span>
-                  </td>
+                            <td className="p-4">
+                              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-bold">
+                                {course.studentsCount} Students
+                              </span>
+                            </td>
 
-                  <td className="p-4 text-slate-500 text-[11px]">
-                    {course.bookKit}
-                  </td>
+                            <td className="p-4 text-slate-500 text-[11px]">
+                              {course.bookKit}
+                            </td>
 
-                  <td className="p-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => handleOpenEdit(course)}
-                        className="p-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 border border-slate-200 rounded-lg transition cursor-pointer"
-                        title="Edit Course"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
+                            <td className="p-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => handleOpenEdit(course)}
+                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 border border-slate-200 rounded-lg transition cursor-pointer"
+                                  title="Edit Blueprint"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                </button>
 
-                      <button
-                        onClick={() => handleDeleteCourse(course.id, course.title)}
-                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg transition cursor-pointer"
-                        title="Delete Course"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+                                <button
+                                  onClick={() => handleDeleteCourse(course.id, course.title)}
+                                  className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg transition cursor-pointer"
+                                  title="Delete Blueprint"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </tbody>
+                )}
+              </Droppable>
+            </DragDropContext>
           </table>
         </div>
       </div>

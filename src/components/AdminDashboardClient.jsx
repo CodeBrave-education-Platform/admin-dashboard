@@ -10,6 +10,7 @@ import {
   PlusCircle, RefreshCw, Key, ShieldAlert, Sparkles, TrendingUp,
   Mail, Calendar, ExternalLink, Activity
 } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function AdminDashboardClient() {
   const router = useRouter();
@@ -18,6 +19,8 @@ export default function AdminDashboardClient() {
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
   const [recentAttempts, setRecentAttempts] = useState([]);
+  const [courseEnrollments, setCourseEnrollments] = useState([]);
+  const [batchEnrollments, setBatchEnrollments] = useState([]);
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,6 +73,18 @@ export default function AdminDashboardClient() {
         .limit(5);
 
       setRecentAttempts(attemptsData || []);
+
+      // 4. Fetch enrollments
+      const { data: enrollData } = await supabase
+        .from('enrollments')
+        .select('*');
+      setCourseEnrollments(enrollData || []);
+
+      const { data: batchEnrollData } = await supabase
+        .from('batch_enrollments')
+        .select('*');
+      setBatchEnrollments(batchEnrollData || []);
+
     } catch (err) {
       console.error('[Dashboard Ingest Error]:', err);
     } finally {
@@ -213,7 +228,7 @@ export default function AdminDashboardClient() {
               { label: 'Active Courses', value: courses.length, icon: BookOpen, color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
               { label: 'Registered Students', value: students.filter(s => s.role === 'student' || !s.role).length, icon: Users, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
               { label: 'Live Polls', value: recentAttempts.length > 0 ? 'Active' : 'Inactive', icon: Radio, color: recentAttempts.length > 0 ? 'text-teal-600 bg-teal-50 border-teal-150 animate-pulse' : 'text-slate-400 bg-slate-50 border-slate-200' },
-              { label: 'Total Assessments', value: recentAttempts.length, icon: GraduationCap, color: 'text-cyan-600 bg-cyan-50 border-cyan-100' }
+              { label: 'Course Enrollments', value: courseEnrollments.length, icon: GraduationCap, color: 'text-cyan-600 bg-cyan-50 border-cyan-100' }
             ].map((stat, idx) => (
               <div
                 key={idx}
@@ -397,37 +412,59 @@ export default function AdminDashboardClient() {
                 </div>
               </div>
 
+              <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow duration-200 mt-6">
+                <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+                  <BookOpen className="w-4 h-4 text-purple-600" />
+                  <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Top Course Enrollments</h3>
+                </div>
+                <div className="space-y-3">
+                  {courses.slice(0,5).map(course => {
+                    const count = courseEnrollments.filter(e => e.course_id === course.id).length;
+                    return (
+                      <div key={course.id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl">
+                        <span className="text-xs font-bold text-slate-800 truncate max-w-[150px]">{course.title}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-xs font-black text-slate-700">{count}</span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {courses.length === 0 && <div className="text-xs text-slate-400 text-center py-4">No courses available</div>}
+                </div>
+              </div>
+
+
               <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow duration-200">
                 <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
                   <TrendingUp className="w-4 h-4 text-indigo-600" />
                   <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Recent Test Results</h3>
                 </div>
 
-                <div className="space-y-3 text-xs leading-normal">
+                <div className="h-[200px] w-full mt-4">
                   {recentAttempts.length === 0 ? (
-                    <div className="text-slate-400 text-center py-6">
+                    <div className="text-slate-400 text-center py-6 text-xs">
                       No recent mock test attempts submitted.
                     </div>
                   ) : (
-                    recentAttempts.map(attempt => (
-                      <div
-                        key={attempt.id}
-                        className="bg-slate-50 p-3.5 border border-slate-200 rounded-xl space-y-1.5"
-                      >
-                        <div className="flex justify-between items-center gap-2">
-                          <span className="font-extrabold text-slate-800 truncate max-w-[130px]">
-                            {attempt.profiles?.full_name || 'Student'}
-                          </span>
-                          <span className={attempt.score >= 0 ? 'text-emerald-600 font-black' : 'text-rose-600 font-black'}>
-                            {attempt.score >= 0 ? `+${attempt.score}` : attempt.score} pts
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center text-[10px] text-slate-500 font-semibold leading-none">
-                          <span className="truncate max-w-[110px] text-slate-600">{attempt.assessments?.title}</span>
-                          <span>{new Date(attempt.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                      </div>
-                    ))
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={recentAttempts.map((a, i) => ({ name: a.profiles?.full_name?.split(' ')[0] || `S${i}`, score: a.score }))}>
+                        <defs>
+                          <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <XAxis dataKey="name" tick={{fontSize: 10, fill: '#64748b'}} axisLine={false} tickLine={false} />
+                        <YAxis tick={{fontSize: 10, fill: '#64748b'}} axisLine={false} tickLine={false} />
+                        <Tooltip 
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                          cursor={{stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4'}}
+                        />
+                        <Area type="monotone" dataKey="score" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   )}
                 </div>
               </div>

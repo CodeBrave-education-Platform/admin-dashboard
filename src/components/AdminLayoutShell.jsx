@@ -7,6 +7,8 @@ import { createClient } from '@/utils/supabase/client';
 import { 
   LayoutDashboard, GraduationCap, Loader2, ChevronRight, Menu, X, Award, LogOut, BookOpen, Radio, Package, HelpCircle
 } from 'lucide-react';
+import CommandPalette from '@/components/CommandPalette';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
   const searchParams = useSearchParams();
@@ -35,6 +37,17 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
     { label: 'Test Series', href: '/admin/test-series/compiler', icon: Award }
   ];
 
+  const allNavItems = [
+    ...mainSection, 
+    ...academicsSection, 
+    ...storeSection, 
+    ...testingSection
+  ];
+  
+  // Find the longest matching href for the current pathname to prevent active state bleeding
+  const sortedHrefs = allNavItems.map(item => item.href).sort((a, b) => b.length - a.length);
+  const activeHref = sortedHrefs.find(href => pathname === href || pathname.startsWith(href + '/'));
+
   const renderNavGroup = (title, items) => (
     <div className="space-y-1">
       {title && (
@@ -43,7 +56,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
         </span>
       )}
       {items.map(item => {
-        const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href + '/'));
+        const isActive = item.href === activeHref;
         return (
           <Link
             key={item.href}
@@ -296,9 +309,12 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
             </div>
           </div>
 
-          <span className="px-2.5 py-0.5 bg-indigo-50 border border-indigo-200 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-wider">
-            ASENTRA Beta
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-wider">
+              ASENTRA Beta
+            </span>
+            <ThemeToggle />
+          </div>
         </header>
 
         {/* Viewport content */}
@@ -307,6 +323,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
         </main>
       </div>
 
+      <CommandPalette />
     </div>
   );
 }

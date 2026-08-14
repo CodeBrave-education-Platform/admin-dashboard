@@ -1,65 +1,53 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/utils/supabase/client'
 import { 
   Users, UserCheck, ShieldAlert, Edit, Trash2, Plus, Search, 
   BookOpen, Package, Award, CheckCircle2, AlertCircle, RefreshCw, Send, Lock, Unlock, ArrowLeft 
 } from 'lucide-react'
 
 export default function StudentRelationshipClient({ user, initialStudents }) {
+  const supabase = createClient()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [selectedIds, setSelectedIds] = useState([])
 
   // Student directory state
-  const [students, setStudents] = useState([
-    {
-      id: 'stu-9401',
-      name: 'Rahul Sharma',
-      email: 'rahul.sharma@gmail.com',
-      joinedDate: '12 Jan 2026',
-      status: 'Active',
-      enrolledCourses: [
-        { id: 'c1', title: 'JEE Mains & Advanced Complete Physics Mastery 2026', accessDate: '15 Jan 2026' },
-        { id: 'c3', title: 'NEET Medical Biology Complete NCERT Breakdown', accessDate: '20 Jan 2026' }
-      ],
-      attemptsCount: 8,
-      bookOrdersCount: 2,
-      lastActive: '10 Mins Ago'
-    },
-    {
-      id: 'stu-8219',
-      name: 'Vikram Singh',
-      email: 'vikram.singh@Asentra.edu.in',
-      joinedDate: '08 Feb 2026',
-      status: 'Active',
-      enrolledCourses: [
-        { id: 'b-achievers', title: 'JEE Advanced 2026 Top Rankers Achievers Cohort', accessDate: '10 Feb 2026' }
-      ],
-      attemptsCount: 4,
-      bookOrdersCount: 1,
-      lastActive: '1 Hour Ago'
-    },
-    {
-      id: 'stu-7721',
-      name: 'Neha Kapoor',
-      email: 'neha.k@outlook.com',
-      joinedDate: '22 Feb 2026',
-      status: 'Active',
-      enrolledCourses: [
-        { id: 'c2', title: 'Organic & Inorganic Chemistry Reaction Mechanics', accessDate: '24 Feb 2026' }
-      ],
-      attemptsCount: 12,
-      bookOrdersCount: 3,
-      lastActive: '5 Mins Ago'
-    }
-  ])
+  // Data fetched from Supabase
 
   // Form edit states
   const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [announcementMsg, setAnnouncementMsg] = useState('')
+
+  const [students, setStudents] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchStudents = async () => {
+    setLoading(true)
+    const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    if (data) {
+      setStudents(data.map(p => ({
+        id: p.id,
+        name: p.full_name || 'Unknown User',
+        email: p.email || 'No Email',
+        joinedDate: new Date(p.created_at).toLocaleDateString(),
+        status: 'Active',
+        enrolledCourses: [],
+        attemptsCount: 0,
+        bookOrdersCount: 0,
+        lastActive: 'Recently'
+      })))
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchStudents()
+  }, [])
 
   const handleOpenEdit = (student) => {
     setSelectedStudent(student)
@@ -68,17 +56,31 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
     setEditModalOpen(true)
   }
 
-  const handleSaveStudent = () => {
+  const handleSaveStudent = async () => {
     if (!selectedStudent) return
-    setStudents(students.map(s => s.id === selectedStudent.id ? { ...s, name: editName, email: editEmail } : s))
-    setEditModalOpen(false)
-    alert(`🎉 Student profile for ${editName} updated successfully!`)
+    const { error } = await supabase.from('profiles').update({
+      full_name: editName,
+      email: editEmail
+    }).eq('id', selectedStudent.id)
+
+    if (!error) {
+      fetchStudents()
+      setEditModalOpen(false)
+      alert(`🎉 Student profile for ${editName} updated successfully!`)
+    } else {
+      alert(`Error updating student profile`)
+    }
   }
 
-  const handleDeleteStudent = (studentId, studentName) => {
+  const handleDeleteStudent = async (studentId, studentName) => {
     if (confirm(`⚠️ Are you sure you want to delete student account "${studentName}" and revoke all associated course content & attempt scorecards?`)) {
-      setStudents(students.filter(s => s.id !== studentId))
-      alert(`Student "${studentName}" has been removed from the platform.`)
+      const { error } = await supabase.from('profiles').delete().eq('id', studentId)
+      if (!error) {
+        fetchStudents()
+        alert(`Student "${studentName}" has been removed from the platform.`)
+      } else {
+        alert(`Error deleting student`)
+      }
     }
   }
 
@@ -133,8 +135,39 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
   const handleBroadcastAnnouncement = (e) => {
     e.preventDefault()
     if (!announcementMsg.trim()) return
-    alert(`📢 Global Student Broadcast Dispatched: "${announcementMsg}"`)
+    alert(`📢 Notification broadcasted to all enrolled students:\n\n"${announcementMsg}"`)
     setAnnouncementMsg('')
+  }
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedIds(filteredStudents.map(s => s.id))
+    } else {
+      setSelectedIds([])
+    }
+  }
+
+  const handleSelect = (id) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter(sId => sId !== id))
+    } else {
+      setSelectedIds([...selectedIds, id])
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (confirm(`⚠️ Delete ${selectedIds.length} students?`)) {
+      const { error } = await supabase.from('profiles').delete().in('id', selectedIds)
+      if (!error) {
+        fetchStudents()
+        setSelectedIds([])
+      }
+    }
+  }
+
+  const handleBulkExport = () => {
+    alert(`📊 Exporting ${selectedIds.length} students to CSV...`)
+    setSelectedIds([])
   }
 
   const filteredStudents = students.filter(s => 
@@ -210,6 +243,9 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
           <table className="w-full text-left text-xs font-sans">
             <thead className="bg-slate-900 text-slate-400 font-black uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>
+                <th className="p-4 w-10">
+                  <input type="checkbox" onChange={handleSelectAll} checked={selectedIds.length === filteredStudents.length && filteredStudents.length > 0} className="w-4 h-4 accent-teal-500 bg-slate-900 border-slate-800 rounded cursor-pointer" />
+                </th>
                 <th className="p-4">Student Candidate</th>
                 <th className="p-4">Enrolled Courses</th>
                 <th className="p-4">CBT Attempts</th>
@@ -220,7 +256,10 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-medium text-slate-300">
               {filteredStudents.map((student) => (
-                <tr key={student.id} className="hover:bg-slate-900/50 transition">
+                <tr key={student.id} className={`hover:bg-slate-900/50 transition ${selectedIds.includes(student.id) ? 'bg-teal-500/5' : ''}`}>
+                  <td className="p-4 w-10">
+                    <input type="checkbox" checked={selectedIds.includes(student.id)} onChange={() => handleSelect(student.id)} className="w-4 h-4 accent-teal-500 bg-slate-900 border-slate-800 rounded cursor-pointer" />
+                  </td>
                   <td className="p-4">
                     <div className="space-y-0.5">
                       <h4 className="font-bold text-white text-sm">{student.name}</h4>
@@ -273,6 +312,23 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
           </table>
         </div>
       </div>
+
+      {/* Bulk Action Sticky Bar */}
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-6 z-50 animate-fade-in">
+          <div className="text-white font-bold text-sm">
+            <span className="text-teal-400">{selectedIds.length}</span> students selected
+          </div>
+          <div className="flex gap-3">
+            <button onClick={handleBulkExport} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition">
+              Export CSV
+            </button>
+            <button onClick={handleBulkDelete} className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-xl text-xs font-bold transition border border-rose-500/20">
+              Bulk Delete
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Edit Student & Content Modal */}
       {editModalOpen && selectedStudent && (
