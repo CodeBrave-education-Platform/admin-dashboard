@@ -247,7 +247,7 @@ export default function AdminDashboardClient() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Left 2 Columns: Dynamic Student Roster Directory */}
-            <div className="lg:col-span-2 bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow duration-200">
+            <div className="lg:col-span-2 bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-start shadow-sm hover:shadow-md transition-shadow duration-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ export default function AdminDashboardClient() {
                 </div>
               </div>
 
-              <div className="space-y-4 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar flex-1">
+              <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
                 {filteredStudents.length === 0 ? (
                   <div className="text-center text-slate-500 text-xs py-16">
                     <Users className="w-12 h-12 text-slate-200 mb-3 mx-auto" />
