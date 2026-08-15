@@ -12,6 +12,7 @@ import {
   Video, Calendar
 } from 'lucide-react';
 import { invalidateCache } from '@/utils/invalidateCache';
+import TestCompiler from '@/components/TestCompiler';
 
 // Zero-weight LaTeX and Markdown parser for administrative formatting
 const compileMarkdownToHtml = (markdown) => {
@@ -1834,7 +1835,8 @@ export default function CourseManageClient({
           { id: 'readings', label: 'Rich Readings', icon: BookOpen, desc: 'Markdown + LaTeX equations engine' },
           { id: 'doubts', label: 'Doubt Board', icon: MessageSquare, desc: 'Resolve student doubts & nested threads' },
           { id: 'live', label: 'Live Classes', icon: Radio, desc: 'Broadcast classroom polls & cohort telemetry' },
-          { id: 'exams', label: 'JEE Mock Linkages', icon: ClipboardList, desc: 'Assessments pipeline & CBT tests' }
+          { id: 'exams', label: 'JEE Mock Linkages', icon: ClipboardList, desc: 'Assessments pipeline & CBT tests' },
+          { id: 'compiler', label: 'Test Compiler', icon: Target, desc: 'Advanced Question Authoring Engine' }
         ].map(tab => (
           <button
             key={tab.id}
@@ -2880,6 +2882,9 @@ export default function CourseManageClient({
           <LiveClassesTab course={course} triggerToast={triggerToast} />
         )}
 
+        {activeTab === 'compiler' && (
+          <TestCompiler packages={[]} />
+        )}
       </div>
 
       {/* Assessment Question Builder Modal */}

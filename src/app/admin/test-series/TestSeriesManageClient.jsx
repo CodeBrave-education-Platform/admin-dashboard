@@ -342,17 +342,17 @@ export default function TestSeriesManageClient({
                         <span className="text-[9px] text-slate-400 font-bold" suppressHydrationWarning>
                           Created {formatDate(pkg.created_at)}
                         </span>
-                        
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenEditPackage(pkg);
                             }}
-                            className="p-1.5 bg-white border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-slate-400 hover:text-indigo-600 rounded-lg transition"
-                            title="Edit Package Details"
+                            className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-indigo-50 hover:border-indigo-200 text-xs font-bold text-slate-600 hover:text-indigo-600 rounded-lg transition shadow-sm flex items-center gap-1.5"
+                            title="Manage / Update Package Details"
                           >
-                            <Settings className="w-3.5 h-3.5" />
+                            <Settings className="w-3 h-3" />
+                            <span>Manage (Update)</span>
                           </button>
 
                           <button
@@ -360,12 +360,11 @@ export default function TestSeriesManageClient({
                               e.stopPropagation();
                               handleDeletePackage(pkg.id, pkg.title);
                             }}
-                            className="p-1.5 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 rounded-lg transition"
+                            className="p-1.5 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 rounded-lg transition shadow-sm"
                             title="Delete Package"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
-                          <ChevronRight className={`w-4 h-4 text-slate-400 transition ${isSelected ? 'translate-x-1 text-indigo-600' : ''}`} />
                         </div>
                       </div>
                     </div>
