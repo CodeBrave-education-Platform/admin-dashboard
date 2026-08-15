@@ -362,6 +362,28 @@ const parseExtractedText = (text) => {
   return parsedQuestions;
 };
 
+function CompilerTabWrapper() {
+  const supabase = createClient();
+  const [packages, setPackages] = useState([]);
+
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const { data } = await supabase
+          .from('test_packages')
+          .select('id, title, target_exam_tag')
+          .order('created_at', { ascending: false });
+        if (data) setPackages(data);
+      } catch (err) {
+        console.warn('[CompilerTab] Failed to load packages:', err.message);
+      }
+    };
+    fetchPackages();
+  }, []);
+
+  return <TestCompiler packages={packages} />;
+}
+
 function LiveClassesTab({ course, triggerToast }) {
   const supabase = createClient();
   const [question, setQuestion] = useState('');
@@ -2883,7 +2905,7 @@ export default function CourseManageClient({
         )}
 
         {activeTab === 'compiler' && (
-          <TestCompiler packages={[]} />
+          <CompilerTabWrapper />
         )}
       </div>
 
