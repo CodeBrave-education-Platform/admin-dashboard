@@ -16,7 +16,7 @@ export default async function AdminInvoicesPage() {
     const { data: dbInvoices } = await supabase
       .from('invoices')
       .select('*, profiles(full_name, email), courses(title)')
-      .order('issued_at', { ascending: false })
+      .order('invoice_date', { ascending: false })
     if (dbInvoices) invoices = dbInvoices
   } catch (e) {}
 
