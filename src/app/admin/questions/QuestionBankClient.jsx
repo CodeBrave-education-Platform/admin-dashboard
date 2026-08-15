@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
 import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal'
 import ConfirmDialogModal from '@/components/ConfirmDialogModal'
 import KatexRenderer from '@/components/KatexRenderer'
@@ -16,49 +17,16 @@ export default function QuestionBankClient({ user }) {
     message: '',
     onConfirm: () => {}
   });
-  const [questions, setQuestions] = useState([
-    {
-      id: 'qb-1',
-      subject: 'Physics',
-      topic: 'Rotational Motion',
-      formatType: 'single_mcq', // single_mcq, multi_mcq, numerical, assertion_reason, matrix_match
-      difficulty: 'HARD',
-      questionText: 'A solid sphere of mass M and radius R rolls down an inclined plane of inclination θ without slipping. Calculate the linear acceleration of its center of mass.',
-      diagramUrl: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=800&q=80',
-      options: ['(5/7) g sin θ', '(2/5) g sin θ', '(3/5) g sin θ', '(1/2) g sin θ'],
-      correctAnswer: '(5/7) g sin θ',
-      explanation: 'Using rolling dynamics: a = g sin θ / (1 + I/MR²). For a solid sphere, I = (2/5)MR², so a = (5/7) g sin θ.'
-    },
-    {
-      id: 'qb-2',
-      subject: 'Chemistry',
-      topic: 'Chemical Equilibrium',
-      formatType: 'numerical',
-      difficulty: 'MEDIUM',
-      questionText: 'For the reaction N₂ (g) + 3H₂ (g) ⇌ 2NH₃ (g) at 400 K, if Kp = 1.6 x 10⁻⁴ atm⁻², find the equilibrium partial pressure of NH₃ when P_N₂ = 2.0 atm and P_H₂ = 1.0 atm.',
-      diagramUrl: '',
-      options: [],
-      correctAnswer: '0.0178',
-      explanation: 'Kp = (P_NH₃)² / (P_N₂ * (P_H³)). Solving (P_NH₃)² = 1.6x10⁻⁴ * 2.0 * 1.0 = 3.2x10⁻⁴ => P_NH₃ = 0.0178 atm.'
-    },
-    {
-      id: 'qb-3',
-      subject: 'Mathematics',
-      topic: 'Definite Integration',
-      formatType: 'multi_mcq',
-      difficulty: 'HARD',
-      questionText: 'Which of the following statements regarding the integral I = ∫[0 to π/2] ln(sin x) dx are CORRECT?',
-      diagramUrl: '',
-      options: [
-        'I = -(π/2) ln 2',
-        'I = ∫[0 to π/2] ln(cos x) dx',
-        'I is divergent',
-        '2I = ∫[0 to π/2] ln(sin 2x / 2) dx'
-      ],
-      correctAnswer: ['I = -(π/2) ln 2', 'I = ∫[0 to π/2] ln(cos x) dx', '2I = ∫[0 to π/2] ln(sin 2x / 2) dx'],
-      explanation: 'Standard definite integral property evaluation using King\'s Rule.'
+  const supabase = createClient()
+  const [questions, setQuestions] = useState([])
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      const { data, error } = await supabase.from('questions').select('*').order('created_at', { ascending: false })
+      if (data) setQuestions(data)
     }
-  ])
+    fetchQuestions()
+  }, [])
 
   // Filter States
   const [selectedSubject, setSelectedSubject] = useState('ALL')
@@ -138,11 +106,16 @@ export default function QuestionBankClient({ user }) {
       explanation: formExplanation.trim()
     }
 
-    if (editingQuestion) {
-      setQuestions(questions.map(q => q.id === editingQuestion.id ? newQ : q))
-    } else {
-      setQuestions([newQ, ...questions])
+    const saveToDb = async () => {
+      if (editingQuestion) {
+        await supabase.from('questions').update(newQ).eq('id', editingQuestion.id)
+        setQuestions(questions.map(q => q.id === editingQuestion.id ? newQ : q))
+      } else {
+        await supabase.from('questions').insert([newQ])
+        setQuestions([newQ, ...questions])
+      }
     }
+    saveToDb()
 
     setIsAuthorModalOpen(false)
   }
@@ -152,9 +125,10 @@ export default function QuestionBankClient({ user }) {
       isOpen: true,
       title: 'Remove Question from Bank',
       message: 'Are you sure you want to permanently delete this question entry from the central Question Bank repository?',
-      onConfirm: () => {
-        setQuestions(prev => prev.filter(q => q.id !== id));
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      onConfirm: async () => {
+        await supabase.from('questions').delete().eq('id', id)
+        setQuestions(questions.filter(q => q.id !== id))
+        setConfirmDialog({ isOpen: false, title: '', message: '', onConfirm: () => {} })
       }
     });
   }
