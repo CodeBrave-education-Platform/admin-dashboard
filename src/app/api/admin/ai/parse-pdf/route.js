@@ -5,8 +5,6 @@ if (typeof global.DOMMatrix === 'undefined') global.DOMMatrix = class DOMMatrix 
 if (typeof global.ImageData === 'undefined') global.ImageData = class ImageData {};
 if (typeof global.Path2D === 'undefined') global.Path2D = class Path2D {};
 
-const pdfParse = require('pdf-parse');
-
 // ═══════════════════════════════════════════════════════════════
 // REAL PDF TEXT PARSER — Extracts ALL questions from raw text
 // Ported from CourseManageClient.jsx production parser
@@ -231,26 +229,10 @@ function parseExtractedText(text) {
 export async function POST(request) {
   try {
     const formData = await request.formData();
-    const file = formData.get('file');
     const rawText = formData.get('rawText');
     const parserType = formData.get('parserType') || 'unstructured_pdf';
 
     let textToParse = rawText || '';
-
-    if (file) {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      if (file.name && file.name.toLowerCase().endsWith('.pdf')) {
-        try {
-          const pdfData = await pdfParse(buffer);
-          textToParse = pdfData.text;
-        } catch (err) {
-          console.error("PDF extraction error:", err);
-          textToParse = buffer.toString('utf-8'); // fallback
-        }
-      } else {
-        textToParse = buffer.toString('utf-8');
-      }
-    }
 
     if (parserType === 'structured_table') {
       // For structured table format, also run the real parser first

@@ -14,6 +14,30 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
   const [aiParsing, setAiParsing] = useState(false);
   const [parsedQuestions, setParsedQuestions] = useState([]);
 
+  // Dynamically load PDF.js from CDN
+  const loadPdfJs = () => {
+    return new Promise((resolve, reject) => {
+      if (typeof window === 'undefined') return reject(new Error('Browser context required'));
+      if (window.pdfjsLib) return resolve(window.pdfjsLib);
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      script.onload = () => {
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        window.pdfjsLib = pdfjsLib;
+        resolve(pdfjsLib);
+      };
+      script.onerror = () => reject(new Error('Failed to load PDF.js'));
+      document.head.appendChild(script);
+    });
+  };
+
+  const extractTextWithLayout = async (page) => {
+    const textContent = await page.getTextContent();
+    if (!textContent.items || textContent.items.length === 0) return '';
+    return textContent.items.map(item => item.str).join(' ');
+  };
+
   if (!isOpen) return null;
 
   const handleFileChange = (e) => {
@@ -31,10 +55,32 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
     setAiParsing(true);
 
     try {
+      let finalRawText = aiRawText;
+
+      // Parse PDF client-side to avoid sending binary file to Next.js API
+      if (selectedFile && selectedFile.type === 'application/pdf') {
+        const pdfjsLib = await loadPdfJs();
+        const fileReader = new FileReader();
+        const arrayBuffer = await new Promise((resolve, reject) => {
+          fileReader.onload = () => resolve(fileReader.result);
+          fileReader.onerror = () => reject(fileReader.error);
+          fileReader.readAsArrayBuffer(selectedFile);
+        });
+
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        let fullText = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const pageText = await extractTextWithLayout(page);
+          fullText += pageText + '\n';
+        }
+        finalRawText = fullText;
+      }
+
       const formData = new FormData();
       formData.append('parserType', parserType);
-      if (selectedFile) formData.append('file', selectedFile);
-      if (aiRawText) formData.append('rawText', aiRawText);
+      if (finalRawText) formData.append('rawText', finalRawText);
 
       const res = await fetch('/api/admin/ai/parse-pdf', {
         method: 'POST',
