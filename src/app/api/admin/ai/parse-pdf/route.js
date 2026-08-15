@@ -714,25 +714,43 @@ export async function POST(request) {
         const GenAIClient = typeof GoogleGenAI !== 'undefined' ? GoogleGenAI : (require('@google/genai').GoogleGenAI);
         const ai = new GenAIClient({ apiKey });
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: [
-            {
-              inlineData: {
-                mimeType: 'application/pdf',
-                data: cleanBase64
+        let response = null;
+        let successfulModel = '';
+        let lastError = null;
+        const modelsToTry = ['gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash'];
+        
+        for (const modelName of modelsToTry) {
+          try {
+            response = await ai.models.generateContent({
+              model: modelName,
+              contents: [
+                {
+                  inlineData: {
+                    mimeType: 'application/pdf',
+                    data: cleanBase64
+                  }
+                },
+                {
+                  text: 'Extract all questions, options, correct answers, and explanations into structured JSON format.'
+                }
+              ],
+              config: {
+                responseMimeType: 'application/json',
+                systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
+                temperature: 0.1
               }
-            },
-            {
-              text: 'Extract all questions, options, correct answers, and explanations into structured JSON format.'
-            }
-          ],
-          config: {
-            responseMimeType: 'application/json',
-            systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
-            temperature: 0.1
+            });
+            successfulModel = modelName;
+            break;
+          } catch (err) {
+            console.warn(`[Gemini Route] Model ${modelName} failed: ${err.message}. Trying next fallback...`);
+            lastError = err;
           }
-        });
+        }
+
+        if (!response) {
+          throw new Error(`All Gemini fallback models failed. Last error: ${lastError?.message || 'Unknown'}`);
+        }
 
         let responseText = response.text || '';
         if (!responseText && response.candidates && response.candidates[0] && response.candidates[0].content) {
@@ -766,7 +784,7 @@ export async function POST(request) {
         return NextResponse.json({
           success: true,
           parserType: 'gemini_ai_multimodal',
-          model: 'gemini-3.6-flash',
+          model: successfulModel,
           questions_count: formattedQuestions.length,
           questions: formattedQuestions
         });
