@@ -26,7 +26,6 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
   ];
 
   const storeSection = [
-    { label: 'Coupons', href: '/admin/coupons', icon: Award },
     { label: 'Book Orders', href: '/admin/books/orders', icon: Package },
     { label: 'Book Inventory', href: '/admin/books', icon: BookOpen }
   ];

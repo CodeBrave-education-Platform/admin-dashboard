@@ -87,13 +87,6 @@ export default function CommandPalette() {
                 <FileText className="w-4 h-4 text-slate-500" />
                 <span>Compile New Exam</span>
               </Command.Item>
-              <Command.Item 
-                onSelect={() => runCommand(() => router.push('/admin/coupons'))}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer aria-selected:bg-slate-100 aria-selected:text-slate-900 text-slate-700 font-bold text-xs mt-1 transition-colors"
-              >
-                <Ticket className="w-4 h-4 text-slate-500" />
-                <span>Issue Promo Code</span>
-              </Command.Item>
             </Command.Group>
           </Command.List>
         </Command>
