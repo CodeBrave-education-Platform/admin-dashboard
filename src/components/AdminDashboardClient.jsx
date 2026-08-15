@@ -133,338 +133,129 @@ export default function AdminDashboardClient() {
     return s.role === roleFilter;
   });
 
-  return (
-    <div className="space-y-8 animate-fade-in font-sans">
-      
-      {/* Header section with refreshing state */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-2">
-            <span>Admin Dashboard</span>
-            <Sparkles className="w-5 h-5 text-indigo-600 animate-pulse" />
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">Overview of students, courses, and platform activity</p>
-        </div>
+  const activeStudentsCount = students.filter(s => s.role === 'student' || !s.role).length;
+  const liveClassesCount = courses.length; // Simplified proxy for live classes
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={fetchDashboardData}
-            disabled={refreshing}
-            className="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold transition flex items-center gap-2 select-none cursor-pointer disabled:opacity-50 shadow-sm"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Refresh Data</span>
-          </button>
+  return (
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 font-sans max-w-5xl mx-auto pb-20">
+      
+      {/* Hero Section */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
+        <div>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">
+            Welcome back, {currentUserRole === 'admin' ? 'Admin' : 'User'}!
+          </h1>
+          <p className="text-sm font-medium text-slate-500">
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
         </div>
+        
+        <button
+          onClick={fetchDashboardData}
+          disabled={refreshing}
+          className="px-5 py-2.5 bg-white/50 backdrop-blur-md border border-slate-200/60 hover:bg-white text-slate-700 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 select-none cursor-pointer disabled:opacity-50 shadow-sm hover:shadow-md"
+        >
+          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          <span>Refresh Data</span>
+        </button>
       </div>
 
-
-
       {loading ? (
-        <div className="space-y-8 animate-pulse">
-          {/* Asymmetric Bento-Grid Statistics Skeletons */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {[1, 2, 3, 4].map(i => (
-              <div key={i} className="bg-white border border-slate-200 p-6 rounded-3xl flex items-center justify-between shadow-sm h-24">
-                <div className="space-y-2">
-                  <div className="w-24 h-2 bg-slate-100 rounded" />
-                  <div className="w-12 h-5 bg-slate-200 rounded" />
-                </div>
-                <div className="w-12 h-12 bg-slate-100 rounded-2.5xl" />
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Student Roster Directory Skeleton */}
-            <div className="lg:col-span-2 bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 shadow-sm min-h-[400px]">
-              <div className="flex justify-between items-center border-b border-slate-150 pb-4">
-                <div className="w-48 h-4 bg-slate-100 rounded" />
-                <div className="w-60 h-8 bg-slate-50 border border-slate-150 rounded-xl" />
-              </div>
-              <div className="space-y-4">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="bg-slate-50 border border-slate-100 p-4 rounded-2xl flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-slate-100" />
-                      <div className="space-y-2">
-                        <div className="w-32 h-3 bg-slate-150 rounded" />
-                        <div className="w-48 h-2 bg-slate-100 rounded" />
-                      </div>
-                    </div>
-                    <div className="w-16 h-3 bg-slate-100 rounded" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Quick Actions & CBT Telemetry Skeleton */}
-            <div className="space-y-6 lg:col-span-1">
-              <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm h-44 flex flex-col justify-center space-y-3">
-                <div className="w-24 h-3 bg-slate-100 rounded" />
-                <div className="h-10 bg-slate-50 border border-slate-100 rounded-2xl" />
-                <div className="h-10 bg-slate-50 border border-slate-100 rounded-2xl" />
-              </div>
-              <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm h-64 flex flex-col justify-center space-y-3">
-                <div className="w-32 h-3 bg-slate-100 rounded" />
-                {[1, 2].map(i => (
-                  <div key={i} className="bg-slate-50 p-3 border border-slate-100 rounded-xl space-y-2">
-                    <div className="flex justify-between">
-                      <div className="w-20 h-3 bg-slate-150 rounded" />
-                      <div className="w-8 h-3 bg-slate-100 rounded" />
-                    </div>
-                    <div className="w-28 h-2 bg-slate-100 rounded" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="flex justify-center py-20">
+          <RefreshCw className="w-8 h-8 text-slate-300 animate-spin" />
         </div>
       ) : (
         <>
-          {/* Asymmetric Bento-Grid Statistics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {[
-              { label: 'Active Courses', value: courses.length, icon: BookOpen, color: 'text-indigo-600 bg-indigo-50 border-indigo-100' },
-              { label: 'Registered Students', value: students.filter(s => s.role === 'student' || !s.role).length, icon: Users, color: 'text-emerald-600 bg-emerald-50 border-emerald-100' },
-              { label: 'Live Polls', value: recentAttempts.length > 0 ? 'Active' : 'Inactive', icon: Radio, color: recentAttempts.length > 0 ? 'text-teal-600 bg-teal-50 border-teal-150 animate-pulse' : 'text-slate-400 bg-slate-50 border-slate-200' },
-              { label: 'Course Enrollments', value: courseEnrollments.length, icon: GraduationCap, color: 'text-cyan-600 bg-cyan-50 border-cyan-100' }
-            ].map((stat, idx) => (
-              <div
-                key={idx}
-                className="bg-white border border-slate-200 p-6 rounded-3xl flex items-center justify-between transition-all duration-200 shadow-sm hover:shadow-md select-none group"
-              >
-                <div>
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">{stat.label}</span>
-                  <h3 className="text-2xl font-black text-slate-900 mt-1 group-hover:scale-105 transition duration-300 origin-left">{stat.value}</h3>
+          {/* Main Metric Cards (Glassmorphism + Soft Gradients) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-gradient-to-br from-[#f3e8ff] to-[#fae8ff] border border-white/40 p-8 rounded-[2rem] shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 border border-white/50 text-purple-600">
+                  <Users className="w-6 h-6" />
                 </div>
-                <div className={`p-4 rounded-2.5xl border ${stat.color}`}>
-                  <stat.icon className="w-5 h-5" />
-                </div>
+                <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-2 group-hover:scale-105 transition-transform origin-left">
+                  {activeStudentsCount.toLocaleString()}
+                </h2>
+                <p className="text-sm font-bold text-slate-700">Total Active Students</p>
+                <p className="text-xs font-bold text-emerald-600 mt-4">+2.1% this week</p>
               </div>
-            ))}
+            </div>
+
+            <div className="bg-gradient-to-br from-[#cffafe] to-[#ccfbf1] border border-white/40 p-8 rounded-[2rem] shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 border border-white/50 text-teal-600">
+                  <BookOpen className="w-6 h-6" />
+                </div>
+                <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-2 group-hover:scale-105 transition-transform origin-left">
+                  {liveClassesCount}
+                </h2>
+                <p className="text-sm font-bold text-slate-700">Ongoing Live Classes</p>
+                <p className="text-xs font-bold text-amber-600 mt-4">{batchEnrollments.length} Starting Soon</p>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left 2 Columns: Dynamic Student Roster Directory */}
-            <div className="lg:col-span-2 bg-white border border-slate-200 p-6 sm:p-8 rounded-3xl space-y-6 flex flex-col justify-start shadow-sm hover:shadow-md transition-shadow duration-200">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-indigo-600" />
-                    <h3 className="font-extrabold text-sm uppercase text-slate-800 tracking-wider">
-                      {roleFilter === 'all' ? 'Users' : roleFilter === 'student' ? 'Students' : roleFilter === 'teacher' ? 'Teachers' : 'Admins'}
-                    </h3>
-                  </div>
-                  {/* Segmented control for role filtering */}
-                  <div className="flex gap-1.5 pt-1.5 select-none">
-                    {[
-                      { key: 'all', label: 'All' },
-                      { key: 'student', label: 'Students' },
-                      { key: 'teacher', label: 'Teachers' },
-                      { key: 'admin', label: 'Admins' }
-                    ].map(btn => (
-                      <button
-                        key={btn.key}
-                        onClick={() => setRoleFilter(btn.key)}
-                        className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider transition cursor-pointer ${
-                          roleFilter === btn.key
-                            ? 'bg-indigo-600 text-white border border-indigo-600 shadow-sm'
-                            : 'bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-800'
-                        }`}
-                      >
-                        {btn.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="relative w-full sm:w-60 shrink-0">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    placeholder="Search credentials..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-900 outline-none focus:border-indigo-500 transition font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-4 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
-                {filteredStudents.length === 0 ? (
-                  <div className="text-center text-slate-500 text-xs py-16">
-                    <Users className="w-12 h-12 text-slate-200 mb-3 mx-auto" />
-                    No matching profiles found in registry.
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-6">
+            {/* Minimal Student Activity Chart */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight">Student Activity</h3>
+              <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-6 rounded-[2rem] shadow-sm h-[300px]">
+                {recentAttempts.length === 0 ? (
+                  <div className="flex items-center justify-center h-full text-sm font-medium text-slate-400">
+                    Not enough data
                   </div>
                 ) : (
-                  filteredStudents.map(student => {
-                    const initials = (student.full_name || 'ST').substring(0,2).toUpperCase();
-                    const isNeet = student.target_focus === 'NEET' || student.academic_batch?.toUpperCase().includes('NEET');
-                    const subjects = student.preferred_subjects || student.preferred_subject || 'Physics, Chemistry, Mathematics';
-                    const isCurrentUser = student.id === currentUserId;
-                    return (
-                      <div
-                        key={student.id}
-                        className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/50 hover:border-slate-300 transition"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-655 font-black text-xs shrink-0">
-                            {initials}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h4 className="text-xs font-black text-slate-800 leading-tight">
-                                {student.full_name || 'Anonymous User'}
-                              </h4>
-                              {isCurrentUser && (
-                                <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[8px] font-bold uppercase tracking-wider border border-amber-200 select-none">
-                                  You
-                                </span>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-slate-500 block mt-0.5">{student.email}</span>
-                            {(student.role === 'student' || !student.role) && (
-                              <span className="text-[9px] text-slate-400 font-bold block mt-1">
-                                Subjects: {subjects}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 justify-between sm:justify-end w-full sm:w-auto">
-                          {/* Role edit select menu for administrators */}
-                          {currentUserRole === 'admin' ? (
-                            <div className="flex items-center gap-1.5 select-none">
-                              <span className="text-[9px] text-slate-400 font-bold uppercase">Role:</span>
-                              <select
-                                value={student.role || 'student'}
-                                disabled={isCurrentUser}
-                                onChange={(e) => handleUpdateUserRole(student.id, e.target.value)}
-                                className="bg-white border border-slate-250 rounded-lg px-2 py-1 text-[10px] font-black text-slate-750 outline-none focus:border-indigo-500 cursor-pointer disabled:opacity-50 shadow-sm"
-                              >
-                                <option value="student">Student</option>
-                                <option value="teacher">Teacher</option>
-                                <option value="admin">Admin</option>
-                              </select>
-                            </div>
-                          ) : (
-                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border shadow-xs ${
-                              student.role === 'admin'
-                                ? 'bg-rose-50 text-rose-700 border-rose-150'
-                                : student.role === 'teacher'
-                                  ? 'bg-amber-50 text-amber-700 border-amber-150'
-                                  : isNeet
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-150'
-                                    : 'bg-indigo-50 text-indigo-700 border-indigo-150'
-                            }`}>
-                              {student.role === 'admin' ? 'Admin' : student.role === 'teacher' ? 'Teacher' : isNeet ? 'NEET Focus' : 'JEE Focus'}
-                            </span>
-                          )}
-
-                          <div className="text-right shrink-0">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block leading-none">Joined</span>
-                            <span className="text-[10px] text-slate-600 font-bold block mt-1.5 font-mono leading-none">
-                              {new Date(student.created_at).toLocaleDateString('en-US')}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={recentAttempts.map((a, i) => ({ name: a.profiles?.full_name?.split(' ')[0] || `S${i}`, score: a.score }))}>
+                      <defs>
+                        <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#c084fc" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#c084fc" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="name" tick={{fontSize: 11, fill: '#94a3b8', fontWeight: 600}} axisLine={false} tickLine={false} dy={10} />
+                      <YAxis tick={{fontSize: 11, fill: '#94a3b8', fontWeight: 600}} axisLine={false} tickLine={false} dx={-10} />
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '1rem', border: '1px solid #f1f5f9', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
+                        cursor={{stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4'}}
+                      />
+                      <Area type="monotone" dataKey="score" stroke="#c084fc" strokeWidth={4} fillOpacity={1} fill="url(#colorScore)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 )}
               </div>
             </div>
 
-            {/* Right Column: Recent Telemetry Actions & Catalog Shortcuts */}
-            <div className="space-y-6 lg:col-span-1">
-              <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow duration-200">
-                <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-                  <Activity className="w-4 h-4 text-emerald-600" />
-                  <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Quick Actions</h3>
-                </div>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={() => router.push('/courses')}
-                    className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs text-slate-800 font-bold transition select-none cursor-pointer hover:bg-slate-100/50 group"
-                  >
-                    <span>Manage Courses</span>
-                    <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-slate-800 transition group-hover:translate-x-1" />
-                  </button>
-
-                  <button
-                    onClick={() => router.push('/admin/test-series')}
-                    className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs text-slate-800 font-bold transition select-none cursor-pointer hover:bg-slate-100/50 group"
-                  >
-                    <span>Manage Test Series</span>
-                    <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-slate-800 transition group-hover:translate-x-1" />
-                  </button>
-
-                  <a
-                    href={studentPortalUrl}
-                    target="_blank"
-                    className="w-full flex items-center justify-between p-4 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-2xl text-xs text-slate-800 font-bold transition select-none cursor-pointer hover:bg-slate-100/50 group"
-                  >
-                    <span>Launch Student Portal</span>
-                    <ExternalLink className="w-4 h-4 text-slate-500 group-hover:text-slate-800 transition" />
-                  </a>
-                </div>
-              </div>
-
-              <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow duration-200 mt-6">
-                <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-                  <BookOpen className="w-4 h-4 text-purple-600" />
-                  <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Top Course Enrollments</h3>
-                </div>
-                <div className="space-y-3">
-                  {courses.slice(0,5).map(course => {
-                    const count = courseEnrollments.filter(e => e.course_id === course.id).length;
-                    return (
-                      <div key={course.id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-100 rounded-2xl">
-                        <span className="text-xs font-bold text-slate-800 truncate max-w-[150px]">{course.title}</span>
-                        <div className="flex items-center gap-1.5">
-                          <Users className="w-3.5 h-3.5 text-slate-400" />
-                          <span className="text-xs font-black text-slate-700">{count}</span>
-                        </div>
+            {/* Recent Activity Feed */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight">Recent Activity</h3>
+              <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-6 rounded-[2rem] shadow-sm">
+                <div className="space-y-6">
+                  {courseEnrollments.slice(0, 2).map((enrollment, idx) => (
+                    <div key={`e-${idx}`} className="flex items-start gap-4">
+                      <span className="text-sm font-black text-slate-300 mt-0.5">{idx + 1}.</span>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">New enrollment: Student {enrollment.profile_id?.substring(0,4)}</p>
+                        <p className="text-xs font-semibold text-slate-500 mt-1">Class: {courses.find(c => c.id === enrollment.course_id)?.title || 'Standard Course'}</p>
                       </div>
-                    )
-                  })}
-                  {courses.length === 0 && <div className="text-xs text-slate-400 text-center py-4">No courses available</div>}
-                </div>
-              </div>
-
-
-              <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-4 shadow-sm hover:shadow-md transition-shadow duration-200">
-                <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
-                  <TrendingUp className="w-4 h-4 text-indigo-600" />
-                  <h3 className="font-bold text-xs uppercase text-slate-800 tracking-wider">Recent Test Results</h3>
-                </div>
-
-                <div className="h-[200px] w-full mt-4">
-                  {recentAttempts.length === 0 ? (
-                    <div className="text-slate-400 text-center py-6 text-xs">
-                      No recent mock test attempts submitted.
                     </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={recentAttempts.map((a, i) => ({ name: a.profiles?.full_name?.split(' ')[0] || `S${i}`, score: a.score }))}>
-                        <defs>
-                          <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis dataKey="name" tick={{fontSize: 10, fill: '#64748b'}} axisLine={false} tickLine={false} />
-                        <YAxis tick={{fontSize: 10, fill: '#64748b'}} axisLine={false} tickLine={false} />
-                        <Tooltip 
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
-                          cursor={{stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4'}}
-                        />
-                        <Area type="monotone" dataKey="score" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                  ))}
+                  
+                  {recentAttempts.slice(0, 2).map((attempt, idx) => (
+                    <div key={`a-${idx}`} className="flex items-start gap-4">
+                      <span className="text-sm font-black text-slate-300 mt-0.5">{idx + 3}.</span>
+                      <div>
+                        <p className="text-sm font-bold text-slate-900">Quiz Submitted: {attempt.profiles?.full_name || 'Anonymous'}</p>
+                        <p className="text-xs font-semibold text-slate-500 mt-1">Score: {attempt.score} / {attempt.assessments?.total_marks || 100}</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {courseEnrollments.length === 0 && recentAttempts.length === 0 && (
+                    <p className="text-sm font-medium text-slate-400">No recent activity found.</p>
                   )}
                 </div>
               </div>

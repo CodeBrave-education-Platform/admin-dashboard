@@ -546,171 +546,182 @@ export default function TestSeriesManageClient({
                 </button>
               </div>
 
-              <form onSubmit={handleSavePackage} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block">Package Title</label>
-                  <input
-                    type="text"
-                    required
-                    value={pkgTitle}
-                    onChange={e => setPkgTitle(e.target.value)}
-                    placeholder="JEE Main High-Yield Test Series 2026"
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold placeholder-slate-400"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase block">Target Competitive Tag</label>
-                    <select
-                      value={pkgTag}
-                      onChange={e => setPkgTag(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
-                    >
-                      <option value="JEE Main">JEE Main</option>
-                      <option value="JEE Advanced">JEE Advanced</option>
-                      <option value="NEET">NEET Focus</option>
-                      <option value="KVPY">KVPY / Olympiad</option>
-                      <option value="Foundation">Foundation Drills</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase block">Campus Branch</label>
-                    <select
-                      value={pkgBranch}
-                      onChange={e => setPkgBranch(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
-                    >
-                      <option value="Hyderabad Main Campus">Hyderabad Main Campus</option>
-                      <option value="Vijayawada Center">Vijayawada Center</option>
-                      <option value="Vizag Branch">Vizag Branch</option>
-                      <option value="Bengaluru Hub">Bengaluru Hub</option>
-                      <option value="Online Pan-India">Online Pan-India</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Distribution setup */}
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase block">Chapter Drills</label>
-                    <input
-                      type="number"
-                      value={drillsCount}
-                      onChange={e => setDrillsCount(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase block">Full Mocks</label>
-                    <input
-                      type="number"
-                      value={mocksCount}
-                      onChange={e => setMocksCount(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-500 uppercase block">Live Papers</label>
-                    <input
-                      type="number"
-                      value={liveCount}
-                      onChange={e => setLiveCount(e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
-                    />
-                  </div>
-                </div>
-
-                {/* Price Ledger toggle setup */}
-                <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-4">
-                  <div className="space-y-1 flex flex-col justify-center">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Ledger Status</span>
-                    <label className="flex items-center mt-2 cursor-pointer select-none">
+              <form onSubmit={handleSavePackage} className="flex flex-col max-h-[70vh] overflow-hidden">
+                <div className="overflow-y-auto custom-scrollbar pr-2 space-y-6 pb-4">
+                  
+                  {/* Section 1: Basic Information */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider">1. Basic Details</h4>
+                    
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase block">Package Title</label>
                       <input
-                        type="checkbox"
-                        checked={isPremium}
-                        onChange={e => setIsPremium(e.target.checked)}
-                        className="accent-indigo-600 h-5 w-5 cursor-pointer"
+                        type="text"
+                        required
+                        value={pkgTitle}
+                        onChange={e => setPkgTitle(e.target.value)}
+                        placeholder="JEE Main High-Yield Test Series 2026"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold placeholder-slate-400"
                       />
-                      <span className="text-xs font-bold text-slate-700 ml-2">Premium Paid Package</span>
-                    </label>
-                  </div>
-
-                  {isPremium && (
-                    <>
-                      <div className="space-y-1 animate-in fade-in duration-200">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Tuition Price (₹)</label>
-                        <input
-                          type="number"
-                          required={isPremium}
-                          value={pkgPrice}
-                          onChange={e => setPkgPrice(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
-                        />
-                      </div>
-                      <div className="space-y-1 animate-in fade-in duration-200">
-                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Original Price (Fake Discount ₹)</label>
-                        <input
-                          type="number"
-                          value={pkgOriginalPrice}
-                          onChange={e => setPkgOriginalPrice(e.target.value)}
-                          placeholder="e.g. 1999"
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-                {/* Thumbnail Image URL & Description */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block">Thumbnail Image URL</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={pkgThumbnail}
-                      onChange={e => setPkgThumbnail(e.target.value)}
-                      placeholder="https://images.unsplash.com/photo-1606326608606..."
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-mono"
-                    />
-                  </div>
-                  {pkgThumbnail && (
-                    <div className="mt-2 p-2 bg-slate-50 border border-slate-200 rounded-xl">
-                      <img src={pkgThumbnail} alt="Preview" className="h-16 w-full object-cover rounded-lg" />
                     </div>
-                  )}
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Competitive Tag</label>
+                        <select
+                          value={pkgTag}
+                          onChange={e => setPkgTag(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
+                        >
+                          <option value="JEE Main">JEE Main</option>
+                          <option value="JEE Advanced">JEE Advanced</option>
+                          <option value="NEET">NEET Focus</option>
+                          <option value="KVPY">KVPY / Olympiad</option>
+                          <option value="Foundation">Foundation Drills</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Campus Branch</label>
+                        <select
+                          value={pkgBranch}
+                          onChange={e => setPkgBranch(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
+                        >
+                          <option value="Hyderabad Main Campus">Hyderabad Main Campus</option>
+                          <option value="Vijayawada Center">Vijayawada Center</option>
+                          <option value="Vizag Branch">Vizag Branch</option>
+                          <option value="Bengaluru Hub">Bengaluru Hub</option>
+                          <option value="Online Pan-India">Online Pan-India</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Visuals & Description */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider">2. Marketing Details</h4>
+                    
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase block">Thumbnail URL</label>
+                      <input
+                        type="text"
+                        value={pkgThumbnail}
+                        onChange={e => setPkgThumbnail(e.target.value)}
+                        placeholder="https://images.unsplash.com/..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-mono"
+                      />
+                      {pkgThumbnail && (
+                        <div className="mt-2 p-1 bg-slate-50 border border-slate-200 rounded-lg max-w-[150px]">
+                          <img src={pkgThumbnail} alt="Preview" className="h-12 w-full object-cover rounded" />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase block">Description & Highlights</label>
+                      <textarea
+                        rows={2}
+                        value={pkgDescription}
+                        onChange={e => setPkgDescription(e.target.value)}
+                        placeholder="Provide test series highlights..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold resize-none custom-scrollbar"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Section 3: Contents & Pricing */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-black text-slate-900 border-b border-slate-100 pb-2 uppercase tracking-wider">3. Commercials & Access</h4>
+                    
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Chapter Drills</label>
+                        <input
+                          type="number"
+                          value={drillsCount}
+                          onChange={e => setDrillsCount(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Full Mocks</label>
+                        <input
+                          type="number"
+                          value={mocksCount}
+                          onChange={e => setMocksCount(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Live Papers</label>
+                        <input
+                          type="number"
+                          value={liveCount}
+                          onChange={e => setLiveCount(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 mt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase block">Pricing Ledger</span>
+                        <label className="flex items-center cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={isPremium}
+                            onChange={e => setIsPremium(e.target.checked)}
+                            className="accent-indigo-600 h-4 w-4 cursor-pointer"
+                          />
+                          <span className="text-xs font-bold text-indigo-700 ml-2">Premium Package</span>
+                        </label>
+                      </div>
+
+                      {isPremium && (
+                        <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-2">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase block">Selling Price (₹)</label>
+                            <input
+                              type="number"
+                              required={isPremium}
+                              value={pkgPrice}
+                              onChange={e => setPkgPrice(e.target.value)}
+                              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase block">Original Price (₹)</label>
+                            <input
+                              type="number"
+                              value={pkgOriginalPrice}
+                              onChange={e => setPkgOriginalPrice(e.target.value)}
+                              placeholder="e.g. 1999"
+                              className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase block">Package Description & Syllabus</label>
-                  <textarea
-                    rows="3"
-                    value={pkgDescription}
-                    onChange={e => setPkgDescription(e.target.value)}
-                    placeholder="Provide test series highlights, target topics, and chapter coverage..."
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs outline-none focus:border-indigo-500 transition font-medium"
-                  />
-                </div>
-
-                <div className="border-t border-slate-100 pt-4 flex gap-3 justify-end select-none">
+                {/* Footer Actions */}
+                <div className="pt-4 border-t border-slate-100 flex justify-end gap-3 mt-auto shrink-0">
                   <button
                     type="button"
                     onClick={() => setShowAddPackageModal(false)}
-                    className="px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl text-xs font-bold transition cursor-pointer"
+                    className="px-5 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isCreatingPackage}
-                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm border border-indigo-700"
+                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 disabled:opacity-50"
                   >
-                    {isCreatingPackage ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <PlusCircle className="w-3.5 h-3.5 shrink-0" />
-                    )}
-                    <span>{editingPackage ? 'Save Package Changes' : 'Publish Package'}</span>
+                    {isCreatingPackage && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                    {editingPackage ? 'Update Package' : 'Create Package'}
                   </button>
                 </div>
               </form>
