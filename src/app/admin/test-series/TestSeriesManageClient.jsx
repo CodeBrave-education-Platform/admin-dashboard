@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { motion, AnimatePresence } from 'framer-motion';
 import ConfirmDialogModal from '@/components/ConfirmDialogModal';
+import TestCompiler from '@/components/TestCompiler';
 import { 
   Award, BookOpen, Clock, Users, PlusCircle, RefreshCw, Trash2, 
   ChevronRight, Play, LayoutGrid, ClipboardCheck, BarChart3, 
-  HelpCircle, Settings, Layers, Calendar, Loader2, Sparkles, X, Plus, AlertCircle, Image as ImageIcon
+  HelpCircle, Settings, Layers, Calendar, Loader2, Sparkles, X, Plus, AlertCircle, Image as ImageIcon,
+  Edit3
 } from 'lucide-react';
 
 const formatDate = (dateStr) => {
@@ -36,6 +38,7 @@ export default function TestSeriesManageClient({
   const [attempts, setAttempts] = useState(initialAttempts || []);
   
   const [selectedPackageId, setSelectedPackageId] = useState(null);
+  const [expandedExamId, setExpandedExamId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   // In-Website Confirmation Dialog State (No Browser Native Popups!)
@@ -413,54 +416,82 @@ export default function TestSeriesManageClient({
                     const isUpcoming = start && now < start;
 
                     return (
-                      <div
-                        key={exam.id}
-                        className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 transition"
-                      >
-                        <div className="space-y-1.5 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <h4 className="text-xs font-black text-slate-800 truncate max-w-[260px] sm:max-w-[340px]">
-                              {exam.title}
-                            </h4>
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
-                              isUpcoming
-                                ? 'bg-amber-50 text-amber-700 border-amber-250'
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-250'
-                            }`}>
-                              {isUpcoming ? 'Scheduled' : 'Live'}
+                      <div key={exam.id} className="space-y-3">
+                        <div
+                          className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 transition"
+                        >
+                          <div className="space-y-1.5 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-black text-slate-800 truncate max-w-[260px] sm:max-w-[340px]">
+                                {exam.title}
+                              </h4>
+                              <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase border ${
+                                isUpcoming
+                                  ? 'bg-amber-50 text-amber-700 border-amber-250'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-250'
+                              }`}>
+                                {isUpcoming ? 'Scheduled' : 'Live'}
+                              </span>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-450 font-bold uppercase">
+                              <span>Duration: {exam.duration_minutes}m</span>
+                              <span>•</span>
+                              <span>Questions: {exam.total_questions}</span>
+                              <span>•</span>
+                              <span>Live Board: {exam.is_live_ranking ? 'Yes' : 'No'}</span>
+                            </div>
+
+                            <span className="text-[9px] text-slate-400 font-bold block">
+                              Opens: {new Date(exam.activation_timestamp).toLocaleString()}
                             </span>
                           </div>
-                          
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-slate-450 font-bold uppercase">
-                            <span>Duration: {exam.duration_minutes}m</span>
-                            <span>•</span>
-                            <span>Questions: {exam.total_questions}</span>
-                            <span>•</span>
-                            <span>Live Board: {exam.is_live_ranking ? 'Yes' : 'No'}</span>
+
+                          <div className="flex items-center gap-2 justify-end shrink-0 select-none">
+                            <button
+                              onClick={() => router.push(`/admin/test-series/monitor/${exam.id}`)}
+                              className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition shadow-sm border border-emerald-650 flex items-center gap-1"
+                            >
+                              <Play className="w-3 h-3 fill-white text-emerald-200" />
+                              <span>Monitor</span>
+                            </button>
+
+                            <button
+                              onClick={() => setExpandedExamId(expandedExamId === exam.id ? null : exam.id)}
+                              className={`px-3 py-2 rounded-lg text-[9px] font-black uppercase tracking-wider transition shadow-sm border flex items-center gap-1 ${
+                                expandedExamId === exam.id
+                                  ? 'bg-slate-800 text-white border-slate-900'
+                                  : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                              }`}
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>{expandedExamId === exam.id ? 'Close Compiler' : 'Manage'}</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteExam(exam.id, exam.title, selectedPackageId)}
+                              className="p-2 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 rounded-lg transition"
+                              title="Delete Exam"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-
-                          <span className="text-[9px] text-slate-400 font-bold block">
-                            Opens: {new Date(exam.activation_timestamp).toLocaleString()}
-                          </span>
                         </div>
 
-                        <div className="flex items-center gap-2 justify-end shrink-0 select-none">
-                          <button
-                            onClick={() => router.push(`/admin/test-series/monitor/${exam.id}`)}
-                            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition shadow-sm border border-emerald-650 flex items-center gap-1"
-                          >
-                            <Play className="w-3 h-3 fill-white text-emerald-200" />
-                            <span>Monitor</span>
-                          </button>
-
-                          <button
-                            onClick={() => handleDeleteExam(exam.id, exam.title, selectedPackageId)}
-                            className="p-2 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-600 rounded-lg transition"
-                            title="Delete Exam"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                        <AnimatePresence>
+                          {expandedExamId === exam.id && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden"
+                            >
+                              <div className="p-4 bg-slate-100 border border-slate-200 rounded-2xl mb-4 relative z-0">
+                                <TestCompiler exam={exam} packages={packages} />
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     );
                   })}

@@ -10,7 +10,7 @@ import {
   HelpCircle, Settings, Layers, Calendar, Loader2, Sparkles
 } from 'lucide-react'
 
-export default function CompilerClient({ packages = [], initialPackages = [] }) {
+export default function CompilerClient({ packages = [], initialPackages = [], exam = null }) {
   const pkgs = packages.length > 0 ? packages : initialPackages
   return (
     <Suspense fallback={
@@ -18,12 +18,12 @@ export default function CompilerClient({ packages = [], initialPackages = [] }) 
         <Loader2 className="w-8 h-8 text-indigo-650 animate-spin" />
       </div>
     }>
-      <CompilerClientContent packages={pkgs || []} />
+      <CompilerClientContent packages={pkgs || []} exam={exam} />
     </Suspense>
   )
 }
 
-function CompilerClientContent({ packages = [] }) {
+function CompilerClientContent({ packages = [], exam = null }) {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const packageIdParam = searchParams?.get('packageId') || searchParams?.get('id')
@@ -58,14 +58,21 @@ function CompilerClientContent({ packages = [] }) {
   const [selectedQuestions, setSelectedQuestions] = useState([])
 
   // Form States: Exam Compilation Blueprint
-  const [examTitle, setExamTitle] = useState('')
-  const [targetPackageId, setTargetPackageId] = useState('')
-  const [examDuration, setExamDuration] = useState('180')
-  const [positiveMarks, setPositiveMarks] = useState('4')
-  const [negativeMarks, setNegativeMarks] = useState('-1')
-  const [isLiveRanking, setIsLiveRanking] = useState(true)
-  const [activationTimestamp, setActivationTimestamp] = useState('')
+  const [examTitle, setExamTitle] = useState(exam?.title || '')
+  const [targetPackageId, setTargetPackageId] = useState(exam?.package_id || '')
+  const [examDuration, setExamDuration] = useState(exam?.duration_minutes ? String(exam.duration_minutes) : '180')
+  const [positiveMarks, setPositiveMarks] = useState(exam?.marks_scheme?.positive_marks ? String(exam.marks_scheme.positive_marks) : '4')
+  const [negativeMarks, setNegativeMarks] = useState(exam?.marks_scheme?.negative_marks ? String(Math.abs(exam.marks_scheme.negative_marks)) : '1')
+  const [isLiveRanking, setIsLiveRanking] = useState(exam?.is_live_ranking ?? true)
+  const [activationTimestamp, setActivationTimestamp] = useState(exam?.activation_timestamp ? new Date(exam.activation_timestamp).toISOString().slice(0, 16) : '')
   const [isCompiling, setIsCompiling] = useState(false)
+
+  // Initialize selected questions if exam is provided
+  useEffect(() => {
+    if (exam && exam.questions) {
+      setSelectedQuestions(exam.questions);
+    }
+  }, [exam]);
 
   // AI PDF Question Importer & Review State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false)
@@ -273,55 +280,77 @@ function CompilerClientContent({ packages = [] }) {
     })
   }
 
-  // Compile Exam Blueprint
+  // Compile Exam Blueprint OR Update Existing Exam
   const handleCompileExam = async (e) => {
     e.preventDefault()
     if (!examTitle.trim()) return alert('Exam Title is required.')
-    if (!targetPackageId) return alert('Target package selection is required.')
+    if (!exam && !targetPackageId) return alert('Target package selection is required.')
     if (selectedQuestions.length === 0) return alert('Compilation bundle must contain at least 1 question.')
     if (!activationTimestamp) return alert('Activation timestamp is required.')
 
     setIsCompiling(true)
     try {
-      // 1. Insert exam blueprint
-      const { data: exam, error: examErr } = await supabase
-        .from('test_exams')
-        .insert([{
-          package_id: targetPackageId,
-          title: examTitle.trim(),
-          duration_minutes: parseInt(examDuration) || 180,
-          total_questions: selectedQuestions.length,
-          marks_scheme: {
-            positive_marks: parseInt(positiveMarks) || 4,
-            negative_marks: parseInt(negativeMarks) || -1
-          },
-          is_live_ranking: isLiveRanking,
-          activation_timestamp: new Date(activationTimestamp).toISOString(),
-          questions: selectedQuestions // Serialize compiled questions in jsonb array
-        }])
-        .select()
-        .single()
+      if (exam) {
+        // Update existing exam
+        const { error: updateErr } = await supabase
+          .from('test_exams')
+          .update({
+            title: examTitle.trim(),
+            duration_minutes: parseInt(examDuration) || 180,
+            total_questions: selectedQuestions.length,
+            marks_scheme: {
+              positive_marks: parseInt(positiveMarks) || 4,
+              negative_marks: parseInt(negativeMarks) * -1 || -1
+            },
+            is_live_ranking: isLiveRanking,
+            activation_timestamp: new Date(activationTimestamp).toISOString(),
+            questions: selectedQuestions
+          })
+          .eq('id', exam.id);
 
-      if (examErr) throw examErr
+        if (updateErr) throw updateErr;
+        alert('Exam questions successfully updated!');
+      } else {
+        // 1. Insert new exam blueprint
+        const { data: newExam, error: examErr } = await supabase
+          .from('test_exams')
+          .insert([{
+            package_id: targetPackageId,
+            title: examTitle.trim(),
+            duration_minutes: parseInt(examDuration) || 180,
+            total_questions: selectedQuestions.length,
+            marks_scheme: {
+              positive_marks: parseInt(positiveMarks) || 4,
+              negative_marks: parseInt(negativeMarks) * -1 || -1
+            },
+            is_live_ranking: isLiveRanking,
+            activation_timestamp: new Date(activationTimestamp).toISOString(),
+            questions: selectedQuestions // Serialize compiled questions in jsonb array
+          }])
+          .select()
+          .single()
 
-      // 2. Increment package's total count
-      const targetPkg = packages.find(p => p.id === targetPackageId)
-      if (targetPkg) {
-        const { error: countErr } = await supabase
-          .from('test_packages')
-          .update({ total_tests_count: (targetPkg.total_tests_count || 0) + 1 })
-          .eq('id', targetPackageId)
+        if (examErr) throw examErr
+
+        // 2. Increment package's total count
+        const targetPkg = packages.find(p => p.id === targetPackageId)
+        if (targetPkg) {
+          const { error: countErr } = await supabase
+            .from('test_packages')
+            .update({ total_tests_count: (targetPkg.total_tests_count || 0) + 1 })
+            .eq('id', targetPackageId)
+          
+          if (countErr) console.warn('[Compiler] Failed to update package count:', countErr.message)
+        }
+
+        alert('CBT Exam blueprint successfully compiled and published!')
         
-        if (countErr) console.warn('[Compiler] Failed to update package count:', countErr.message)
+        // Reset compilation state
+        setExamTitle('')
+        setSelectedQuestions([])
+        setExamDuration('180')
+        setActivationTimestamp('')
       }
-
-      alert('CBT Exam blueprint successfully compiled and published!')
-      
-      // Reset compilation state
-      setExamTitle('')
-      setSelectedQuestions([])
-      setExamDuration('180')
-      setActivationTimestamp('')
     } catch (err) {
       alert('Compilation failed: ' + err.message)
     } finally {
@@ -734,19 +763,22 @@ function CompilerClientContent({ packages = [] }) {
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-500 uppercase block">Target Test Package</label>
-              <select
-                value={targetPackageId}
-                onChange={e => setTargetPackageId(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
-              >
-                <option value="">-- Select Test Package --</option>
-                {packages.map(p => (
-                  <option key={p.id} value={p.id}>{p.title} ({p.target_exam_tag})</option>
-                ))}
-              </select>
-            </div>
+            {/* Target Package Dropdown (Hide if editing an existing exam) */}
+            {!exam && (
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase block">Target Test Package</label>
+                <select
+                  value={targetPackageId}
+                  onChange={e => setTargetPackageId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition cursor-pointer font-bold"
+                >
+                  <option value="">-- Select Test Package --</option>
+                  {packages.map(p => (
+                    <option key={p.id} value={p.id}>{p.title} ({p.target_exam_tag})</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -849,7 +881,7 @@ function CompilerClientContent({ packages = [] }) {
               ) : (
                 <CheckCircle2 className="w-3.5 h-3.5 text-slate-100 shrink-0" />
               )}
-              <span>Compile & Establish Blueprint</span>
+              <span>{exam ? 'Update Exam Questions' : 'Compile & Establish Blueprint'}</span>
             </button>
           </form>
         </div>
