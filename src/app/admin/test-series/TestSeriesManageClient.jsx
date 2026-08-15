@@ -61,6 +61,7 @@ export default function TestSeriesManageClient({
   const [liveCount, setLiveCount] = useState('0');
   const [isPremium, setIsPremium] = useState(false);
   const [pkgPrice, setPkgPrice] = useState('499');
+  const [pkgOriginalPrice, setPkgOriginalPrice] = useState('');
   const [isCreatingPackage, setIsCreatingPackage] = useState(false);
 
   // Fetch / Sync data
@@ -94,6 +95,7 @@ export default function TestSeriesManageClient({
     setLiveCount(String(pkg.test_distribution?.live_papers || 0));
     setIsPremium(pkg.price_ledger?.status === 'premium');
     setPkgPrice(String(pkg.price_ledger?.price || 499));
+    setPkgOriginalPrice(String(pkg.price_ledger?.original_price || ''));
     setShowAddPackageModal(true);
   };
 
@@ -108,6 +110,7 @@ export default function TestSeriesManageClient({
     setLiveCount('0');
     setIsPremium(false);
     setPkgPrice('499');
+    setPkgOriginalPrice('');
     setShowAddPackageModal(true);
   };
 
@@ -130,7 +133,8 @@ export default function TestSeriesManageClient({
         },
         price_ledger: {
           status: isPremium ? 'premium' : 'free',
-          price: isPremium ? (parseFloat(pkgPrice) || 0) : 0
+          price: isPremium ? (parseFloat(pkgPrice) || 0) : 0,
+          original_price: isPremium ? (parseFloat(pkgOriginalPrice) || 0) : 0
         }
       };
 
@@ -634,16 +638,28 @@ export default function TestSeriesManageClient({
                   </div>
 
                   {isPremium && (
-                    <div className="space-y-1 animate-in fade-in duration-200">
-                      <label className="text-[10px] font-bold text-slate-500 uppercase block">Tuition Price (₹)</label>
-                      <input
-                        type="number"
-                        required={isPremium}
-                        value={pkgPrice}
-                        onChange={e => setPkgPrice(e.target.value)}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
-                      />
-                    </div>
+                    <>
+                      <div className="space-y-1 animate-in fade-in duration-200">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Tuition Price (₹)</label>
+                        <input
+                          type="number"
+                          required={isPremium}
+                          value={pkgPrice}
+                          onChange={e => setPkgPrice(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
+                        />
+                      </div>
+                      <div className="space-y-1 animate-in fade-in duration-200">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase block">Original Price (Fake Discount ₹)</label>
+                        <input
+                          type="number"
+                          value={pkgOriginalPrice}
+                          onChange={e => setPkgOriginalPrice(e.target.value)}
+                          placeholder="e.g. 1999"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs outline-none focus:border-indigo-500 transition font-bold"
+                        />
+                      </div>
+                    </>
                   )}
                 </div>
                 {/* Thumbnail Image URL & Description */}
