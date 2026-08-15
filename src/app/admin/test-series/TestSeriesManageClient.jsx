@@ -40,6 +40,7 @@ export default function TestSeriesManageClient({
   const [selectedPackageId, setSelectedPackageId] = useState(null);
   const [expandedExamId, setExpandedExamId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [packageEnrollments, setPackageEnrollments] = useState({});
 
   // In-Website Confirmation Dialog State (No Browser Native Popups!)
   const [confirmDialog, setConfirmDialog] = useState({
@@ -71,15 +72,23 @@ export default function TestSeriesManageClient({
   const syncDashboardData = async () => {
     setRefreshing(true);
     try {
-      const [packagesRes, examsRes, attemptsRes] = await Promise.all([
+      const [packagesRes, examsRes, attemptsRes, invoicesRes] = await Promise.all([
         supabase.from('test_packages').select('*').order('created_at', { ascending: false }),
         supabase.from('test_exams').select('id, package_id, title, duration_minutes, total_questions, is_live_ranking, activation_timestamp, created_at').order('created_at', { ascending: false }),
-        supabase.from('test_attempts').select('*, profiles(full_name, email), test_exams(title)').order('completed_at', { ascending: false }).limit(10)
+        supabase.from('test_attempts').select('*, profiles(full_name, email), test_exams(title)').order('completed_at', { ascending: false }).limit(10),
+        supabase.from('invoices').select('package_id').not('package_id', 'is', null)
       ]);
 
       if (packagesRes.data) setPackages(packagesRes.data);
       if (examsRes.data) setExams(examsRes.data);
       if (attemptsRes.data) setAttempts(attemptsRes.data);
+      if (invoicesRes.data) {
+        const counts = {};
+        invoicesRes.data.forEach(inv => {
+          counts[inv.package_id] = (counts[inv.package_id] || 0) + 1;
+        });
+        setPackageEnrollments(counts);
+      }
     } catch (err) {
       console.error('[Dashboard Sync Failed]:', err);
     } finally {
@@ -312,13 +321,18 @@ export default function TestSeriesManageClient({
                           <span className="px-2 py-0.5 bg-slate-900 text-teal-400 text-[9px] font-black uppercase tracking-wider rounded-lg">
                             {pkg.target_exam_tag}
                           </span>
-                          <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-lg border ${
-                            isPremiumPkg 
-                              ? 'bg-amber-50 text-amber-700 border-amber-200' 
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-250'
-                          }`}>
-                            {isPremiumPkg ? `₹${priceInfo.price}` : 'FREE'}
-                          </span>
+                          <div className="flex flex-col items-end gap-1">
+                            <span className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-lg border ${
+                              isPremiumPkg 
+                                ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-250'
+                            }`}>
+                              {isPremiumPkg ? `₹${priceInfo.price}` : 'FREE'}
+                            </span>
+                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider bg-slate-100 px-2 py-0.5 rounded-md">
+                              {packageEnrollments[pkg.id] || 0} Enrolled
+                            </span>
+                          </div>
                         </div>
 
                         <h4 className="text-xs font-black text-slate-800 group-hover:text-indigo-600 transition truncate max-w-[240px]">
