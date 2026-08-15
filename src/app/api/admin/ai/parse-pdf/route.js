@@ -715,7 +715,7 @@ export async function POST(request) {
         const ai = new GenAIClient({ apiKey });
 
         const response = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
+          model: 'gemini-3.6-flash',
           contents: [
             {
               inlineData: {
@@ -766,7 +766,7 @@ export async function POST(request) {
         return NextResponse.json({
           success: true,
           parserType: 'gemini_ai_multimodal',
-          model: 'gemini-3.5-flash',
+          model: 'gemini-3.6-flash',
           questions_count: formattedQuestions.length,
           questions: formattedQuestions
         });
