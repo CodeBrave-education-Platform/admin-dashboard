@@ -297,7 +297,15 @@ export default function TestSeriesManageClient({
                       }`}
                     >
                       <div className="space-y-3">
-                        <div className="flex justify-between items-start">
+                        <div className="w-full h-32 rounded-xl overflow-hidden bg-slate-100 mb-4 border border-slate-200">
+                          <img 
+                            src={pkg.thumbnail_url || 'https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&w=800&q=80'} 
+                            alt={pkg.title} 
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                          />
+                        </div>
+
+                        <div className="flex justify-between items-start mt-2">
                           <span className="px-2 py-0.5 bg-slate-900 text-teal-400 text-[9px] font-black uppercase tracking-wider rounded-lg">
                             {pkg.target_exam_tag}
                           </span>
