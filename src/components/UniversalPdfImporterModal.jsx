@@ -34,8 +34,41 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
 
   const extractTextWithLayout = async (page) => {
     const textContent = await page.getTextContent();
-    if (!textContent.items || textContent.items.length === 0) return '';
-    return textContent.items.map(item => item.str).join(' ');
+    const items = textContent.items;
+    if (!items || items.length === 0) return '';
+
+    // Group text items by Y-coordinate to reconstruct line structure
+    const linesMap = {};
+    for (const item of items) {
+      if (!item.str || (!item.str.trim() && item.str !== ' ')) continue;
+      const y = item.transform[5];
+      let foundY = null;
+      for (const key of Object.keys(linesMap)) {
+        if (Math.abs(parseFloat(key) - y) < 3.5) {
+          foundY = key;
+          break;
+        }
+      }
+      if (foundY !== null) {
+        linesMap[foundY].push(item);
+      } else {
+        linesMap[y] = [item];
+      }
+    }
+
+    const sortedYs = Object.keys(linesMap)
+      .map(Number)
+      .sort((a, b) => b - a);
+
+    const lines = [];
+    for (const y of sortedYs) {
+      const lineItems = linesMap[y];
+      lineItems.sort((a, b) => a.transform[4] - b.transform[4]);
+      const lineStr = lineItems.map(item => item.str).join(' ');
+      lines.push(lineStr);
+    }
+
+    return lines.join('\n');
   };
 
   if (!isOpen) return null;
