@@ -16,7 +16,7 @@ export default async function CompilerPage() {
   try {
     const { data: dbPackages } = await supabase
       .from('test_packages')
-      .select('id, title')
+      .select('id, title, target_exam_tag')
       .order('created_at', { ascending: false })
     if (dbPackages) packages = dbPackages
   } catch (e) {}
