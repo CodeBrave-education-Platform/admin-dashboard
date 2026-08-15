@@ -1,9 +1,155 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
 
 // Next.js Node environment polyfills for pdf-parse (pdf.js dependency)
 if (typeof globalThis.DOMMatrix === 'undefined') globalThis.DOMMatrix = class DOMMatrix {};
 if (typeof globalThis.ImageData === 'undefined') globalThis.ImageData = class ImageData {};
 if (typeof globalThis.Path2D === 'undefined') globalThis.Path2D = class Path2D {};
+
+// ═══════════════════════════════════════════════════════════════
+// GEMINI AI SYSTEM INSTRUCTIONS & SCHEMAS
+// ═══════════════════════════════════════════════════════════════
+
+export const GEMINI_SYSTEM_INSTRUCTION = `You are an elite exam paper digitizer and parser for STEM competitive exams (JEE Main, JEE Advanced, NEET, CBSE, and Olympiads).
+Your task is to analyze the uploaded PDF exam paper and extract EVERY single question with extreme precision into a structured JSON array.
+
+### EXTRACTION GUIDELINES:
+1. Question Types (formatType):
+   - "single_mcq": Standard single-choice MCQ with exactly 4 options.
+   - "multi_mcq": Multi-choice question with one or more correct options.
+   - "numerical": Integer or decimal answer question without multiple-choice options (options must be an empty array []).
+   - "assertion_reason": Assertion-Reason questions with Assertion (A) and Reason (R) statements.
+   - "matrix_match": Column matching questions (Column I A-D matching Column II P-S).
+
+2. STEM Content & LaTeX Formulas:
+   - Preserve all mathematical formulas, symbols, indices, and chemical equations using valid LaTeX notation.
+   - Use '$...$' for inline math/chemistry (e.g. '$v_0$', '$[Ni(CN)_4]^{2-}$', '$\\theta$') and '$$...$$' for standalone block equations.
+   - Maintain chemical bracket notations (e.g. '[Ni(CN)4]2-') and signed numbers (e.g. '-5', '-1').
+
+3. Options Array:
+   - For 'single_mcq', 'multi_mcq', 'assertion_reason', 'matrix_match': MUST contain exactly 4 clean option strings without leading prefixes like '(A)', '(B)', 'A.', '1.', etc.
+   - For 'numerical': MUST be an empty array [].
+
+4. Answer Key & Indices:
+   - "correct_option_index": 0-based integer (0 for A/1, 1 for B/2, 2 for C/3, 3 for D/4). For multi_mcq, provide the primary 0-based index.
+   - "correct_answer": The exact text/value of the correct answer (e.g. "-5", "\\frac{2}{3} g \\sin \\theta", "A->R, B->Q, C->S, D->P").
+   - "explanation": Step-by-step derivation, scientific reasoning, or solution steps.
+
+5. Classification & Metadata:
+   - "subject": Categorize into "Physics", "Chemistry", "Mathematics", "Biology", "Computer Science", or "General".
+   - "sub_topic": Chapter or concept name (e.g. "Rotational Dynamics", "Coordination Compounds", "Calculus", "General").
+   - "difficulty": "EASY", "MEDIUM", or "HARD".
+   - "diagram_url": "" (empty string if no diagram).
+   - "marks": { "positive": 4, "negative": -1 } for MCQs, or { "positive": 4, "negative": 0 } for numerical.
+
+Return a valid JSON object matching the requested schema:
+{
+  "success": true,
+  "parserType": "gemini_ai_multimodal",
+  "questions_count": <number>,
+  "questions": [
+    {
+      "id": "pdf-q-1-...",
+      "subject": "Physics",
+      "sub_topic": "Rotational Dynamics",
+      "difficulty": "HARD",
+      "formatType": "single_mcq",
+      "content": "...",
+      "diagram_url": "",
+      "options": ["...", "...", "...", "..."],
+      "correct_option_index": 0,
+      "correct_answer": "...",
+      "explanation": "...",
+      "marks": { "positive": 4, "negative": -1 }
+    }
+  ]
+}`;
+
+/**
+ * Sanitize and validate raw question objects returned by Gemini AI
+ */
+export function sanitizeGeminiQuestions(rawQuestions = []) {
+  if (!Array.isArray(rawQuestions)) return [];
+
+  return rawQuestions.map((q, idx) => {
+    const qNum = idx + 1;
+    const id = q.id || `pdf-q-${qNum}-${Date.now()}`;
+    const content = q.content || q.questionText || q.question || '';
+
+    let formatType = q.formatType || 'single_mcq';
+    if (formatType === 'single') formatType = 'single_mcq';
+    else if (formatType === 'multiple' || formatType === 'multi') formatType = 'multi_mcq';
+    else if (formatType === 'integer') formatType = 'numerical';
+    else if (formatType === 'match' || formatType === 'matrix') formatType = 'matrix_match';
+    else if (formatType === 'assertion') formatType = 'assertion_reason';
+    if (!['single_mcq', 'multi_mcq', 'numerical', 'assertion_reason', 'matrix_match'].includes(formatType)) {
+      formatType = 'single_mcq';
+    }
+
+    let options = Array.isArray(q.options) ? q.options.map(o => String(o != null ? o : '').trim()) : [];
+    if (formatType === 'numerical') {
+      options = [];
+    } else {
+      options = options.map(opt => opt.replace(/^[\(\[]?\s*[A-Da-d1-4]\s*[\)\]\.\-\:]\s+/, '').trim());
+      while (options.length < 4) {
+        options.push(`Option ${String.fromCharCode(65 + options.length)}`);
+      }
+      if (options.length > 4 && formatType !== 'multi_mcq') {
+        options = options.slice(0, 4);
+      }
+    }
+
+    let correctOptionIndex = 0;
+    if (typeof q.correct_option_index === 'number' && q.correct_option_index >= 0) {
+      correctOptionIndex = q.correct_option_index;
+    } else if (typeof q.correctOptionIndex === 'number' && q.correctOptionIndex >= 0) {
+      correctOptionIndex = q.correctOptionIndex;
+    } else if (typeof q.correct_answer === 'string' && options.length > 0) {
+      const foundIdx = options.findIndex(o => o.toLowerCase() === q.correct_answer.toLowerCase());
+      if (foundIdx !== -1) correctOptionIndex = foundIdx;
+    }
+
+    let correctAnswer = q.correct_answer || q.correctAnswer || '';
+    if (!correctAnswer && options.length > 0 && options[correctOptionIndex] !== undefined) {
+      correctAnswer = options[correctOptionIndex];
+    }
+
+    const explanation = q.explanation || q.solution || q.solution_explanation || '';
+    const subject = q.subject || detectSubject(content, explanation, options.join(' ')) || 'General';
+    const subTopic = q.sub_topic || q.subTopic || q.topic || 'General';
+
+    let difficulty = String(q.difficulty || 'MEDIUM').toUpperCase();
+    if (!['EASY', 'MEDIUM', 'HARD'].includes(difficulty)) {
+      difficulty = 'MEDIUM';
+    }
+
+    const diagramUrl = q.diagram_url || q.diagramUrl || '';
+
+    const defaultMarks = formatType === 'numerical'
+      ? { positive: 4, negative: 0 }
+      : (formatType === 'multi_mcq' ? { positive: 4, negative: -2 } : { positive: 4, negative: -1 });
+
+    const marks = q.marks && typeof q.marks === 'object' ? {
+      positive: typeof q.marks.positive === 'number' ? q.marks.positive : defaultMarks.positive,
+      negative: typeof q.marks.negative === 'number' ? q.marks.negative : defaultMarks.negative
+    } : defaultMarks;
+
+    return {
+      id,
+      subject,
+      sub_topic: subTopic,
+      difficulty,
+      formatType,
+      content,
+      diagram_url: diagramUrl,
+      options,
+      correct_option_index: correctOptionIndex,
+      correct_answer: correctAnswer,
+      explanation,
+      marks
+    };
+  });
+}
 
 // ═══════════════════════════════════════════════════════════════
 // ADVANCED 5-STAGE DETERMINISTIC EXAM PDF PARSER ENGINE
@@ -503,21 +649,153 @@ export function parseExamPdfText(text) {
 export async function POST(request) {
   try {
     let rawText = '';
+    let pdfBase64 = '';
+    let fileName = '';
     let parserType = 'unstructured_pdf';
 
     const contentType = request.headers ? (request.headers.get('content-type') || '') : '';
     if (contentType.includes('application/json')) {
       const jsonBody = await request.json();
       rawText = jsonBody.rawText || jsonBody.text || '';
+      pdfBase64 = jsonBody.pdfBase64 || jsonBody.base64Pdf || jsonBody.fileBase64 || jsonBody.pdf_base64 || jsonBody.base64 || '';
+      fileName = jsonBody.fileName || '';
       parserType = jsonBody.parserType || 'unstructured_pdf';
     } else if (typeof request.formData === 'function') {
-      const formData = await request.formData();
-      rawText = formData.get('rawText') || '';
-      parserType = formData.get('parserType') || 'unstructured_pdf';
+      try {
+        const formData = await request.formData();
+        rawText = formData.get('rawText') || formData.get('text') || '';
+        pdfBase64 = formData.get('pdfBase64') || formData.get('base64Pdf') || formData.get('fileBase64') || formData.get('pdf_base64') || formData.get('base64') || '';
+        fileName = formData.get('fileName') || '';
+        parserType = formData.get('parserType') || 'unstructured_pdf';
+
+        const fileField = formData.get('file') || formData.get('pdf');
+        if (!pdfBase64 && fileField && typeof fileField.arrayBuffer === 'function') {
+          const buffer = await fileField.arrayBuffer();
+          pdfBase64 = Buffer.from(buffer).toString('base64');
+          if (!fileName && fileField.name) fileName = fileField.name;
+        }
+      } catch (_formErr) {
+        // FormData extraction fallback
+      }
     }
 
-    const textToParse = rawText || '';
+    // Clean Base64 Data (strip data URL prefix if present)
+    let cleanBase64 = typeof pdfBase64 === 'string' ? pdfBase64.trim() : '';
+    if (cleanBase64.startsWith('data:')) {
+      cleanBase64 = cleanBase64.replace(/^data:[^;]+;base64,/, '').trim();
+    }
 
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY;
+
+    // ─────────────────────────────────────────────────────────────
+    // PATH 1: Multimodal Gemini AI PDF Extraction (@google/genai)
+    // ─────────────────────────────────────────────────────────────
+    if (cleanBase64) {
+      if (!apiKey) {
+        // If API key is missing but rawText is available, fallback gracefully to regex
+        if (rawText && rawText.trim()) {
+          const fallbackQuestions = parseExtractedText(rawText);
+          return NextResponse.json({
+            success: true,
+            parserType: 'deterministic_engine',
+            questions_count: fallbackQuestions.length,
+            questions: fallbackQuestions,
+            warning: 'GEMINI_API_KEY is not configured. Fell back to deterministic regex parser.'
+          });
+        }
+
+        return NextResponse.json({
+          success: false,
+          error: 'GEMINI_API_KEY is not configured on the server. Please set GEMINI_API_KEY in environment variables.'
+        }, { status: 400 });
+      }
+
+      try {
+        const GenAIClient = typeof GoogleGenAI !== 'undefined' ? GoogleGenAI : (require('@google/genai').GoogleGenAI);
+        const ai = new GenAIClient({ apiKey });
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: [
+            {
+              inlineData: {
+                mimeType: 'application/pdf',
+                data: cleanBase64
+              }
+            },
+            {
+              text: 'Extract all questions, options, correct answers, and explanations into structured JSON format.'
+            }
+          ],
+          config: {
+            responseMimeType: 'application/json',
+            systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
+            temperature: 0.1
+          }
+        });
+
+        let responseText = response.text || '';
+        if (!responseText && response.candidates && response.candidates[0] && response.candidates[0].content) {
+          const parts = response.candidates[0].content.parts || [];
+          responseText = parts.map(p => p.text || '').join('');
+        }
+
+        let cleanedJson = responseText.trim();
+        if (cleanedJson.startsWith('```')) {
+          cleanedJson = cleanedJson.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+        }
+
+        let parsedData = {};
+        try {
+          parsedData = JSON.parse(cleanedJson);
+        } catch (parseErr) {
+          throw new Error(`Failed to parse Gemini JSON output: ${parseErr.message}`);
+        }
+
+        let extractedList = [];
+        if (Array.isArray(parsedData)) {
+          extractedList = parsedData;
+        } else if (parsedData && Array.isArray(parsedData.questions)) {
+          extractedList = parsedData.questions;
+        } else if (parsedData && Array.isArray(parsedData.data)) {
+          extractedList = parsedData.data;
+        }
+
+        const formattedQuestions = sanitizeGeminiQuestions(extractedList);
+
+        return NextResponse.json({
+          success: true,
+          parserType: 'gemini_ai_multimodal',
+          model: 'gemini-2.5-flash',
+          questions_count: formattedQuestions.length,
+          questions: formattedQuestions
+        });
+      } catch (aiError) {
+        console.error('[Gemini Route] AI generation error:', aiError);
+
+        // Fallback to deterministic regex if rawText is provided
+        if (rawText && rawText.trim()) {
+          const fallbackQuestions = parseExtractedText(rawText);
+          return NextResponse.json({
+            success: true,
+            parserType: 'deterministic_engine',
+            questions_count: fallbackQuestions.length,
+            questions: fallbackQuestions,
+            warning: `Gemini parsing failed (${aiError.message}). Fell back to deterministic regex parser.`
+          });
+        }
+
+        return NextResponse.json({
+          success: false,
+          error: `Gemini AI PDF parsing failed: ${aiError.message || aiError}`
+        }, { status: 500 });
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // PATH 2: Structured Table Fallback (Legacy/Test mode)
+    // ─────────────────────────────────────────────────────────────
+    const textToParse = rawText || '';
     if (parserType === 'structured_table') {
       const realParsed = parseExtractedText(textToParse);
       if (realParsed.length > 0) {
@@ -529,7 +807,6 @@ export async function POST(request) {
         });
       }
 
-      // Placeholder fallback for structured_table when no text provided
       const tableQuestions = [
         {
           id: `tbl-q-1-${Date.now()}`,
@@ -554,9 +831,10 @@ export async function POST(request) {
       });
     }
 
-    // Standard Real Parser Execution
+    // ─────────────────────────────────────────────────────────────
+    // PATH 3: Deterministic Regex Parser Execution (Fallback/Direct)
+    // ─────────────────────────────────────────────────────────────
     const realParsed = parseExtractedText(textToParse);
-
     if (realParsed.length > 0) {
       return NextResponse.json({
         success: true,
@@ -579,3 +857,4 @@ export async function POST(request) {
 }
 
 export default POST;
+

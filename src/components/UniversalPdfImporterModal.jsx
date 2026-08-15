@@ -2,80 +2,64 @@
 
 import React, { useState } from 'react';
 import KatexRenderer from '@/components/KatexRenderer';
-import { Sparkles, Upload, FileText, CheckCircle2, Trash2, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { Sparkles, Upload, FileText, CheckCircle2, Trash2, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
 
-export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIngest, targetModuleName = 'Question Bank' }) {
+/**
+ * Reads a File or Blob asynchronously as a Base64 Data URL (data:application/pdf;base64,...)
+ * Native browser FileReader API with zero external dependencies and non-blocking streaming.
+ */
+const readFileAsBase64 = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = (error) => reject(error || new Error('Failed to read file as Base64 Data URL'));
+    reader.readAsDataURL(file);
+  });
+};
+
+export default function UniversalPdfImporterModal({ 
+  isOpen, 
+  onClose, 
+  onConfirmIngest, 
+  targetModuleName = 'Question Bank',
+  contextType
+}) {
   const { showToast } = useToast();
   const [aiStep, setAiStep] = useState('input'); // 'input' | 'review'
-  const [parserType, setParserType] = useState('unstructured_pdf'); // 'unstructured_pdf' | 'structured_table'
+  const [parserType, setParserType] = useState('gemini_ai_multimodal'); // 'gemini_ai_multimodal' | 'structured_table'
   const [aiRawText, setAiRawText] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [aiParsing, setAiParsing] = useState(false);
   const [parsedQuestions, setParsedQuestions] = useState([]);
-
-  // Dynamically load PDF.js from CDN
-  const loadPdfJs = () => {
-    return new Promise((resolve, reject) => {
-      if (typeof window === 'undefined') return reject(new Error('Browser context required'));
-      if (window.pdfjsLib) return resolve(window.pdfjsLib);
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-      script.onload = () => {
-        const pdfjsLib = window['pdfjs-dist/build/pdf'];
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-        window.pdfjsLib = pdfjsLib;
-        resolve(pdfjsLib);
-      };
-      script.onerror = () => reject(new Error('Failed to load PDF.js'));
-      document.head.appendChild(script);
-    });
-  };
-
-  const extractTextWithLayout = async (page) => {
-    const textContent = await page.getTextContent();
-    const items = textContent.items;
-    if (!items || items.length === 0) return '';
-
-    // Group text items by Y-coordinate to reconstruct line structure
-    const linesMap = {};
-    for (const item of items) {
-      if (!item.str || (!item.str.trim() && item.str !== ' ')) continue;
-      const y = item.transform[5];
-      let foundY = null;
-      for (const key of Object.keys(linesMap)) {
-        if (Math.abs(parseFloat(key) - y) < 3.5) {
-          foundY = key;
-          break;
-        }
-      }
-      if (foundY !== null) {
-        linesMap[foundY].push(item);
-      } else {
-        linesMap[y] = [item];
-      }
-    }
-
-    const sortedYs = Object.keys(linesMap)
-      .map(Number)
-      .sort((a, b) => b - a);
-
-    const lines = [];
-    for (const y of sortedYs) {
-      const lineItems = linesMap[y];
-      lineItems.sort((a, b) => a.transform[4] - b.transform[4]);
-      const lineStr = lineItems.map(item => item.str).join(' ');
-      lines.push(lineStr);
-    }
-
-    return lines.join('\n');
-  };
 
   if (!isOpen) return null;
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setSelectedFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -88,126 +72,82 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
     setAiParsing(true);
 
     try {
-      let finalRawText = aiRawText;
+      const formData = new FormData();
+      const activeParserType = selectedFile 
+        ? (parserType === 'structured_table' ? 'structured_table' : 'gemini_ai_multimodal') 
+        : (parserType || 'gemini_ai_multimodal');
+      
+      formData.append('parserType', activeParserType);
 
-      // Parse PDF client-side to avoid sending binary file to Next.js API
-      if (selectedFile && selectedFile.type === 'application/pdf') {
-        const pdfjsLib = await loadPdfJs();
-        const fileReader = new FileReader();
-        const arrayBuffer = await new Promise((resolve, reject) => {
-          fileReader.onload = () => resolve(fileReader.result);
-          fileReader.onerror = () => reject(fileReader.error);
-          fileReader.readAsArrayBuffer(selectedFile);
-        });
-
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-        const pdf = await loadingTask.promise;
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const pageText = await extractTextWithLayout(page);
-          fullText += pageText + '\n';
-        }
-        finalRawText = fullText;
+      if (selectedFile) {
+        // Read file directly as Base64 Data URL (bypassing client-side PDF.js)
+        const base64Data = await readFileAsBase64(selectedFile);
+        formData.append('pdfBase64', base64Data);
+        formData.append('fileName', selectedFile.name);
+        formData.append('mimeType', selectedFile.type || 'application/pdf');
       }
 
-      const formData = new FormData();
-      formData.append('parserType', parserType);
-      if (finalRawText) formData.append('rawText', finalRawText);
+      if (aiRawText.trim()) {
+        formData.append('rawText', aiRawText.trim());
+      }
 
       const res = await fetch('/api/admin/ai/parse-pdf', {
         method: 'POST',
         body: formData
       });
 
+      if (!res.ok) {
+        let errorMsg = `Server error (${res.status})`;
+        try {
+          const errData = await res.json();
+          if (errData && (errData.error || errData.message)) {
+            errorMsg = errData.error || errData.message;
+          }
+        } catch (_) {
+          // ignore non-JSON response body
+        }
+        showToast(`Extraction failed: ${errorMsg}`, 'error');
+        return;
+      }
+
       const data = await res.json();
-      if (data.success && data.questions) {
-        const marked = data.questions.map(q => ({ ...q, selected: true }));
+
+      if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
+        const marked = data.questions.map((q, idx) => {
+          const contentStr = q.content || q.questionText || '';
+          const diagramUrlStr = q.diagram_url || q.diagramUrl || '';
+          const correctAns = q.correct_answer || q.correctAnswer || (Array.isArray(q.options) && typeof q.correct_option_index === 'number' ? q.options[q.correct_option_index] : '');
+
+          return {
+            id: q.id || `pdf-q-${idx + 1}-${Date.now()}`,
+            subject: q.subject || 'GENERAL',
+            sub_topic: q.sub_topic || q.topic || 'General',
+            difficulty: q.difficulty || 'MEDIUM',
+            formatType: q.formatType || 'single_mcq',
+            content: contentStr,
+            questionText: contentStr,
+            diagram_url: diagramUrlStr,
+            diagramUrl: diagramUrlStr,
+            options: Array.isArray(q.options) ? q.options : [],
+            correct_option_index: typeof q.correct_option_index === 'number' ? q.correct_option_index : 0,
+            correct_answer: correctAns,
+            correctAnswer: correctAns,
+            explanation: q.explanation || q.solution_text || '',
+            marks: q.marks || { positive: 4, negative: -1 },
+            selected: true
+          };
+        });
+
         setParsedQuestions(marked);
         setAiStep('review');
+        showToast(`🎉 Successfully extracted ${marked.length} questions!`, 'success');
       } else {
-        showToast('Extraction error: ' + (data.error || 'Failed to parse PDF content'), 'error');
+        const errMsg = data.error || data.warning || 'No questions could be extracted from this document.';
+        showToast(`Extraction error: ${errMsg}`, 'error');
       }
     } catch (err) {
       console.error('PDF Parsing failed:', err);
-      showToast('Parsing error. Using fallback extracted questions.', 'error');
-      
-      // Smart fallback parser without header metadata
-      const fallbackExtracted = [
-        {
-          id: `pdf-q-1-${Date.now()}`,
-          subject: 'MATHEMATICS',
-          sub_topic: 'Number System',
-          difficulty: 'MEDIUM',
-          formatType: 'single_mcq',
-          content: 'Numeral for five hundred three million eight thousand seven hundred two is:',
-          diagram_url: '',
-          options: ['500380702', '503800702', '503008702', '503080702'],
-          correct_option_index: 1,
-          correct_answer: '503800702',
-          explanation: '503,008,702 = five hundred three million eight thousand seven hundred two.',
-          selected: true
-        },
-        {
-          id: `pdf-q-6-${Date.now()}`,
-          subject: 'MATHEMATICS',
-          sub_topic: 'Digit Formation',
-          difficulty: 'HARD',
-          formatType: 'single_mcq',
-          content: 'Find the difference between the greatest and the smallest 9-digit number formed by using the given digits: 0, 8, 9, 7, 6, 4 (Use each digit at least once).',
-          diagram_url: 'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?auto=format&fit=crop&w=800&q=80',
-          options: ['500, 998, 889', '588, 998, 779', '599, 980, 851', '599, 988, 051'],
-          correct_option_index: 2,
-          correct_answer: '599, 980, 851',
-          explanation: 'Greatest = 999876400, Smallest = 4000046789. Difference = 599, 980, 851.',
-          selected: true
-        },
-        {
-          id: `pdf-q-21-${Date.now()}`,
-          subject: 'PHYSICS',
-          sub_topic: 'Electricity & Cells',
-          difficulty: 'EASY',
-          formatType: 'single_mcq',
-          content: 'In an electric cell, a metal cap on the top of the carbon rod acts as:',
-          diagram_url: '',
-          options: ['The insulated material', 'The positive terminal of the cell', 'The negative terminal of the cell', 'A switch of the cell'],
-          correct_option_index: 1,
-          correct_answer: 'The positive terminal of the cell',
-          explanation: 'The metal cap acts as the positive terminal.',
-          selected: true
-        },
-        {
-          id: `pdf-q-31-${Date.now()}`,
-          subject: 'CHEMISTRY',
-          sub_topic: 'Heat Transfer',
-          difficulty: 'EASY',
-          formatType: 'single_mcq',
-          content: 'Heat transfer by direct contact is:',
-          diagram_url: '',
-          options: ['Radiation', 'Convection', 'Conduction', 'Insulation'],
-          correct_option_index: 2,
-          correct_answer: 'Conduction',
-          explanation: 'Conduction is heat transfer via direct physical contact.',
-          selected: true
-        },
-        {
-          id: `pdf-q-41-${Date.now()}`,
-          subject: 'BIOLOGY',
-          sub_topic: 'Human Growth',
-          difficulty: 'MEDIUM',
-          formatType: 'single_mcq',
-          content: 'Observe the flow chart: Infancy → Childhood → X → Adulthood → Old Age. Which stage correctly fills blank X?',
-          diagram_url: '',
-          options: ['Infancy', 'Adolescence', 'Puberty', 'Teenage'],
-          correct_option_index: 1,
-          correct_answer: 'Adolescence',
-          explanation: 'Adolescence comes between Childhood and Adulthood.',
-          selected: true
-        }
-      ];
-
-      setParsedQuestions(fallbackExtracted);
-      setAiStep('review');
+      showToast(`PDF Extraction failed: ${err.message || 'Network or Server Error'}`, 'error');
     } finally {
       setAiParsing(false);
     }
@@ -220,13 +160,20 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
       return;
     }
     
-    onConfirmIngest(selected);
+    if (typeof onConfirmIngest === 'function') {
+      onConfirmIngest(selected);
+    }
     onClose();
     setAiStep('input');
     setAiRawText('');
     setSelectedFile(null);
     setParsedQuestions([]);
     showToast(`🎉 Successfully ingested ${selected.length} questions with diagrams into ${targetModuleName}!`, 'success');
+  };
+
+  const toggleSelectAll = () => {
+    const allSelected = parsedQuestions.every(q => q.selected);
+    setParsedQuestions(parsedQuestions.map(q => ({ ...q, selected: !allSelected })));
   };
 
   return (
@@ -242,14 +189,14 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                 {aiStep === 'review' ? 'AI Extraction & Diagram Inspection Studio' : 'Universal PDF & Document AI Importer'}
               </h3>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                Target: {targetModuleName} (Header Metadata Stripped)
+                Target: {targetModuleName} (Multimodal Gemini Vision Pipeline)
               </p>
             </div>
           </div>
           <button 
             type="button" 
             onClick={() => { onClose(); setAiStep('input'); }} 
-            className="text-slate-400 hover:text-slate-700 font-bold text-sm"
+            className="text-slate-400 hover:text-slate-700 font-bold text-sm p-1 rounded-lg hover:bg-slate-100 transition"
           >
             ✕
           </button>
@@ -264,15 +211,18 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setParserType('unstructured_pdf')}
+                    onClick={() => setParserType('gemini_ai_multimodal')}
                     className={`p-3 rounded-2xl border text-left transition cursor-pointer ${
-                      parserType === 'unstructured_pdf' 
+                      parserType === 'gemini_ai_multimodal' || parserType === 'unstructured_pdf'
                         ? 'bg-teal-50 border-teal-600 text-teal-900 font-bold shadow-xs' 
                         : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <div className="text-xs font-extrabold">📄 Standard Exam Paper PDF</div>
-                    <div className="text-[10px] opacity-80 mt-0.5">NTA / CBSE multi-page exams with header stripping</div>
+                    <div className="text-xs font-extrabold flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-teal-600 shrink-0" />
+                      <span>Gemini AI Multimodal</span>
+                    </div>
+                    <div className="text-[10px] opacity-80 mt-0.5">Scanned & digital exam PDFs with diagrams, formulas & tables</div>
                   </button>
 
                   <button
@@ -284,24 +234,54 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                         : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
-                    <div className="text-xs font-extrabold">📊 Tabular / Matrix Table Format</div>
+                    <div className="text-xs font-extrabold flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span>Tabular / Grid Format</span>
+                    </div>
                     <div className="text-[10px] opacity-80 mt-0.5">Calculus, Limits & Math Grid questions (Question / Option / Solution / Marks)</div>
                   </button>
                 </div>
               </div>
 
               {/* Drag & Drop PDF File Upload Zone */}
-              <div className="border-2 border-dashed border-slate-200 hover:border-teal-500 bg-slate-50/70 p-6 rounded-2xl text-center space-y-3 transition">
-                <Upload className="w-8 h-8 text-teal-600 mx-auto animate-bounce" />
+              <div 
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center space-y-3 transition ${
+                  isDragging 
+                    ? 'border-teal-500 bg-teal-50/50 scale-[1.01]' 
+                    : 'border-slate-200 hover:border-teal-500 bg-slate-50/70'
+                }`}
+              >
+                <Upload className={`w-8 h-8 text-teal-600 mx-auto ${isDragging ? 'scale-110' : 'animate-bounce'}`} />
                 <div>
                   <label className="font-bold text-slate-800 cursor-pointer hover:text-teal-600 text-sm block">
-                    Upload Question Paper PDF (.pdf, .docx)
+                    Upload Question Paper PDF (.pdf, .docx, .txt)
                     <input type="file" accept=".pdf,.docx,.txt" onChange={handleFileChange} className="hidden" />
                   </label>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    {selectedFile ? `Selected: ${selectedFile.name}` : 'Drag & drop PDF here or click to browse'}
+                    {selectedFile ? (
+                      <span className="text-teal-700 font-bold">
+                        Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                      </span>
+                    ) : (
+                      'Drag & drop PDF here or click to browse'
+                    )}
                   </p>
                 </div>
+                {selectedFile && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setSelectedFile(null);
+                    }}
+                    className="text-[11px] text-rose-500 hover:underline font-semibold inline-block"
+                  >
+                    Remove selected file
+                  </button>
+                )}
               </div>
 
               <div className="flex items-center gap-3 my-2">
@@ -331,10 +311,19 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                 type="button"
                 onClick={handleRunAiParser}
                 disabled={aiParsing}
-                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
+                className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
               >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>{aiParsing ? 'AI Extracting Questions & Diagrams...' : 'Run Smart AI Extraction'}</span>
+                {aiParsing ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Processing Gemini Multimodal PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Run Smart AI Extraction</span>
+                  </>
+                )}
               </button>
             </div>
           </>
@@ -344,12 +333,21 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
               <div className="flex justify-between items-center bg-teal-50 border border-teal-200 p-3.5 rounded-2xl text-xs text-teal-900 font-bold">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal-600" />
-                  <span>Header metadata stripped. Review extracted questions before importing:</span>
+                  <CheckCircle2 className="w-4 h-4 text-teal-600 shrink-0" />
+                  <span>Multimodal extraction complete. Review extracted questions before importing:</span>
                 </div>
-                <span className="bg-teal-600 text-white px-2.5 py-0.5 rounded-full text-[11px]">
-                  {parsedQuestions.filter(q => q.selected).length} / {parsedQuestions.length} Selected
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    className="text-[11px] text-teal-700 hover:underline font-extrabold cursor-pointer"
+                  >
+                    {parsedQuestions.every(q => q.selected) ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <span className="bg-teal-600 text-white px-2.5 py-0.5 rounded-full text-[11px]">
+                    {parsedQuestions.filter(q => q.selected).length} / {parsedQuestions.length} Selected
+                  </span>
+                </div>
               </div>
 
               {parsedQuestions.map((pq, qIdx) => (
@@ -374,7 +372,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                     <button
                       type="button"
                       onClick={() => setParsedQuestions(parsedQuestions.filter((_, idx) => idx !== qIdx))}
-                      className="text-xs text-rose-600 hover:underline font-bold flex items-center gap-1"
+                      className="text-xs text-rose-600 hover:underline font-bold flex items-center gap-1 cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Discard</span>
@@ -388,6 +386,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                     onChange={e => {
                       const updated = [...parsedQuestions];
                       updated[qIdx].content = e.target.value;
+                      updated[qIdx].questionText = e.target.value;
                       setParsedQuestions(updated);
                     }}
                     className="w-full bg-white border border-slate-200 rounded-xl p-3 text-xs text-slate-900 font-bold outline-none focus:border-teal-600"
@@ -413,6 +412,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                       onChange={e => {
                         const updated = [...parsedQuestions];
                         updated[qIdx].diagram_url = e.target.value;
+                        updated[qIdx].diagramUrl = e.target.value;
                         setParsedQuestions(updated);
                       }}
                       placeholder="Paste image URL (e.g. https://...)"
@@ -420,6 +420,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                     />
                     {(pq.diagram_url || pq.diagramUrl) && (
                       <div className="p-2 bg-white border border-slate-200 rounded-xl max-w-xs">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={pq.diagram_url || pq.diagramUrl} alt="Question Diagram" className="h-20 object-contain rounded" />
                       </div>
                     )}
@@ -436,7 +437,9 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                             value={opt}
                             onChange={e => {
                               const updated = [...parsedQuestions];
-                              updated[qIdx].options[oIdx] = e.target.value;
+                              const newOpts = [...updated[qIdx].options];
+                              newOpts[oIdx] = e.target.value;
+                              updated[qIdx].options = newOpts;
                               setParsedQuestions(updated);
                             }}
                             className="w-full bg-transparent outline-none text-xs"
@@ -456,6 +459,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
                         onChange={e => {
                           const updated = [...parsedQuestions];
                           updated[qIdx].correct_answer = e.target.value;
+                          updated[qIdx].correctAnswer = e.target.value;
                           setParsedQuestions(updated);
                         }}
                         className="bg-white border border-slate-200 rounded-lg px-3 py-1 text-xs text-emerald-700 font-black outline-none focus:border-teal-600"
@@ -486,7 +490,7 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
               <button
                 type="button"
                 onClick={() => setAiStep('input')}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
               >
                 ← Back to Upload
               </button>
@@ -506,3 +510,4 @@ export default function UniversalPdfImporterModal({ isOpen, onClose, onConfirmIn
     </div>
   );
 }
+

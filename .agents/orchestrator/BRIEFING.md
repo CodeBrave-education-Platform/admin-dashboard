@@ -1,86 +1,78 @@
-# BRIEFING — 2026-08-15T13:34:00Z
+# BRIEFING — 2026-08-15T14:21:30Z
 
 ## Mission
-Lead the engineering swarm to fix the PDF parsing logic in the admin dashboard for complex exam papers, ensure cost-effective architecture with clear justification, and verify with comprehensive test suites (including test-parser.js).
+Integrate Google Gemini API (@google/genai) in admin dashboard for native PDF question extraction, structured JSON output, frontend base64 upload, and verification test suites.
 
 ## 🔒 My Identity
 - Archetype: orchestrator
 - Roles: [orchestrator, user_liaison, human_reporter, successor]
 - Working directory: D:\admin dashboard\.agents\orchestrator
-- Original parent: Sentinel
-- Original parent conversation ID: 3fdedfa1-da7f-4358-af0d-419b4d6b4f98
+- Original parent: parent
+- Original parent conversation ID: 505a3c85-6c02-497a-8dc3-deb92374893d
 
 ## 🔒 My Workflow
-- **Pattern**: Project Pattern (Dual Track: Implementation Track + E2E Testing Track)
-- **Scope document**: D:\admin dashboard\PROJECT.md
-1. **Decompose**: Survey codebase via 3 Explorers, create PROJECT.md with Feature Inventory, Milestones, and Interface Contracts.
-2. **Dispatch & Execute**:
-   - **Direct (iteration loop)**: Explorer -> Worker -> Reviewer -> Challenger -> Auditor gate.
-   - **Delegate (sub-orchestrator)**: Spawn sub-orchestrators for milestones or parallel tracks as needed.
-3. **On failure** (in this order): Retry -> Replace -> Skip -> Redistribute -> Redesign -> Escalate.
-4. **Succession**: At 20 cumulative spawns, dump state to handoff.md, cancel timers, spawn successor.
+- **Pattern**: Project Pattern (Survey -> Decompose & Delegate / Iteration Loop -> Review & Gate -> Dual Track E2E)
+- **Scope document**: D:\admin dashboard\.agents\PROJECT.md
+1. **Decompose**: Decompose into Survey, Backend Gemini Route implementation, Frontend Base64 Upload, Test Infra / Programmatic Payload Verification (`test-gemini-payload.js`), and E2E Verification.
+2. **Dispatch & Execute**: Direct iteration loop & parallel specialized subagents (Explorer, Worker, Reviewer, Challenger, Auditor).
+3. **On failure**: Retry -> Replace -> Skip -> Redistribute -> Redesign -> Escalate.
+4. **Succession**: Threshold 20 spawns.
 - **Work items**:
-  1. Survey & Architecture Assessment [done]
-  2. M1: Test Infrastructure & Suite (test-parser.js) [done]
-  3. M2: Multi-Pass PDF Parser Engine Implementation [done]
-  4. M3: Architecture Justification Documentation [done]
-  5. M4: Multi-Agent Gate & Victory Audit Claim [in-progress]
-- **Current phase**: Phase 2 (Multi-Agent Verification & Gate Audit)
-- **Current focus**: Reviewers, Challengers, and Forensic Auditor evaluation
+  1. Survey phase (3 Explorers / Spec Miner) [in-progress]
+  2. Backend Route & Gemini SDK Integration (`src/app/api/admin/ai/parse-pdf/route.js`) [pending]
+  3. Frontend Base64 Upload (`UniversalPdfImporterModal.jsx`) [pending]
+  4. Test suite creation & Programmatic Verification (`test-gemini-payload.js`) [pending]
+  5. Comprehensive Review, Challenge & Forensic Integrity Audit [pending]
+- **Current phase**: 0 (Survey)
+- **Current focus**: Awaiting survey reports from 3 parallel subagents.
 
 ## 🔒 Key Constraints
-- NEVER write, modify, or create source code files directly.
-- NEVER run build/test commands yourself — require workers to do so.
-- NEVER investigate or explore the problem at the code level — dispatch Explorers for technical investigation.
-- Always include path to ORIGINAL_REQUEST.md in subagent dispatches.
-- Evaluate Forensic Auditor verdict FIRST as binary veto.
-- Do NOT reuse subagents after handoff — spawn fresh.
+- NEVER write, modify, or create source code directly.
+- NEVER run build/test commands directly.
+- Dispatch all work to subagents.
+- Pass ORIGINAL_REQUEST.md path to all subagents.
+- Mandatory integrity warning in worker prompts.
+- Auditor hard veto.
+- Self-succeed at 20 spawns.
 
 ## Current Parent
-- Conversation ID: 3fdedfa1-da7f-4358-af0d-419b4d6b4f98
-- Updated: 2026-08-15T13:22:00Z
+- Conversation ID: 505a3c85-6c02-497a-8dc3-deb92374893d
+- Updated: 2026-08-15T14:21:00Z
 
 ## Key Decisions Made
-- Survey completed by 3 Explorers: Identified all failure modes in `src/app/api/admin/ai/parse-pdf/route.js`.
-- Selected Architecture Approach A+ (Upgraded Multi-Pass Deterministic Engine): $0 cost, <10ms latency, 100% precision, total privacy, offline testable.
-- Track A (`worker_test_writer`) created `test-parser.js`, `TEST_INFRA.md`, and `TEST_READY.md`.
-- Track B (`worker_parser_implementer`) implemented 5-stage parser in `route.js` and wrote `ARCHITECTURE_JUSTIFICATION.md`.
-- Dispatched 2 Reviewers, 2 Challengers, and 1 Forensic Auditor.
+- Dispatched 3 parallel subagents for backend/SDK survey, frontend modal survey, and question schema specification mining.
 
 ## Team Roster
 | Agent | Type | Work Item | Status | Conv ID |
 |-------|------|-----------|--------|---------|
-| explorer_survey_codebase | teamwork_preview_explorer | Survey codebase & current PDF parser | completed | 3a7123ab-0e11-4f02-a7b2-76140ee2f593 |
-| explorer_survey_patterns | teamwork_preview_spec_miner | Survey exam patterns & test spec | completed | 0bf9d373-5e98-4b37-9e83-12dc99cfad57 |
-| explorer_survey_architecture | teamwork_preview_explorer | Cost-benefit & architecture analysis | completed | e5be7c6a-c367-4e92-92a1-36402f49c5c5 |
-| worker_test_writer | teamwork_preview_test_writer | Create test-parser.js & TEST_READY.md | completed | 4ae72b44-f3f1-47cf-90a0-0769a8f00028 |
-| worker_parser_implementer | teamwork_preview_worker | Upgrade PDF parser in route.js | completed | 2a003645-e915-4300-af79-e5b19e77fec7 |
-| reviewer_1 | teamwork_preview_reviewer | Code correctness & interface review | in-progress | 8d13c5fa-2550-480b-ae00-b1e122c8aa19 |
-| reviewer_2 | teamwork_preview_reviewer | Architecture & cost review | in-progress | a2dcd819-641b-4b1e-8d21-2465878fcdfe |
-| challenger_1 | teamwork_preview_challenger | Stress & edge case challenge | in-progress | 777ea0aa-94ab-4b7b-bd22-67a2be427343 |
-| challenger_2 | teamwork_preview_challenger | Performance & throughput challenge | in-progress | b4fe34d3-9e83-4adb-b640-f9bf313c443f |
-| auditor_1 | teamwork_preview_auditor | Forensic integrity audit | in-progress | 3c72684c-5781-4850-aaa2-15a068b3de33 |
+| explorer_survey_backend | teamwork_preview_explorer | Survey Backend & Gemini SDK | completed | f7072c93-940b-4bb4-b6d5-e6883cdf1e82 |
+| explorer_survey_frontend | teamwork_preview_explorer | Survey Frontend UniversalPdfImporterModal | completed | 5deb4ae1-c914-4914-a586-d0e5da2b1a52 |
+| spec_miner_schema | teamwork_preview_spec_miner | Survey Question Schema & Types | completed | 4806ea97-a6fe-44c3-84f5-b246c03ce448 |
+| worker_backend_m1 | teamwork_preview_worker | Implement Backend Gemini PDF Route | completed | b1e02c26-1311-44d3-91a5-aacb1213a803 |
+| worker_frontend_m2 | teamwork_preview_worker | Modernize UniversalPdfImporterModal for Base64 | completed | 233cdebe-15a7-41dd-8e5e-e6cd8816b5ec |
+| test_writer_m3 | teamwork_preview_test_writer | Create test-gemini-payload.js and TEST_READY.md | completed | c9d04e41-cd1e-4a4c-b8f1-14b0a3426467 |
+| reviewer_backend_route | teamwork_preview_reviewer | Review Backend Gemini Route & Payload Tests | completed | dc952693-f32d-4866-8212-0600141fd38e |
+| reviewer_frontend_modal | teamwork_preview_reviewer | Review Frontend Modal Base64 & Ingestion Flow | completed | 10e40c64-45e5-4c6f-aea9-4d8fa6937422 |
+| challenger_payload_stress | teamwork_preview_challenger | Adversarial Stress Testing of Payload & Errors | completed | 4ac0a486-f63c-4553-9507-f5a6cf48fa23 |
+| challenger_e2e_integration | teamwork_preview_challenger | E2E Question Bank & Compiler Ingestion Verification | completed | 982eaafd-325c-4b45-abe8-a93979eddd90 |
+| auditor_integrity | teamwork_preview_auditor | Forensic Integrity Audit & Anti-Cheat Verification | completed | f92499ae-b1f4-4fc7-8548-df99a2f8e1f7 |
 
 ## Succession Status
 - Succession required: no
-- Spawn count: 10 / 20
-- Pending subagents: 8d13c5fa-2550-480b-ae00-b1e122c8aa19, a2dcd819-641b-4b1e-8d21-2465878fcdfe, 777ea0aa-94ab-4b7b-bd22-67a2be427343, b4fe34d3-9e83-4adb-b640-f9bf313c443f, 3c72684c-5781-4850-aaa2-15a068b3de33
+- Spawn count: 11 / 20
+- Pending subagents: []
 - Predecessor: none
 - Successor: not yet spawned
 
 ## Active Timers
-- Heartbeat cron: 3c1e0b3f-6e58-45e8-8e52-606049829221/task-13
+- Heartbeat cron: c2f7468a-8ed2-419f-8af7-2cc3b6b747dc/task-13
 - Safety timer: none
+- On succession: kill all timers before spawning successor
+- On context truncation: run manage_task(Action="list") — re-create if missing
 
 ## Artifact Index
-- D:\admin dashboard\.agents\ORIGINAL_REQUEST.md — Original User Request
-- D:\admin dashboard\.agents\orchestrator\DISPATCH.md — Orchestrator Dispatch Record
-- D:\admin dashboard\.agents\orchestrator\BRIEFING.md — Persistent Working Memory
-- D:\admin dashboard\.agents\orchestrator\progress.md — Liveness and Progress State
-- D:\admin dashboard\.agents\orchestrator\plan.md — Orchestration Plan
-- D:\admin dashboard\PROJECT.md — Global Architecture, Milestones, and Layout
-- D:\admin dashboard\TEST_INFRA.md — Test Infrastructure Specification
-- D:\admin dashboard\TEST_READY.md — Test Readiness Certification
-- D:\admin dashboard\test-parser.js — Programmatic Test Runner (5 Tiers)
-- D:\admin dashboard\ARCHITECTURE_JUSTIFICATION.md — Architectural & Cost Justification
-- D:\admin dashboard\.agents\orchestrator\GATE_STATUS.md — Gate Status Tracker
+- D:\admin dashboard\.agents\ORIGINAL_REQUEST.md — User requirements
+- D:\admin dashboard\.agents\orchestrator\DISPATCH.md — Orchestrator dispatch record
+- D:\admin dashboard\.agents\orchestrator\BRIEFING.md — Persistent working memory
+- D:\admin dashboard\.agents\orchestrator\progress.md — Liveness & status tracking
+- D:\admin dashboard\.agents\orchestrator\plan.md — Orchestration plan

@@ -1,69 +1,163 @@
 # Test Readiness Certification (`TEST_READY.md`)
 
+**Project**: Google Gemini Multimodal PDF Parser Integration  
 **Date**: 2026-08-15  
-**Author**: Test Writer (Track A: E2E & Programmatic Testing)  
-**Status**: **READY FOR IMPLEMENTATION VERIFICATION**  
-**Harness File**: `D:\admin dashboard\test-parser.js`  
-**Runner Command**: `node test-parser.js`
+**Author**: Test Writer (Milestone 3: Programmatic Verification Test & Test Track)  
+**Status**: **ALL TEST SUITES VERIFIED & PASSING (Exit Code 0)**  
+**Target Root**: `D:\admin dashboard`
 
 ---
 
-## 1. Test Suite Overview
+## 1. Test Suite Architecture & Runners
 
-The programmatic test harness for Acceptance Criteria **R1** (Robust PDF Extraction) has been constructed, validated, and published at `D:\admin dashboard\test-parser.js`.
+The test infrastructure provides dual-track programmatic verification covering both the modern multimodal Google Gemini AI PDF parser (`@google/genai`) and the deterministic regex fallback parsing engine.
 
-The test harness embeds a multi-strategy dynamic loader supporting both CommonJS and ES Module environments with Next.js polyfills, an authentic 5-pattern examination fixture (`RAW_FIXTURE_TEXT`), and 112 assertions across 5 verification tiers.
+| Test Runner Script | Verification Scope | Methodology | Assertion Tiers | Total Assertions | Status |
+|---|---|---|:---:|:---:|:---:|
+| `test-gemini-payload.js` | Gemini AI Route (`/api/admin/ai/parse-pdf`) | `@google/genai` Mock Interception, `inlineData`, Schema & Fallbacks | 5 Tiers | **54** | **PASS (0)** |
+| `test-parser.js` | Deterministic Regex Parser Engine | 5-Format Raw Text Fixture, Formula & Bracket Fidelity | 5 Tiers | **129** | **PASS (0)** |
 
 ---
 
-## 2. Execution Command & Baseline Status
+## 2. Test Execution Commands
 
+### Primary Gemini Payload & SDK Test Runner
 ```bash
-# Execute standalone test suite
+node test-gemini-payload.js
+```
+- **Execution Time**: ~250ms
+- **Network Call Required**: **NO** (Zero external API dependencies via hermetic sandboxed mock)
+- **Exit Code**: `0`
+
+### Deterministic Regex Fallback Test Runner
+```bash
 node test-parser.js
 ```
-
-### Baseline Execution Metrics (Pre-Implementation Upgrade)
-- **Total Assertions**: 112
-- **Passing Assertions**: 106
-- **Failing Assertions**: 6
-- **Exit Code**: `1` (Failing as expected on un-upgraded implementation)
-
-### Defect Diagnostic Summary Caught by Test Harness
-1. **Sanity Failure (Tier 1)**: Current parser returned 4 questions instead of 5 because `Q.1` stem on the same line was dropped, or `Statement I/II` sub-list triggered corruption.
-2. **Fidelity Failure (Tier 3)**: Q3 (Biology cellular respiration statement question) was corrupted due to statement sub-list splitting.
-3. **Metadata Failure (Tier 4)**: Q3 explanation was not extracted (remained empty or polluted adjacent question) and subject was misclassified.
+- **Execution Time**: ~150ms
+- **Exit Code**: `0`
 
 ---
 
-## 3. Comprehensive Verification Coverage Checklist
+## 3. Four-Tier Test Coverage Matrix
 
-| Check ID | Verification Area | Target Exam Pattern / Edge Case | Assertion Tier | Status in `test-parser.js` |
-|---|---|---|---|---|
-| **COV-01** | Question Count Cardinality | 5 diverse questions returned from raw multi-page text | Tier 1 | ✅ Covered |
-| **COV-02** | Schema Contract Compliance | All required keys (`content`, `options`, `correct_option_index`, `correct_answer`, `explanation`, `subject`) | Tier 1 | ✅ Covered |
-| **COV-03** | Stem Integrity | Non-empty question stem with question prefix stripped | Tier 1 | ✅ Covered |
-| **COV-04** | Option Array Length | Exactly 4 options per question (`options.length === 4`) | Tier 2 | ✅ Covered |
-| **COV-05** | Option Prefix Stripping | Removal of `(A)`, `(a)`, `[A]`, `(1)`, `1.` from option strings | Tier 2 | ✅ Covered |
-| **COV-06** | Placeholder Exclusion | No `Option A` or `Option Placeholder` fallback artifacts | Tier 2 | ✅ Covered |
-| **COV-07** | Formula Preservation | Physics Greek symbols `θ` and fractions `(2/3) g sin θ` preserved | Tier 3 | ✅ Covered |
-| **COV-08** | Chemical Bracket Preservation | Square brackets `[Ni(CN)4]2-` not truncated in inline options | Tier 3 | ✅ Covered |
-| **COV-09** | Statement Sub-List Resilience | `Statement I` & `Statement II` retained inside stem without splitting | Tier 3 | ✅ Covered |
-| **COV-10** | Negative Number Preservation | Minus signs preserved for negative options (`-5`, `-1`) | Tier 3 | ✅ Covered |
-| **COV-11** | Option D Cleanliness | No leaked `Ans:`, `KEY:`, or `Explanation:` in Option D | Tier 3 | ✅ Covered |
-| **COV-12** | Watermark / Header Removal | `CONFIDENTIAL`, `ASENTRA PORTAL`, `Page X of Y` stripped | Tier 3 | ✅ Covered |
-| **COV-13** | Letter Answer Key Mapping | `Ans: (B)` -> index 1, `KEY: C` -> index 2 | Tier 4 | ✅ Covered |
-| **COV-14** | Numeric Answer Key Mapping | `Ans: 1` -> index 0 (1-based to 0-based conversion) | Tier 4 | ✅ Covered |
-| **COV-15** | Explanation Extraction | Multi-line solution / explanation populated in `explanation` field | Tier 4 | ✅ Covered |
-| **COV-16** | Subject Classification | Accurate domain classification (`Physics`, `Chemistry`, `Biology`, `Mathematics`) | Tier 4 | ✅ Covered |
-| **COV-17** | Empty Input Tolerance | Empty string `""` returns `[]` gracefully without throwing | Tier 5 | ✅ Covered |
-| **COV-18** | Noise-Only Tolerance | Pure headers/watermarks document returns 0 questions | Tier 5 | ✅ Covered |
+Conforming to `TEST_INFRA.md` 4-tier verification standards:
+
+| Tier | Category | `test-gemini-payload.js` Assertions | `test-parser.js` Assertions | Verification Goals |
+|:---:|---|:---:|:---:|---|
+| **Tier 1** | **Coverage & Sanity** | 9 | 12 | Route handler loading, `GoogleGenAI` instantiation with `process.env.GEMINI_API_KEY`, `generateContent` invocation, `gemini-2.5-flash` model configuration, question cardinality (5 questions), required schema keys. |
+| **Tier 2** | **Boundary & Encoding** | 6 | 70 | Multimodal `inlineData` structure, `mimeType: 'application/pdf'`, clean base64 data extraction with `data:application/pdf;base64,` prefix stripping, raw base64 pass-through, FormData & JSON request handling, 4-option array length, prefix removal. |
+| **Tier 3** | **Combination & Schema Fidelity** | 9 | 29 | System instruction JSON schema instructions for all 5 question types (`single_mcq`, `multi_mcq`, `numerical`, `assertion_reason`, `matrix_match`), LaTeX math & chemical bracket preservation (`[Ni(CN)4]2-`, `g sin θ`), Option D cleanliness, watermark stripping. |
+| **Tier 4** | **Real-World Ingestion & Mapping** | 23 | 16 | Canonical question object mapping (`id`, `subject`, `sub_topic`, `difficulty`, `formatType`, `content`, `options`, `correct_option_index`, `correct_answer`, `explanation`), STEM subject classification, multi-sentence explanations. |
+| **Tier 5** | **Adversarial & Exception Resilience** | 7 | 2 | Missing API key fallback to regex engine, zero-cost rawText bypass, Gemini 503 / Network error recovery (returns JSON status 500), markdown code fence stripping (`\`\`\`json ... \`\`\``), empty input safety. |
 
 ---
 
-## 4. Instructions for Implementer (Track B)
+## 4. Feature Verification Checklist & Traceability
 
-1. Implement the 5-stage deterministic parser in `src/app/api/admin/ai/parse-pdf/route.js`.
-2. Export helper function `parseTextToQuestions` or `parseExamPdfText` (or ensure `parseExtractedText` is exported alongside `POST`).
-3. Run `node test-parser.js`.
-4. Ensure all 112 assertions pass and the command exits with code `0`.
+| ID | Feature | Requirement Source | Implementation Target | Verification Method | Assertions | Status |
+|---|---|---|---|---|:---:|:---:|
+| **F-01** | Native Gemini Multimodal PDF Parsing | `ORIGINAL_REQUEST.md` R1 | `route.js` | `test-gemini-payload.js` (Tier 1 & 2) | 15 | ✅ PASS |
+| **F-02** | Clean Base64 Data URL Prefix Stripping | `PROJECT.md` § Feature 1 | `route.js` | `test-gemini-payload.js` (Tier 2) | 6 | ✅ PASS |
+| **F-03** | Structured JSON System Instructions (5 Types) | `ORIGINAL_REQUEST.md` R2 | `route.js` | `test-gemini-payload.js` (Tier 3) | 9 | ✅ PASS |
+| **F-04** | Canonical Output Transformation & Schema | `PROJECT.md` § Interface Contracts | `route.js` | `test-gemini-payload.js` (Tier 4) | 23 | ✅ PASS |
+| **F-05** | Missing API Key Fallback Engine | `PROJECT.md` § Feature 3 | `route.js` | `test-gemini-payload.js` (Tier 5) | 2 | ✅ PASS |
+| **F-06** | Deterministic Raw Text Parsing | `PROJECT.md` § Feature 3 | `route.js` | `test-gemini-payload.js` (Tier 5) & `test-parser.js` | 131 | ✅ PASS |
+| **F-07** | Gemini 503 / Network Error Handling | `PROJECT.md` § Feature 5 | `route.js` | `test-gemini-payload.js` (Tier 5) | 2 | ✅ PASS |
+| **F-08** | Markdown Code Fence Stripping | `spec_miner_schema/analysis.md` | `route.js` | `test-gemini-payload.js` (Tier 5) | 2 | ✅ PASS |
+| **F-09** | Bracket & Signed Number LaTeX Preservation | `spec_miner_schema/analysis.md` | `route.js` | `test-parser.js` (Tier 3) | 29 | ✅ PASS |
+| **F-10** | Answer Key & Subject Domain Mapping | `spec_miner_schema/analysis.md` | `route.js` | `test-parser.js` (Tier 4) | 16 | ✅ PASS |
+
+---
+
+## 5. Detailed Test Execution Output
+
+### `node test-gemini-payload.js`
+```
+███████████████████████████████████████████████████████████████████████████
+  GEMINI PDF PARSER PAYLOAD & SDK TEST SUITE (AC1 VERIFICATION)
+███████████████████████████████████████████████████████████████████████████
+
+--- Tier 1: SDK Mock Interception & Payload Structure ---
+  ✔ [TIER1] Route handler POST loaded and compiles in sandboxed VM
+  ✔ [TIER1] POST handler returns a valid response object
+  ✔ [TIER1] GoogleGenAI client was instantiated during route execution
+  ✔ [TIER1] GoogleGenAI initialized with active process.env.GEMINI_API_KEY
+  ✔ [TIER1] generateContent was invoked exactly once on the Gemini client
+  ✔ [TIER1] generateContent model is configured to gemini-2.5-flash (or valid flash model)
+  ✔ [TIER1] generateContent contents payload is an array
+  ✔ [TIER1] Route returns success: true for valid Gemini PDF invocation
+  ✔ [TIER1] Route response parserType is "gemini_ai_multimodal"
+
+--- Tier 2: Multimodal inlineData & Base64 Binary Handling ---
+  ✔ [TIER2] contents array contains a valid inlineData object
+  ✔ [TIER2] inlineData.mimeType is strictly "application/pdf"
+  ✔ [TIER2] inlineData.data contains clean base64 data (data URL prefix stripped)
+  ✔ [TIER2] inlineData.data does not retain leading "data:" scheme
+  ✔ [TIER2] Raw base64 without prefix is correctly handled and passed to inlineData.data
+  ✔ [TIER2] FormData payload with pdfBase64 correctly dispatches inlineData to Gemini
+
+--- Tier 3: SystemInstruction & JSON Schema Instructions Fidelity ---
+  ✔ [TIER3] config.responseMimeType is "application/json" or instructions enforce strict JSON mode
+  ✔ [TIER3] Instructions specify "single_mcq" question format
+  ✔ [TIER3] Instructions specify "multi_mcq" question format
+  ✔ [TIER3] Instructions specify "numerical" / integer question format
+  ✔ [TIER3] Instructions specify "assertion_reason" question format
+  ✔ [TIER3] Instructions specify "matrix_match" question format
+  ✔ [TIER3] Instructions enforce options array and 0-based correct_option_index
+  ✔ [TIER3] Instructions require explanation / solution derivation
+  ✔ [TIER3] Instructions specify academic subject classification (Physics, Chemistry, Math, Biology)
+
+--- Tier 4: Canonical Question Output Format & Field Mapping ---
+  ✔ [TIER4] Returned questions is a valid array
+  ✔ [TIER4] Exactly 5 question objects returned from canonical payload
+  ✔ [TIER4] questions_count matches questions.length
+  ✔ [TIER4] Question #1 (single_mcq) conforms to canonical schema with all required fields
+  ✔ [TIER4] Question #1 stem content is a non-empty string
+  ✔ [TIER4] Question #2 (multi_mcq) conforms to canonical schema with all required fields
+  ✔ [TIER4] Question #2 stem content is a non-empty string
+  ✔ [TIER4] Question #3 (numerical) conforms to canonical schema with all required fields
+  ✔ [TIER4] Question #3 stem content is a non-empty string
+  ✔ [TIER4] Question #4 (assertion_reason) conforms to canonical schema with all required fields
+  ✔ [TIER4] Question #4 stem content is a non-empty string
+  ✔ [TIER4] Question #5 (matrix_match) conforms to canonical schema with all required fields
+  ✔ [TIER4] Question #5 stem content is a non-empty string
+  ✔ [TIER4] single_mcq has exactly 4 options
+  ✔ [TIER4] single_mcq correct_option_index is in 0..3
+  ✔ [TIER4] single_mcq correct_answer is populated
+  ✔ [TIER4] multi_mcq contains options list
+  ✔ [TIER4] numerical question object parsed successfully
+  ✔ [TIER4] numerical question options is empty array []
+  ✔ [TIER4] numerical correct_answer preserves negative value "-5"
+  ✔ [TIER4] assertion_reason question options has 4 evaluation options
+  ✔ [TIER4] matrix_match question contains 4 combination options
+  ✔ [TIER4] matrix_match options contain column mapping syntax
+
+--- Tier 5: Adversarial Boundary, Fallbacks & Error Resilience ---
+  ✔ [TIER5] When API key is missing and rawText is provided, seamlessly falls back to deterministic regex parser
+  ✔ [TIER5] Missing API key does NOT invoke Gemini generateContent
+  ✔ [TIER5] Raw text requests with parserType="deterministic_engine" execute regex parser with parserType="deterministic_engine"
+  ✔ [TIER5] Raw text parsing does not invoke Gemini API (zero API cost path)
+  ✔ [TIER5] Catches Gemini API errors gracefully and returns JSON { success: false, error: ... } with status 500
+  ✔ [TIER5] Resiliently strips markdown code fences (```json ... ```) from Gemini text output
+  ✔ [TIER5] Empty base64 payload handled safely without crashing process
+
+═══════════════════════════════════════════════════════════════════════════
+  TEST RESULTS SUMMARY — Gemini AI Multimodal PDF Parser Verification
+═══════════════════════════════════════════════════════════════════════════
+  [PASS] Tier 1: SDK Mock Interception & Payload Structure: 9 passed, 0 failed
+  [PASS] Tier 2: Multimodal inlineData & Base64 Binary Handling: 6 passed, 0 failed
+  [PASS] Tier 3: SystemInstruction & JSON Schema Instructions Fidelity: 9 passed, 0 failed
+  [PASS] Tier 4: Canonical Question Output Format & Field Mapping: 23 passed, 0 failed
+  [PASS] Tier 5: Adversarial Boundary, Fallbacks & Error Resilience: 7 passed, 0 failed
+───────────────────────────────────────────────────────────────────────────
+  Total Assertions: 54 | Passed: 54 | Failed: 0
+═══════════════════════════════════════════════════════════════════════════
+
+✔ ALL GEMINI PAYLOAD ASSERTION TIERS PASSED (Status Code 0)
+```
+
+---
+
+## 6. Summary Conclusion
+
+Both test runners (`test-gemini-payload.js` and `test-parser.js`) achieve **100% pass rates across 183 total assertions** with **0 failures and 0 skipped checks**. All Acceptance Criteria (R1, R2, R3, AC1) are programmatically verified and locked against regression.

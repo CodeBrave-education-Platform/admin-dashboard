@@ -1,27 +1,23 @@
-# Orchestration Plan — PDF Parsing & Architecture Hardening
+# Orchestration Plan: Google Gemini PDF Parser Integration
 
-## Overview
-Transform the admin dashboard's PDF parsing capabilities to accurately extract all questions, options, and correct answers from complex exam paper PDFs, with cost-effective architectural justification and robust programmatic verification.
+## Mission
+Integrate `@google/genai` in Next.js admin dashboard to natively parse PDF exam papers into structured JSON matching application schema, update frontend modal for Base64 transmission, and establish automated verification test harness.
 
-## Phases & Milestones
-
-### Phase 0: Survey & Scope Mapping
-- **Action**: Spawn 3 parallel Explorers:
-  - Explorer 1 (Codebase Structure & Existing PDF Parser): Analyze current PDF parsing implementation, routes, libraries, file structure, and data model.
-  - Explorer 2 (Exam Paper Pattern & Test Case Requirements): Analyze question formats (single choice, multi-choice, tabular, inline options, Roman numeral matching, multi-line questions, complex answer keys, etc.) and specify requirements for `test-parser.js`.
-  - Explorer 3 (Architecture & Cost-Benefit Analysis): Evaluate Regex vs LLM API vs Hybrid approach based on speed, accuracy, zero API cost vs cloud dependency, token costs, latency, privacy, and offline capabilities.
-- **Output**: Merged findings in `PROJECT.md` with Feature Inventory, Architecture, Milestones, and Interface Contracts.
-
-### Phase 1: Dual Track Execution
-- **Track A: E2E & Programmatic Testing Track**
-  - Milestone T1: Test Infrastructure & Runner (`test-parser.js` and test suite). Create 5+ diverse question formats test harness covering edge cases, unconventional formats, answer mappings.
-  - Output: `TEST_INFRA.md` & `TEST_READY.md`.
-- **Track B: Implementation Track**
-  - Milestone M1: Core Extraction Engine & Regex/Parser Architecture Upgrade.
-  - Milestone M2: Formatting Normalization, Multi-Option Mapping, Answer Key Extraction & Integration.
-  - Milestone M3: Documentation & Architecture Justification (Cost vs Accuracy trade-offs, PR documentation).
-
-### Phase 2: Final Verification & Gate Pass
-- Milestone M4: 100% Test Suite Pass (Tiers 1-4) & Adversarial Coverage Hardening (Tier 5).
-- Reviewers, Challengers, and Forensic Auditor verification.
-- Victory Report to Sentinel.
+## Execution Strategy (Project Pattern)
+1. **Survey (Phase 0)**:
+   - Spawn 3 parallel Explorers / Spec Miners to investigate:
+     - Explorer 1: Backend parse-pdf route, Next.js API conventions, `@google/genai` usage, environment variables (GEMINI_API_KEY).
+     - Explorer 2: Frontend `UniversalPdfImporterModal.jsx` and client PDF extraction flow.
+     - Explorer 3 / Spec Miner: Question schemas (matrix, assertion-reasoning, single/multiple choice, integer, options, correct answers, explanations) across the dashboard.
+2. **Architecture & Decomposition (Phase 1)**:
+   - Synthesize survey findings into `PROJECT.md`.
+   - Feature inventory and interface contracts.
+3. **Implementation & Testing Track (Phase 2 - 4)**:
+   - Milestone 1: Implement Backend Gemini Route (`src/app/api/admin/ai/parse-pdf/route.js`) with `@google/genai` SDK, `inlineData`, system prompt, schema validation.
+   - Milestone 2: Implement Frontend Base64 Upload in `UniversalPdfImporterModal.jsx` (FileReader / Data URL / Base64 payload, bypass client-side extraction).
+   - Milestone 3: Create Programmatic Verification Test (`test-gemini-payload.js`) mocking `@google/genai` and asserting `inlineData` structure + JSON schema instructions.
+4. **Verification & Audit (Phase 5)**:
+   - 2 Reviewers independently checking correctness & frontend logic.
+   - 2 Challengers running edge case & integration validation.
+   - 1 Forensic Auditor for zero-tolerance integrity check.
+   - Gate verification.
