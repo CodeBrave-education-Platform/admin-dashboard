@@ -6,6 +6,9 @@ if (typeof globalThis.DOMMatrix === 'undefined') globalThis.DOMMatrix = class DO
 if (typeof globalThis.ImageData === 'undefined') globalThis.ImageData = class ImageData {};
 if (typeof globalThis.Path2D === 'undefined') globalThis.Path2D = class Path2D {};
 
+export const maxDuration = 60; // Allow 60 seconds for Vercel execution
+
+
 // ═══════════════════════════════════════════════════════════════
 // GEMINI AI SYSTEM INSTRUCTIONS & SCHEMAS
 // ═══════════════════════════════════════════════════════════════
