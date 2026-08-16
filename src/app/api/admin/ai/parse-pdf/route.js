@@ -23,7 +23,8 @@ Your task is to analyze the uploaded PDF exam paper and extract EVERY single que
 
 2. STEM Content & LaTeX Formulas:
    - Preserve all mathematical formulas, symbols, indices, and chemical equations using valid LaTeX notation.
-   - Use '$...$' for inline math/chemistry (e.g. '$v_0$', '$[Ni(CN)_4]^{2-}$', '$\\theta$') and '$$...$$' for standalone block equations.
+   - CRITICAL: You MUST double-escape all LaTeX backslashes (e.g. \\\\frac, \\\\mu, \\\\sin) so the output remains valid JSON.
+   - Use '$...$' for inline math/chemistry (e.g. '$v_0$', '$[Ni(CN)_4]^{2-}$', '$\\\\theta$') and '$$...$$' for standalone block equations.
    - Maintain chemical bracket notations (e.g. '[Ni(CN)4]2-') and signed numbers (e.g. '-5', '-1').
 
 3. Options Array:
@@ -762,6 +763,9 @@ export async function POST(request) {
         if (cleanedJson.startsWith('```')) {
           cleanedJson = cleanedJson.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
         }
+
+        // Sanitize LLM JSON output to fix unescaped LaTeX backslashes
+        cleanedJson = cleanedJson.replace(/(?<!\\)\\(?!["\\nr]|u[0-9a-fA-F]{4})/g, '\\\\');
 
         let parsedData = {};
         try {
