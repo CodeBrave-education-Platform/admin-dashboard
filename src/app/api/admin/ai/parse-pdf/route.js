@@ -652,6 +652,15 @@ export function parseExamPdfText(text) {
 
 export async function POST(request) {
   try {
+    // SECURITY: Prevent OOM crashes by rejecting massive payloads immediately
+    const contentLength = request.headers ? parseInt(request.headers.get('content-length') || '0', 10) : 0;
+    if (contentLength > 5 * 1024 * 1024) {
+      return NextResponse.json({
+        success: false,
+        error: 'Payload Too Large: File exceeds the 5MB strict backend limit. Please compress the PDF and try again.'
+      }, { status: 413 });
+    }
+
     let rawText = '';
     let pdfBase64 = '';
     let fileName = '';
