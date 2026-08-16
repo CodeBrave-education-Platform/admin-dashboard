@@ -60,10 +60,10 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+            className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
               isActive 
-                ? 'bg-indigo-600 text-white font-bold shadow-md' 
-                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
+                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
             }`}
           >
             <div className="flex items-center gap-3">
@@ -104,10 +104,10 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
                 <Link
                   key={c.id}
                   href={`/admin/courses?id=${c.id}`}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition-all select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
                     isActive
-                      ? 'bg-indigo-50/80 text-indigo-700 font-bold shadow-2xs border-l-2 border-indigo-600'
-                      : 'text-slate-500 hover:text-slate-850 hover:bg-slate-50'
+                      ? 'bg-blue-50/80 text-blue-700 shadow-sm border-l-2 border-blue-500'
+                      : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50'
                   }`}
                 >
                   <span className="truncate max-w-[170px]">{c.title}</span>
@@ -215,7 +215,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
   const userInitials = adminUser?.email?.substring(0, 2).toUpperCase() || 'AD';
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/20 text-slate-900 flex font-sans">
       
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -226,7 +226,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
       )}
 
       {/* Persistent Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200 z-50 transform lg:translate-x-0 lg:static lg:flex lg:flex-col transition-transform duration-300 ${
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-white/80 backdrop-blur-xl border-r border-slate-100 z-50 transform lg:translate-x-0 lg:static lg:flex lg:flex-col transition-transform duration-300 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
         {/* Brand wordmark logo */}
@@ -293,7 +293,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         
         {/* Header bar */}
-        <header className="h-16 px-6 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-30">
+        <header className="h-16 px-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white/60 backdrop-blur-2xl sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setSidebarOpen(true)}

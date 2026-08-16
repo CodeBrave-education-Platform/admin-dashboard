@@ -162,37 +162,39 @@ export default function AdminDashboardClient() {
 
       {loading ? (
         <div className="flex justify-center py-20">
-          <RefreshCw className="w-8 h-8 text-slate-300 animate-spin" />
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
         </div>
       ) : (
         <>
-          {/* Main Metric Cards (Glassmorphism + Soft Gradients) */}
+          {/* Main Metric Cards (Crisp White Bento) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-gradient-to-br from-[#f3e8ff] to-[#fae8ff] border border-white/40 p-8 rounded-[2rem] shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+            <div className="bg-white border border-slate-100 p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group">
               <div className="relative z-10">
-                <div className="w-12 h-12 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 border border-white/50 text-purple-600">
-                  <Users className="w-6 h-6" />
+                <div className="w-14 h-14 bg-cyan-50 rounded-2xl flex items-center justify-center mb-6 text-cyan-600">
+                  <Users className="w-7 h-7" />
                 </div>
                 <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-2 group-hover:scale-105 transition-transform origin-left">
                   {activeStudentsCount.toLocaleString()}
                 </h2>
-                <p className="text-sm font-bold text-slate-700">Total Active Students</p>
-                <p className="text-xs font-bold text-emerald-600 mt-4">+2.1% this week</p>
+                <p className="text-sm font-bold text-slate-500">Total Active Students</p>
+                <div className="mt-4">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600">+8.2% this month</span>
+                </div>
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-[#cffafe] to-[#ccfbf1] border border-white/40 p-8 rounded-[2rem] shadow-sm hover:shadow-lg transition-all duration-300 relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
+            <div className="bg-white border border-slate-100 p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group">
               <div className="relative z-10">
-                <div className="w-12 h-12 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center mb-6 border border-white/50 text-teal-600">
-                  <BookOpen className="w-6 h-6" />
+                <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6 text-emerald-600">
+                  <BookOpen className="w-7 h-7" />
                 </div>
                 <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-2 group-hover:scale-105 transition-transform origin-left">
                   {liveClassesCount}
                 </h2>
-                <p className="text-sm font-bold text-slate-700">Ongoing Live Classes</p>
-                <p className="text-xs font-bold text-amber-600 mt-4">{batchEnrollments.length} Starting Soon</p>
+                <p className="text-sm font-bold text-slate-500">Active Courses</p>
+                <div className="mt-4">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">+{batchEnrollments.length} New Enrollments</span>
+                </div>
               </div>
             </div>
           </div>
@@ -201,7 +203,7 @@ export default function AdminDashboardClient() {
             {/* Minimal Student Activity Chart */}
             <div className="space-y-6">
               <h3 className="text-lg font-bold text-slate-900 tracking-tight">Student Activity</h3>
-              <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-6 rounded-[2rem] shadow-sm h-[300px]">
+              <div className="bg-white border border-slate-100 p-6 pb-2 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-[350px]">
                 {recentAttempts.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-sm font-medium text-slate-400">
                     Not enough data
@@ -211,18 +213,18 @@ export default function AdminDashboardClient() {
                     <AreaChart data={recentAttempts.map((a, i) => ({ name: a.profiles?.full_name?.split(' ')[0] || `S${i}`, score: a.score }))}>
                       <defs>
                         <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#c084fc" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#c084fc" stopOpacity={0}/>
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" tick={{fontSize: 11, fill: '#94a3b8', fontWeight: 600}} axisLine={false} tickLine={false} dy={10} />
-                      <YAxis tick={{fontSize: 11, fill: '#94a3b8', fontWeight: 600}} axisLine={false} tickLine={false} dx={-10} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f8fafc" />
+                      <XAxis dataKey="name" tick={{fontSize: 11, fill: '#64748b', fontWeight: 600}} axisLine={false} tickLine={false} dy={10} />
+                      <YAxis tick={{fontSize: 11, fill: '#64748b', fontWeight: 600}} axisLine={false} tickLine={false} dx={-10} />
                       <Tooltip 
                         contentStyle={{ borderRadius: '1rem', border: '1px solid #f1f5f9', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '12px', fontWeight: 'bold' }}
                         cursor={{stroke: '#cbd5e1', strokeWidth: 1, strokeDasharray: '4 4'}}
                       />
-                      <Area type="monotone" dataKey="score" stroke="#c084fc" strokeWidth={4} fillOpacity={1} fill="url(#colorScore)" />
+                      <Area type="monotone" dataKey="score" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 )}
@@ -231,31 +233,46 @@ export default function AdminDashboardClient() {
 
             {/* Recent Activity Feed */}
             <div className="space-y-6">
-              <h3 className="text-lg font-bold text-slate-900 tracking-tight">Recent Activity</h3>
-              <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-6 rounded-[2rem] shadow-sm">
-                <div className="space-y-6">
-                  {courseEnrollments.slice(0, 2).map((enrollment, idx) => (
-                    <div key={`e-${idx}`} className="flex items-start gap-4">
-                      <span className="text-sm font-black text-slate-300 mt-0.5">{idx + 1}.</span>
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">New enrollment: Student {enrollment.profile_id?.substring(0,4)}</p>
-                        <p className="text-xs font-semibold text-slate-500 mt-1">Class: {courses.find(c => c.id === enrollment.course_id)?.title || 'Standard Course'}</p>
+              <h3 className="text-lg font-bold text-slate-900 tracking-tight">Recent Platform Activity</h3>
+              <div className="bg-white border border-slate-100 p-2 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-[350px] overflow-y-auto custom-scrollbar">
+                <div className="space-y-2 p-2">
+                  {courseEnrollments.slice(0, 3).map((enrollment, idx) => {
+                    const colors = ['bg-orange-100 text-orange-600', 'bg-blue-100 text-blue-600', 'bg-purple-100 text-purple-600'];
+                    const colorClass = colors[idx % colors.length];
+                    return (
+                      <div key={`e-${idx}`} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition cursor-pointer">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shrink-0 ${colorClass}`}>
+                          {enrollment.profile_id?.substring(0, 2).toUpperCase() || 'ST'}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">New student enrolled</p>
+                          <p className="text-xs font-semibold text-slate-500 mt-0.5">{courses.find(c => c.id === enrollment.course_id)?.title || 'Standard Course'}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   
-                  {recentAttempts.slice(0, 2).map((attempt, idx) => (
-                    <div key={`a-${idx}`} className="flex items-start gap-4">
-                      <span className="text-sm font-black text-slate-300 mt-0.5">{idx + 3}.</span>
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">Quiz Submitted: {attempt.profiles?.full_name || 'Anonymous'}</p>
-                        <p className="text-xs font-semibold text-slate-500 mt-1">Score: {attempt.score} / {attempt.assessments?.total_marks || 100}</p>
+                  {recentAttempts.slice(0, 3).map((attempt, idx) => {
+                    const colors = ['bg-emerald-100 text-emerald-600', 'bg-rose-100 text-rose-600', 'bg-cyan-100 text-cyan-600'];
+                    const colorClass = colors[idx % colors.length];
+                    const initials = attempt.profiles?.full_name?.substring(0, 2).toUpperCase() || 'AN';
+                    return (
+                      <div key={`a-${idx}`} className="flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 transition cursor-pointer">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm shrink-0 ${colorClass}`}>
+                          {initials}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{attempt.profiles?.full_name || 'Anonymous'} completed a quiz</p>
+                          <p className="text-xs font-semibold text-slate-500 mt-0.5">Scored {attempt.score} / {attempt.assessments?.total_marks || 100}</p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {courseEnrollments.length === 0 && recentAttempts.length === 0 && (
-                    <p className="text-sm font-medium text-slate-400">No recent activity found.</p>
+                    <div className="py-10 text-center">
+                      <p className="text-sm font-medium text-slate-400">No recent activity found.</p>
+                    </div>
                   )}
                 </div>
               </div>
