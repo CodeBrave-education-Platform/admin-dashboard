@@ -62,7 +62,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData }) {
             href={item.href}
             className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
               isActive 
-                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' 
+                ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/30' 
                 : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
             }`}
           >
@@ -215,7 +215,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
   const userInitials = adminUser?.email?.substring(0, 2).toUpperCase() || 'AD';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50/20 text-slate-900 flex font-sans">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-50 via-white to-emerald-50 text-slate-900 flex font-sans">
       
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (

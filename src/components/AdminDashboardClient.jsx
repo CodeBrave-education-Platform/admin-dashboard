@@ -168,32 +168,34 @@ export default function AdminDashboardClient() {
         <>
           {/* Main Metric Cards (Crisp White Bento) */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-white border border-slate-100 p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-violet-500 to-fuchsia-500 p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(139,92,246,0.3)] hover:shadow-[0_8px_40px_rgb(139,92,246,0.5)] transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
               <div className="relative z-10">
-                <div className="w-14 h-14 bg-cyan-50 rounded-2xl flex items-center justify-center mb-6 text-cyan-600">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 text-white border border-white/30">
                   <Users className="w-7 h-7" />
                 </div>
-                <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-2 group-hover:scale-105 transition-transform origin-left">
+                <h2 className="text-6xl font-black text-white tracking-tighter mb-2 group-hover:scale-105 transition-transform origin-left">
                   {activeStudentsCount.toLocaleString()}
                 </h2>
-                <p className="text-sm font-bold text-slate-500">Total Active Students</p>
+                <p className="text-sm font-bold text-white/90">Total Active Students</p>
                 <div className="mt-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600">+8.2% this month</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">+8.2% this month</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-100 p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)] transition-all duration-300 relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-cyan-400 to-blue-500 p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(56,189,248,0.3)] hover:shadow-[0_8px_40px_rgb(56,189,248,0.5)] transition-all duration-300 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
               <div className="relative z-10">
-                <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6 text-emerald-600">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6 text-white border border-white/30">
                   <BookOpen className="w-7 h-7" />
                 </div>
-                <h2 className="text-6xl font-black text-slate-900 tracking-tighter mb-2 group-hover:scale-105 transition-transform origin-left">
+                <h2 className="text-6xl font-black text-white tracking-tighter mb-2 group-hover:scale-105 transition-transform origin-left">
                   {liveClassesCount}
                 </h2>
-                <p className="text-sm font-bold text-slate-500">Active Courses</p>
+                <p className="text-sm font-bold text-white/90">Active Courses</p>
                 <div className="mt-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 text-blue-600">+{batchEnrollments.length} New Enrollments</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">+{batchEnrollments.length} New Enrollments</span>
                 </div>
               </div>
             </div>
@@ -203,7 +205,7 @@ export default function AdminDashboardClient() {
             {/* Minimal Student Activity Chart */}
             <div className="space-y-6">
               <h3 className="text-lg font-bold text-slate-900 tracking-tight">Student Activity</h3>
-              <div className="bg-white border border-slate-100 p-6 pb-2 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-[350px]">
+              <div className="bg-white/60 backdrop-blur-3xl border border-white p-6 pb-2 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-[350px]">
                 {recentAttempts.length === 0 ? (
                   <div className="flex items-center justify-center h-full text-sm font-medium text-slate-400">
                     Not enough data
@@ -234,7 +236,7 @@ export default function AdminDashboardClient() {
             {/* Recent Activity Feed */}
             <div className="space-y-6">
               <h3 className="text-lg font-bold text-slate-900 tracking-tight">Recent Platform Activity</h3>
-              <div className="bg-white border border-slate-100 p-2 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-[350px] overflow-y-auto custom-scrollbar">
+              <div className="bg-white/60 backdrop-blur-3xl border border-white p-2 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-[350px] overflow-y-auto custom-scrollbar">
                 <div className="space-y-2 p-2">
                   {courseEnrollments.slice(0, 3).map((enrollment, idx) => {
                     const colors = ['bg-orange-100 text-orange-600', 'bg-blue-100 text-blue-600', 'bg-purple-100 text-purple-600'];
