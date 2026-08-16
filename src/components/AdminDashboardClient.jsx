@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, BookOpen, Radio, GraduationCap, Search, ArrowRight,
   PlusCircle, RefreshCw, Key, ShieldAlert, Sparkles, TrendingUp,
-  Mail, Calendar, ExternalLink, Activity
+  Mail, Calendar, ExternalLink, Activity, Loader2
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
