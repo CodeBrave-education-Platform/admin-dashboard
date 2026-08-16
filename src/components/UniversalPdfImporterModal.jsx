@@ -80,9 +80,13 @@ export default function UniversalPdfImporterModal({
       formData.append('parserType', activeParserType);
 
       if (selectedFile) {
-        // Read file directly as Base64 Data URL (bypassing client-side PDF.js)
-        const base64Data = await readFileAsBase64(selectedFile);
-        formData.append('pdfBase64', base64Data);
+        if (selectedFile.size > 4.4 * 1024 * 1024) {
+          showToast('File too large! Please upload a PDF under 4.4MB to bypass Vercel server limits.', 'error');
+          setAiParsing(false);
+          return;
+        }
+        // Append raw file object directly to bypass 33% Base64 overhead over network
+        formData.append('pdf', selectedFile);
         formData.append('fileName', selectedFile.name);
         formData.append('mimeType', selectedFile.type || 'application/pdf');
       }
