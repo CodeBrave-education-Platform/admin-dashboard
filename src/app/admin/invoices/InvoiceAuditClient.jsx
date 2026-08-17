@@ -11,13 +11,13 @@ import {
 } from 'lucide-react'
 
 export default function InvoiceAuditClient({ user, profile, initialInvoices }) {
-  const [invoices, setInvoices] = useState(initialInvoices)
+  const [invoices, setInvoices] = useState(initialInvoices || [])
   const [searchQuery, setSearchQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('ALL')
   const [selectedInvoice, setSelectedInvoice] = useState(null)
 
   // Map raw invoice DB rows into clean presentation format
-  const formattedInvoices = invoices.map(inv => {
+  const formattedInvoices = (invoices || []).map(inv => {
     let title = 'Asentra Platform Subscription'
     let category = 'Course'
     if (inv.books?.title) {

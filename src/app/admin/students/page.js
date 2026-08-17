@@ -17,17 +17,23 @@ export default async function AdminStudentPage() {
     const { data: dbProfiles } = await supabase
       .from('profiles')
       .select('*')
-      .order('created_at', { ascending: false })
-    if (dbProfiles) {
-      profiles = dbProfiles.map(p => ({
+    if (dbProfiles && Array.isArray(dbProfiles)) {
+      const sorted = [...dbProfiles].filter(Boolean).sort((a, b) => {
+        const timeA = a?.created_at ? (!isNaN(new Date(a.created_at).getTime()) ? new Date(a.created_at).getTime() : 0) : 0
+        const timeB = b?.created_at ? (!isNaN(new Date(b.created_at).getTime()) ? new Date(b.created_at).getTime() : 0) : 0
+        return timeB - timeA
+      })
+      profiles = sorted.map(p => ({
         ...p,
         name: p.full_name || 'Unknown',
         enrolledCourses: [],
-        attemptsCount: p.weekly_tests_attempted ? parseInt(p.weekly_tests_attempted) : 0,
+        attemptsCount: p.weekly_tests_attempted ? (parseInt(p.weekly_tests_attempted) || 0) : 0,
         lastActive: p.last_active_date || 'N/A'
       }))
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[AdminStudentPage] Fetch profiles warning:', e?.message)
+  }
 
   return (
     <StudentRelationshipClient

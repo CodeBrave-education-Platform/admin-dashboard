@@ -57,10 +57,17 @@ export default function CommandPalette() {
                 <span>Overview Dashboard</span>
               </Command.Item>
               <Command.Item 
-                onSelect={() => runCommand(() => router.push('/admin/courses'))}
+                onSelect={() => runCommand(() => router.push('/batches'))}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer aria-selected:bg-indigo-50 aria-selected:text-indigo-700 text-slate-700 font-bold text-xs mt-1 transition-colors"
               >
-                <Book className="w-4 h-4 text-emerald-500" />
+                <Activity className="w-4 h-4 text-emerald-500" />
+                <span>Cohort Batches & Live Classes</span>
+              </Command.Item>
+              <Command.Item 
+                onSelect={() => runCommand(() => router.push('/courses'))}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer aria-selected:bg-indigo-50 aria-selected:text-indigo-700 text-slate-700 font-bold text-xs mt-1 transition-colors"
+              >
+                <Book className="w-4 h-4 text-teal-500" />
                 <span>Course Blueprint Studio</span>
               </Command.Item>
               <Command.Item 
@@ -77,6 +84,27 @@ export default function CommandPalette() {
                 <Users className="w-4 h-4 text-blue-500" />
                 <span>Student Relationship Manager</span>
               </Command.Item>
+              <Command.Item 
+                onSelect={() => runCommand(() => router.push('/admin/questions'))}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer aria-selected:bg-indigo-50 aria-selected:text-indigo-700 text-slate-700 font-bold text-xs mt-1 transition-colors"
+              >
+                <GraduationCap className="w-4 h-4 text-purple-500" />
+                <span>Question Bank Studio</span>
+              </Command.Item>
+              <Command.Item 
+                onSelect={() => runCommand(() => router.push('/admin/books'))}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer aria-selected:bg-indigo-50 aria-selected:text-indigo-700 text-slate-700 font-bold text-xs mt-1 transition-colors"
+              >
+                <Book className="w-4 h-4 text-amber-500" />
+                <span>Book Inventory & Fulfillments</span>
+              </Command.Item>
+              <Command.Item 
+                onSelect={() => runCommand(() => router.push('/admin/invoices'))}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer aria-selected:bg-indigo-50 aria-selected:text-indigo-700 text-slate-700 font-bold text-xs mt-1 transition-colors"
+              >
+                <FileText className="w-4 h-4 text-cyan-500" />
+                <span>Tax Invoices & Revenue Audit</span>
+              </Command.Item>
             </Command.Group>
 
             <Command.Group heading="Quick Actions" className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2 py-1 mt-3">
@@ -85,7 +113,14 @@ export default function CommandPalette() {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer aria-selected:bg-slate-100 aria-selected:text-slate-900 text-slate-700 font-bold text-xs mt-1 transition-colors"
               >
                 <FileText className="w-4 h-4 text-slate-500" />
-                <span>Compile New Exam</span>
+                <span>Compile New CBT Exam</span>
+              </Command.Item>
+              <Command.Item 
+                onSelect={() => runCommand(() => router.push('/gradebook'))}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer aria-selected:bg-slate-100 aria-selected:text-slate-900 text-slate-700 font-bold text-xs mt-1 transition-colors"
+              >
+                <GraduationCap className="w-4 h-4 text-indigo-500" />
+                <span>View Cohort Gradebook</span>
               </Command.Item>
             </Command.Group>
           </Command.List>

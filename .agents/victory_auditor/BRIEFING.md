@@ -1,44 +1,44 @@
-# BRIEFING — 2026-08-15T14:40:00Z
+# BRIEFING — 2026-08-17T15:18:00Z
 
 ## Mission
-Conduct mandatory post-victory audit for the Gemini PDF Parser integration in D:\admin dashboard.
+Conduct mandatory independent post-victory audit for the Admin Dashboard Supabase Schema & UI Resilience project in D:\admin dashboard.
 
 ## 🔒 My Identity
 - Archetype: victory_auditor
 - Roles: critic, specialist, auditor, victory_verifier
 - Working directory: D:\admin dashboard\.agents\victory_auditor
-- Original parent: 505a3c85-6c02-497a-8dc3-deb92374893d
+- Original parent: 7af4767b-437d-406d-b0ef-70d049df0774
 - Target: full project
 
 ## 🔒 Key Constraints
 - Audit-only — do NOT modify implementation code
 - Trust NOTHING — verify everything independently
-- Benchmark integrity mode per ORIGINAL_REQUEST.md (2026-08-15T14:19:20Z prompt)
-- Zero tolerance for hardcoded mocks or facades in production code
+- Benchmark/Development integrity mode per ORIGINAL_REQUEST.md (2026-08-17T14:37:24Z prompt)
+- Zero tolerance for hardcoded mocks, facade implementations, or unhandled crashes
 
 ## Current Parent
-- Conversation ID: 505a3c85-6c02-497a-8dc3-deb92374893d
-- Updated: 2026-08-15T14:40:00Z
+- Conversation ID: 7af4767b-437d-406d-b0ef-70d049df0774
+- Updated: 2026-08-17T15:18:00Z
 
 ## Audit Scope
-- **Work product**: Gemini PDF Parser Integration (`src/app/api/admin/ai/parse-pdf/route.js`, `src/components/UniversalPdfImporterModal.jsx`, `test-gemini-payload.js`, `test-parser.js`)
+- **Work product**: Admin Dashboard UI Resilience & Supabase Migration (`supabase_schema_migration.sql`, `src/app/admin/students/StudentRelationshipClient.jsx`, `src/app/admin/students/page.js`, `src/app/batches/page.js`, `src/app/admin/test-series/*`, `src/app/admin/invoices/InvoiceAuditClient.jsx`, `src/components/AdminLayoutShell.jsx`)
 - **Profile loaded**: General Project (Victory Audit & Integrity Forensics)
 - **Audit type**: victory audit (Phase A, B, C)
 
 ## Audit Progress
 - **Phase**: Complete (Phase A, Phase B, Phase C)
 - **Checks completed**:
-  1. Phase A: Timeline & Provenance Audit (M1 -> M2 -> M3 -> M4 trace, no pre-populated artifacts) -> PASS
-  2. Phase B: Integrity & Anti-Cheating Forensics (Zero hardcoded test shortcuts, zero facades, authentic SDK integration) -> PASS
-  3. Phase C: Requirements & Acceptance Criteria Verification (R1, R2, R3, AC1, AC2 fully verified against source code and test harness contracts) -> PASS
+  1. Phase A: Timeline & Provenance Audit (M1 -> Implementer -> Reviewer 1 -> Reviewer 2 -> Reviewer 3 trace) -> PASS
+  2. Phase B: Integrity & Anti-Cheating Forensics (Zero hardcoded test shortcuts, zero facades, authentic TanStack Table legacy migration, real CSV export, authentic Supabase client integration) -> PASS
+  3. Phase C: Independent Requirements & Acceptance Criteria Verification (R1, R2, R3, Build Verification, SQL Migration Verification) -> PASS
 - **Findings so far**: CLEAN — VICTORY CONFIRMED
 
 ## Key Decisions Made
-- Confirmed full compliance with ORIGINAL_REQUEST.md specifications
-- Verified `@google/genai` integration via `inlineData` with `mimeType: 'application/pdf'`
-- Verified `FileReader` Base64 encoding in frontend modal
-- Verified multi-format question schema (`single_mcq`, `multi_mcq`, `numerical`, `assertion_reason`, `matrix_match`)
-- Verified error resilience and zero-cost regex fallback engine
+- Confirmed complete fulfillment of R1, R2, R3 from ORIGINAL_REQUEST.md
+- Verified resolution of fatal TanStack Table import error on `/admin/students`
+- Verified two-step resilient query and in-memory sorting on `/batches`
+- Verified `supabase_schema_migration.sql` contains 20 comprehensive idempotent sections
+- Verified zero UI crashes from missing database columns across all admin views
 
 ## Artifact Index
 - `D:\admin dashboard\.agents\victory_auditor\DISPATCH.md` — Inbound instructions log
@@ -48,10 +48,10 @@ Conduct mandatory post-victory audit for the Gemini PDF Parser integration in D:
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Hypothesis 1: Data URL prefix `data:application/pdf;base64,` could pollute Gemini API payload -> Verified clean regex stripping on lines 683-686 of `route.js`.
-  - Hypothesis 2: Client-side pdf.js CDN could linger in frontend modal -> Verified complete removal and replacement with native asynchronous `FileReader.readAsDataURL()`.
-  - Hypothesis 3: Numerical questions might retain default 4-option array -> Verified `sanitizeGeminiQuestions` forces `options: []` for numerical formatType.
-  - Hypothesis 4: Markdown wrapper (```json ... ```) could cause JSON.parse failure -> Verified regex stripping in `route.js` and Tier 5 test assertions.
+  - Hypothesis 1: `@tanstack/react-table` v9.1.2 breaking changes could break other table views -> Verified `StudentRelationshipClient.jsx` uses `@tanstack/react-table/legacy` and `TestSeriesGrid.jsx` also uses `@tanstack/react-table/legacy` safely.
+  - Hypothesis 2: Null timestamp fields (`created_at`, `start_date`) could cause `NaN` or invalid sort results -> Verified safe ternary fallback `(!isNaN(new Date(...).getTime()) ? ... : 0)` preventing sort errors.
+  - Hypothesis 3: `initialInvoices` or `initialStudents` being null could cause fatal render error -> Verified `useState(initialInvoices || [])` and `useState(initialStudents || [])`.
+  - Hypothesis 4: `supabase_schema_migration.sql` might miss relations or fail on re-run -> Verified idempotent syntax (`CREATE TABLE IF NOT EXISTS`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, `DROP CONSTRAINT IF EXISTS`).
 - **Vulnerabilities found**: None.
 - **Untested angles**: None.
 

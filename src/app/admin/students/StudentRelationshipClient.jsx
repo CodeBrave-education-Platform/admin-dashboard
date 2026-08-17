@@ -4,9 +4,14 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { 
-  useTable, createCoreRowModel, createFilteredRowModel, createPaginatedRowModel,
-  createSortedRowModel, flexRender, createColumnHelper
-} from '@tanstack/react-table'
+  useLegacyTable as useReactTable,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  legacyCreateColumnHelper as createColumnHelper
+} from '@tanstack/react-table/legacy'
+import { flexRender } from '@tanstack/react-table'
 import { 
   Users, Edit, Trash2, Plus, Search, 
   RefreshCw, Send, ArrowLeft, ChevronLeft, ChevronRight, X, ChevronDown, ChevronUp
@@ -29,21 +34,49 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
 
   const fetchStudents = async () => {
     setLoading(true)
-    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
-    const source = data || initialStudents || []
-    setStudents(source.map(p => ({
-      ...p,
-      id: p.id,
-      name: p.full_name || 'Unknown User',
-      email: p.email || 'No Email',
-      joinedDate: new Date(p.created_at).toLocaleDateString(),
-      status: 'Active',
-      enrolledCourses: [],
-      attemptsCount: p.weekly_tests_attempted ? parseInt(p.weekly_tests_attempted) : 0,
-      bookOrdersCount: 0,
-      lastActive: p.last_active_date || 'Recently'
-    })))
-    setLoading(false)
+    try {
+      const { data, error } = await supabase.from('profiles').select('*')
+      const source = (data && !error) ? data : (initialStudents || [])
+      const sorted = [...source].filter(Boolean).sort((a, b) => {
+        const timeA = a?.created_at ? (!isNaN(new Date(a.created_at).getTime()) ? new Date(a.created_at).getTime() : 0) : 0
+        const timeB = b?.created_at ? (!isNaN(new Date(b.created_at).getTime()) ? new Date(b.created_at).getTime() : 0) : 0
+        return timeB - timeA
+      })
+      setStudents(sorted.map(p => ({
+        ...p,
+        id: p.id,
+        name: p.full_name || 'Unknown User',
+        email: p.email || 'No Email',
+        joinedDate: p.created_at ? (!isNaN(new Date(p.created_at).getTime()) ? new Date(p.created_at).toLocaleDateString() : 'N/A') : 'N/A',
+        status: 'Active',
+        enrolledCourses: [],
+        attemptsCount: p.weekly_tests_attempted ? (parseInt(p.weekly_tests_attempted) || 0) : 0,
+        bookOrdersCount: 0,
+        lastActive: p.last_active_date || 'Recently'
+      })))
+    } catch (e) {
+      console.warn('[Fetch Students Warning]:', e?.message)
+      const source = initialStudents || []
+      const sorted = [...source].filter(Boolean).sort((a, b) => {
+        const timeA = a?.created_at ? (!isNaN(new Date(a.created_at).getTime()) ? new Date(a.created_at).getTime() : 0) : 0
+        const timeB = b?.created_at ? (!isNaN(new Date(b.created_at).getTime()) ? new Date(b.created_at).getTime() : 0) : 0
+        return timeB - timeA
+      })
+      setStudents(sorted.map(p => ({
+        ...p,
+        id: p.id,
+        name: p.full_name || 'Unknown User',
+        email: p.email || 'No Email',
+        joinedDate: p.created_at ? (!isNaN(new Date(p.created_at).getTime()) ? new Date(p.created_at).toLocaleDateString() : 'N/A') : 'N/A',
+        status: 'Active',
+        enrolledCourses: [],
+        attemptsCount: p.weekly_tests_attempted ? (parseInt(p.weekly_tests_attempted) || 0) : 0,
+        bookOrdersCount: 0,
+        lastActive: p.last_active_date || 'Recently'
+      })))
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
@@ -148,8 +181,8 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
       header: 'Student Candidate',
       cell: info => (
         <div className="space-y-0.5">
-          <h4 className="font-bold text-slate-900 text-sm">{info.getValue()}</h4>
-          <p className="text-slate-500 text-[11px] font-mono">{info.row.original.email} • {info.row.original.id.substring(0,8)}</p>
+          <h4 className="font-bold text-slate-900 text-sm">{info.getValue() || 'Unknown User'}</h4>
+          <p className="text-slate-500 text-[11px] font-mono">{info.row.original.email || 'No Email'} • {info.row.original.id?.substring(0,8) || 'N/A'}</p>
         </div>
       ),
     }),
@@ -157,17 +190,17 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
       header: 'Enrolled Courses',
       cell: info => (
         <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-xs font-bold">
-          {info.getValue().length} Courses
+          {(info.getValue() || []).length} Courses
         </span>
       ),
     }),
     columnHelper.accessor('attemptsCount', {
       header: 'CBT Attempts',
-      cell: info => <span className="font-bold text-slate-700">{info.getValue()} Tests</span>,
+      cell: info => <span className="font-bold text-slate-700">{info.getValue() ?? 0} Tests</span>,
     }),
     columnHelper.accessor('lastActive', {
       header: 'Last Activity',
-      cell: info => <span className="text-slate-500 font-medium">{info.getValue()}</span>,
+      cell: info => <span className="text-slate-500 font-medium">{info.getValue() || 'N/A'}</span>,
     }),
     columnHelper.display({
       id: 'actions',
@@ -193,7 +226,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
     })
   ], [students])
 
-  const table = useTable({
+  const table = useReactTable({
     data: students,
     columns,
     state: {
@@ -203,10 +236,10 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
     onGlobalFilterChange: setGlobalFilter,
-    getCoreRowModel: createCoreRowModel(),
-    getFilteredRowModel: createFilteredRowModel(),
-    getPaginationRowModel: createPaginatedRowModel(),
-    getSortedRowModel: createSortedRowModel(),
+    getCoreRowModel: getCoreRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: { pageSize: 10 }
     }
@@ -226,7 +259,37 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
   }
 
   const handleBulkExport = () => {
-    alert(`📊 Exporting ${selectedCount} students to CSV...`)
+    const selectedRows = table.getSelectedRowModel().rows
+    const exportData = selectedRows.length > 0
+      ? selectedRows.map(r => r.original)
+      : table.getFilteredRowModel().rows.map(r => r.original)
+
+    if (exportData.length === 0) {
+      alert('No student records to export.')
+      return
+    }
+
+    const headers = ['ID', 'Candidate Name', 'Email', 'Joined Date', 'CBT Attempts', 'Last Active']
+    const csvRows = [headers.join(',')]
+
+    for (const item of exportData) {
+      csvRows.push([
+        `"${item.id || ''}"`,
+        `"${(item.name || item.full_name || 'Unknown User').replace(/"/g, '""')}"`,
+        `"${(item.email || '').replace(/"/g, '""')}"`,
+        `"${item.joinedDate || 'N/A'}"`,
+        item.attemptsCount || 0,
+        `"${item.lastActive || 'N/A'}"`
+      ].join(','))
+    }
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `students_export_${Date.now()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
     setRowSelection({})
   }
 
@@ -292,7 +355,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
           
           <div className="flex items-center gap-2">
             <span className="text-[11px] text-slate-500 font-bold mr-2">
-              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+              Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
             </span>
             <button
               onClick={() => table.previousPage()}
@@ -388,7 +451,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
             <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
               <div>
                 <h3 className="text-lg font-black text-slate-900 tracking-tight">Manage Student</h3>
-                <p className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-widest">{selectedStudent.id.substring(0,12)}</p>
+                <p className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-widest">{selectedStudent.id?.substring(0,12) || 'N/A'}</p>
               </div>
               <button onClick={() => setDrawerOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition cursor-pointer">
                 <X className="w-5 h-5" />
@@ -430,7 +493,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
                 </div>
 
                 <div className="space-y-2">
-                  {selectedStudent.enrolledCourses.length === 0 ? (
+                  {(!selectedStudent.enrolledCourses || selectedStudent.enrolledCourses.length === 0) ? (
                     <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center">
                       <p className="text-slate-400 text-xs font-bold">No active courses enrolled.</p>
                     </div>

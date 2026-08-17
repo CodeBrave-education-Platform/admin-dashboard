@@ -85,16 +85,42 @@ export default function BatchEditorDrawer({
         .select('*, profiles(*)')
         .eq('batch_id', batchId);
 
-      if (!enrollmentsErr && enrollmentsData) {
+      if (!enrollmentsErr && Array.isArray(enrollmentsData)) {
         const studentProfiles = enrollmentsData
           .map(e => ({
-            ...e.profiles,
+            ...(e.profiles || {}),
             enrollment_id: e.id,
             enrollment_status: e.status,
             user_id: e.user_id
           }))
           .filter(Boolean);
         setStudents(studentProfiles);
+      } else {
+        // Resilient fallback if foreign key join is unavailable
+        const { data: fallbackEnrollments } = await supabase
+          .from('batch_enrollments')
+          .select('*')
+          .eq('batch_id', batchId);
+
+        if (fallbackEnrollments && Array.isArray(fallbackEnrollments)) {
+          const userIds = fallbackEnrollments.map(e => e.user_id).filter(Boolean);
+          let profilesMap = {};
+          if (userIds.length > 0) {
+            const { data: profs } = await supabase.from('profiles').select('*').in('id', userIds);
+            if (profs && Array.isArray(profs)) {
+              profs.forEach(p => { profilesMap[p.id] = p; });
+            }
+          }
+          const studentProfiles = fallbackEnrollments.map(e => ({
+            ...(profilesMap[e.user_id] || {}),
+            enrollment_id: e.id,
+            enrollment_status: e.status,
+            user_id: e.user_id
+          }));
+          setStudents(studentProfiles);
+        } else {
+          setStudents([]);
+        }
       }
 
       // 2. Materials

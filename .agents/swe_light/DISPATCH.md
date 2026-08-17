@@ -1,6 +1,4 @@
-# Original User Request
-
-## Initial Request — 2026-08-17T14:37:24Z
+## 2026-08-17T14:37:24Z
 
 You are the SWE Light Orchestrator for this project.
 

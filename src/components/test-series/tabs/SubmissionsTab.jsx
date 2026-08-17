@@ -40,11 +40,20 @@ export default function SubmissionsTab({
           .in('exam_id', examIds)
           .order('completed_at', { ascending: false });
 
-        if (error) throw error;
-        setAttempts(data || []);
+        if (!error && Array.isArray(data)) {
+          setAttempts(data);
+        } else {
+          // Fallback to simple query if relational join constraints are absent
+          const { data: fallbackData } = await supabase
+            .from('test_attempts')
+            .select('*')
+            .in('exam_id', examIds);
+
+          setAttempts(fallbackData || []);
+        }
       } catch (err) {
         console.warn('[Submissions Tab] Error fetching attempts:', err.message);
-        showToast('Failed to load submission gradebook', 'error');
+        setAttempts([]);
       } finally {
         setLoading(false);
       }

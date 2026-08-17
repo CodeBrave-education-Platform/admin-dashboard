@@ -23,7 +23,27 @@ export default function QuestionBankClient({ user }) {
   useEffect(() => {
     const fetchQuestions = async () => {
       const { data, error } = await supabase.from('questions').select('*').order('created_at', { ascending: false })
-      if (data) setQuestions(data)
+      if (data && Array.isArray(data)) {
+        const normalized = data.map(q => ({
+          ...q,
+          id: q.id,
+          subject: q.subject || 'Physics',
+          topic: q.topic || q.sub_topic || 'General',
+          sub_topic: q.sub_topic || q.topic || 'General',
+          formatType: q.formatType || q.format_type || 'single_mcq',
+          format_type: q.format_type || q.formatType || 'single_mcq',
+          difficulty: q.difficulty || 'MEDIUM',
+          questionText: q.questionText || q.content || '',
+          content: q.content || q.questionText || '',
+          diagramUrl: q.diagramUrl || q.diagram_url || '',
+          diagram_url: q.diagram_url || q.diagramUrl || '',
+          options: Array.isArray(q.options) ? q.options : [],
+          correctAnswer: q.correctAnswer || q.correct_answer || (q.correct_option_index !== undefined ? String(q.correct_option_index) : ''),
+          correct_answer: q.correct_answer || q.correctAnswer || '',
+          explanation: q.explanation || ''
+        }))
+        setQuestions(normalized)
+      }
     }
     fetchQuestions()
   }, [])
@@ -59,17 +79,19 @@ export default function QuestionBankClient({ user }) {
   const handleOpenAuthor = (q = null) => {
     if (q) {
       setEditingQuestion(q)
-      setFormSubject(q.subject)
-      setFormTopic(q.topic)
-      setFormFormatType(q.formatType)
-      setFormDifficulty(q.difficulty)
-      setFormQuestionText(q.questionText)
-      setFormDiagramUrl(q.diagramUrl || '')
-      setFormOptionA(q.options[0] || '')
-      setFormOptionB(q.options[1] || '')
-      setFormOptionC(q.options[2] || '')
-      setFormOptionD(q.options[3] || '')
-      setFormCorrectAnswer(Array.isArray(q.correctAnswer) ? q.correctAnswer.join(', ') : q.correctAnswer)
+      setFormSubject(q.subject || 'Physics')
+      setFormTopic(q.topic || q.sub_topic || 'General')
+      setFormFormatType(q.formatType || q.format_type || 'single_mcq')
+      setFormDifficulty(q.difficulty || 'MEDIUM')
+      setFormQuestionText(q.questionText || q.content || '')
+      setFormDiagramUrl(q.diagramUrl || q.diagram_url || '')
+      const opts = Array.isArray(q.options) ? q.options : []
+      setFormOptionA(opts[0] || '')
+      setFormOptionB(opts[1] || '')
+      setFormOptionC(opts[2] || '')
+      setFormOptionD(opts[3] || '')
+      const ans = q.correctAnswer || q.correct_answer || ''
+      setFormCorrectAnswer(Array.isArray(ans) ? ans.join(', ') : String(ans))
       setFormExplanation(q.explanation || '')
     } else {
       setEditingQuestion(null)
@@ -97,13 +119,18 @@ export default function QuestionBankClient({ user }) {
       id: editingQuestion ? editingQuestion.id : `qb-${Date.now()}`,
       subject: formSubject,
       topic: formTopic.trim() || 'General',
+      sub_topic: formTopic.trim() || 'General',
       formatType: formFormatType,
+      format_type: formFormatType,
       difficulty: formDifficulty,
       questionText: formQuestionText.trim(),
-      diagramUrl: formDiagramUrl.trim(),
+      content: formQuestionText.trim(),
+      diagramUrl: formDiagramUrl.trim() || null,
+      diagram_url: formDiagramUrl.trim() || null,
       options: formFormatType === 'numerical' ? [] : [formOptionA, formOptionB, formOptionC, formOptionD].filter(Boolean),
       correctAnswer: formCorrectAnswer.trim(),
-      explanation: formExplanation.trim()
+      correct_answer: formCorrectAnswer.trim(),
+      explanation: formExplanation.trim() || null
     }
 
     const saveToDb = async () => {
@@ -111,8 +138,10 @@ export default function QuestionBankClient({ user }) {
         await supabase.from('questions').update(newQ).eq('id', editingQuestion.id)
         setQuestions(questions.map(q => q.id === editingQuestion.id ? newQ : q))
       } else {
-        await supabase.from('questions').insert([newQ])
-        setQuestions([newQ, ...questions])
+        const payload = { ...newQ }
+        delete payload.id
+        const { data, error } = await supabase.from('questions').insert([payload]).select().single()
+        setQuestions([data || newQ, ...questions])
       }
     }
     saveToDb()
@@ -197,12 +226,14 @@ export default function QuestionBankClient({ user }) {
   }
 
   const filteredQuestions = questions.filter(q => {
-    const matchesSubject = selectedSubject === 'ALL' || q.subject.toUpperCase() === selectedSubject
-    const matchesFormat = selectedFormat === 'ALL' || q.formatType === selectedFormat
+    const subj = String(q.subject || '').toUpperCase()
+    const matchesSubject = selectedSubject === 'ALL' || subj === selectedSubject
+    const format = q.formatType || q.format_type || 'single_mcq'
+    const matchesFormat = selectedFormat === 'ALL' || format === selectedFormat
     const term = searchQuery.trim().toLowerCase()
-    const matchesSearch = !term || 
-      q.questionText.toLowerCase().includes(term) ||
-      q.topic.toLowerCase().includes(term)
+    const text = String(q.questionText || q.content || '').toLowerCase()
+    const topic = String(q.topic || q.sub_topic || '').toLowerCase()
+    const matchesSearch = !term || text.includes(term) || topic.includes(term)
 
     return matchesSubject && matchesFormat && matchesSearch
   })
@@ -280,24 +311,26 @@ export default function QuestionBankClient({ user }) {
             No questions found matching your filter criteria.
           </div>
         ) : (
-          filteredQuestions.map((q, idx) => (
-            <div key={q.id} className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm space-y-4 hover:border-slate-300 transition">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-black rounded-lg uppercase">
-                    Q{idx + 1} • {q.subject}
-                  </span>
-                  <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold rounded-lg uppercase">
-                    {q.topic}
-                  </span>
-                  <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase ${
-                    q.formatType === 'numerical' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                    q.formatType === 'multi_mcq' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                    'bg-teal-50 text-teal-700 border-teal-200'
-                  }`}>
-                    {q.formatType.replace('_', ' ')}
-                  </span>
-                </div>
+          filteredQuestions.map((q, idx) => {
+            const format = q.formatType || q.format_type || 'single_mcq'
+            return (
+              <div key={q.id} className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm space-y-4 hover:border-slate-300 transition">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-black rounded-lg uppercase">
+                      Q{idx + 1} • {q.subject || 'General'}
+                    </span>
+                    <span className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-200 text-[10px] font-bold rounded-lg uppercase">
+                      {q.topic || q.sub_topic || 'General'}
+                    </span>
+                    <span className={`px-2.5 py-1 text-[10px] font-black rounded-lg border uppercase ${
+                      format === 'numerical' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      format === 'multi_mcq' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                      'bg-teal-50 text-teal-700 border-teal-200'
+                    }`}>
+                      {String(format).replace('_', ' ')}
+                    </span>
+                  </div>
 
                 <div className="flex items-center gap-2">
                   <button
@@ -350,7 +383,8 @@ export default function QuestionBankClient({ user }) {
                 {q.explanation && <p className="text-[11px] text-emerald-700">Explanation: {q.explanation}</p>}
               </div>
             </div>
-          ))
+          );
+        })
         )}
       </div>
 

@@ -63,8 +63,17 @@ export default function LiveTelemetryTab({
         .eq('exam_id', activeExamId)
         .order('completed_at', { ascending: false });
 
-      if (!dbErr && dbAttempts) {
+      if (!dbErr && Array.isArray(dbAttempts)) {
         setAttemptsList(dbAttempts);
+      } else {
+        const { data: fallbackAttempts } = await supabase
+          .from('test_attempts')
+          .select('*')
+          .eq('exam_id', activeExamId);
+
+        if (fallbackAttempts) {
+          setAttemptsList(fallbackAttempts);
+        }
       }
     } catch (err) {
       console.warn('[Telemetry Tab] Query failed:', err.message);

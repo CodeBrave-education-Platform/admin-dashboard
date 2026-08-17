@@ -1,31 +1,35 @@
-# BRIEFING — 2026-08-17T10:15:00Z
+# BRIEFING — 2026-08-17T15:23:10Z
 
 ## Mission
-Monitor orchestration, coordinate victory audit, and verify acceptance criteria for Batches and Test Series UI redesign.
+Coordinate and monitor the SWE Light execution for admin dashboard UI schema resilience, Supabase SQL migration script, and batch registry loading fix.
 
 ## 🔒 My Identity
 - Archetype: sentinel
 - Working directory: D:\admin dashboard\.agents\sentinel
-- Orchestrator: b02a1018-39dd-406e-a243-757ed0d8e971 (completed)
-- Victory Auditor: 46bcc960-ca52-4d07-a321-be3d820e9bae (completed)
+- Orchestrator: 7af4767b-437d-406d-b0ef-70d049df0774 (completed)
+- Victory Auditor: 5a9a8031-13d0-4317-848a-de664b3d9cf0 (completed)
 
 ## 🔒 Key Constraints
 - No technical decisions — relay only
 - Victory Audit is MANDATORY before reporting completion
-- Keep context ultra-light; do not write code or make technical decisions
+- Audit is blocking upon victory claim
 
 ## User Context
-- **Last user request**: Redesign "Batches" and "Test Series" sections to match the best-in-class architecture of Courses (TanStack Data Grid, omnibar filtering, Framer Motion slide-out drawers, modular component teardown).
+- **Last user request**: Audit admin dashboard UI code against Supabase database schemas to fix UI crashes (remove/map missing columns like thumbnail_url, fix cohort batches registry error, resolve /admin/students crash, create supabase_schema_migration.sql, ensure npm run build succeeds).
 - **Pending clarifications**: none
 - **Delivered results**:
-  - Batches UI Redesign (`src/app/batches/page.js`, `src/components/batches/*`)
-  - Test Series UI Redesign (`src/app/admin/test-series/page.js`, `src/components/test-series/*`)
-  - Test Suites (`npm test`, 66/66 assertions passing)
-  - Next.js Turbopack production build (`npm run build`, 0 errors, 16/16 static pages)
-  - Independent Victory Audit confirmed (VICTORY CONFIRMED)
+  - `supabase_schema_migration.sql` created at project root (545 lines, 20 idempotent DDL sections).
+  - Resolved fatal TanStack Table unmount crash on `/admin/students` via `@tanstack/react-table/legacy` adapter and null-safe property mappings.
+  - Resolved "Failed to load cohort batches registry" in `/batches` with resilient two-tier data fetching and safe in-memory sorting.
+  - Added robust schema fallback handling across `/admin/test-series`, `/batches`, `/admin/students`, `/admin/invoices`, and `/admin/questions`.
+  - Next.js production build (`npm run build`) succeeded with exit code 0 across all 23 routes.
+  - Test suites passing (66/66 unit/integration assertions, 25/25 adversarial assertions).
+  - Independent Victory Audit confirmed (VICTORY CONFIRMED).
 
 ## Project Status
 - **Phase**: complete
+- **Route**: SWE Light (teamwork_preview_swe)
+- **Verdict**: VICTORY CONFIRMED
 
 ## Victory Audit Status
 - **Triggered**: yes
@@ -34,7 +38,8 @@ Monitor orchestration, coordinate victory audit, and verify acceptance criteria 
 
 ## Artifact Index
 - D:\admin dashboard\.agents\ORIGINAL_REQUEST.md — Authoritative record of user requests
-- D:\admin dashboard\.agents\orchestrator_batches_testseries\handoff.md — Orchestrator handoff report
-- D:\admin dashboard\.agents\victory_auditor_batches_testseries\handoff.md — Victory Auditor handoff report
-- D:\admin dashboard\PROJECT.md — Global architecture and requirements specification
-- D:\admin dashboard\TEST_READY.md — Test infrastructure and coverage specification
+- D:\admin dashboard\.agents\sentinel\BRIEFING.md — Sentinel persistent briefing
+- D:\admin dashboard\.agents\sentinel\handoff.md — Sentinel handoff report
+- D:\admin dashboard\.agents\swe_light\handoff.md — SWE Light Orchestrator handoff report
+- D:\admin dashboard\.agents\sentinel_victory_auditor\handoff.md — Sentinel Victory Auditor handoff report
+- D:\admin dashboard\supabase_schema_migration.sql — Comprehensive SQL schema migration script

@@ -109,6 +109,7 @@ const parseRosterText = (text) => {
   if (!text) return [];
   const lines = text.split('\n');
   const roster = [];
+  const seenEmails = new Set();
   let tempId = 1;
   const emailRegex = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
 
@@ -120,9 +121,13 @@ const parseRosterText = (text) => {
     const emailMatch = trimmed.match(emailRegex);
     if (emailMatch) {
       const email = emailMatch[0].toLowerCase();
+      if (seenEmails.has(email)) continue;
+      seenEmails.add(email);
+
       let namePart = trimmed.replace(email, '');
       const phoneRegex = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/g;
       namePart = namePart.replace(phoneRegex, '');
+      namePart = namePart.replace(/\b(neet|jee|foundation|medical|engineering|class|batch|stream)\b/gi, ' ');
       namePart = namePart.replace(/[,;:\(\)\[\]\-]+/g, ' ');
       let name = namePart.replace(/\s+/g, ' ').trim();
 

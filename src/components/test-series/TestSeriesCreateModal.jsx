@@ -43,6 +43,7 @@ export default function TestSeriesCreateModal({
         title: title.trim(),
         target_exam_tag: targetTag.trim(),
         thumbnail_url: thumbnailUrl.trim() || 'https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&w=800&q=80',
+        description: description.trim() || null,
         test_distribution: {
           chapter_drills: parseInt(drillsCount) || 0,
           full_mocks: parseInt(mocksCount) || 0,
@@ -53,7 +54,8 @@ export default function TestSeriesCreateModal({
           price: isPremium ? (parseFloat(price) || 0) : 0,
           original_price: isPremium && originalPrice ? (parseFloat(originalPrice) || 0) : null
         },
-        total_tests_count: 0
+        total_tests_count: 0,
+        is_active: true
       };
 
       const { data, error } = await supabase

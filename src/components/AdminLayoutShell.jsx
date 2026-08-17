@@ -101,11 +101,11 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed 
               <div className="px-3.5 py-2 text-[10px] text-slate-400 italic">No courses registered</div>
             ) : (
               courses.map(c => {
-                const isActive = pathname === '/admin/courses' && activeItemId === c.id;
+                const isActive = (pathname === '/courses' || pathname === '/admin/courses') && activeItemId === c.id;
                 return (
                   <Link
                     key={c.id}
-                    href={`/admin/courses?id=${c.id}`}
+                    href={`/courses?id=${c.id}`}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition-all select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
                       isActive
                         ? 'bg-blue-50/80 text-blue-700 shadow-sm border-l-2 border-blue-500'
@@ -138,11 +138,11 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed 
               <div className="px-3.5 py-2 text-[10px] text-slate-400 italic">No batches registered</div>
             ) : (
               batches.map(b => {
-                const isActive = pathname === '/admin/courses' && activeItemId === b.id;
+                const isActive = pathname === '/batches' && activeItemId === b.id;
                 return (
                   <Link
                     key={b.id}
-                    href={`/admin/courses?id=${b.id}`}
+                    href={`/batches?id=${b.id}`}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                       isActive
                         ? 'bg-emerald-50 text-emerald-700 font-bold shadow-2xs border-l-2 border-emerald-600'
