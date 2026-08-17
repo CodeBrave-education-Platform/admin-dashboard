@@ -53,8 +53,7 @@ export default function TestSeriesCreateModal({
           price: isPremium ? (parseFloat(price) || 0) : 0,
           original_price: isPremium && originalPrice ? (parseFloat(originalPrice) || 0) : null
         },
-        total_tests_count: 0,
-        is_active: true
+        total_tests_count: 0
       };
 
       const { data, error } = await supabase

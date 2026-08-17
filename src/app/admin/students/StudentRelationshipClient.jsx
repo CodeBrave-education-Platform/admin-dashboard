@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { 
-  useTable, createCoreRowModel, createFilteredRowModel, createPaginatedRowModel,
+  useReactTable, createCoreRowModel, createFilteredRowModel, createPaginatedRowModel,
   createSortedRowModel, flexRender, createColumnHelper
 } from '@tanstack/react-table'
 import { 
@@ -206,7 +206,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
     })
   ], [students])
 
-  const table = useTable({
+  const table = useReactTable({
     data: students,
     columns,
     state: {
