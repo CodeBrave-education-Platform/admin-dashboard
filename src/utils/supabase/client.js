@@ -1,7 +1,11 @@
 import { createBrowserClient } from '@supabase/ssr'
 
-export function createClient() {
+let browserClient = null;
 
+export function createClient() {
+  if (typeof window !== 'undefined' && browserClient) {
+    return browserClient;
+  }
 
   const cookieOptions = {}
   if (typeof window !== 'undefined') {
@@ -24,6 +28,9 @@ export function createClient() {
     }
   )
 
+  if (typeof window !== 'undefined') {
+    browserClient = client;
+  }
 
   return client
 }

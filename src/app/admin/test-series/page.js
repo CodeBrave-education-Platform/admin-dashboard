@@ -13,7 +13,7 @@ import TestSeriesEditorDrawer from '@/components/test-series/TestSeriesEditorDra
 import TestSeriesCreateModal from '@/components/test-series/TestSeriesCreateModal';
 
 function TestSeriesManagementContent() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();

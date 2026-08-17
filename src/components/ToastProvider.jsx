@@ -10,21 +10,23 @@ let nextToastId = 0
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([])
 
-  const addToast = (message, type = 'success', duration = 4000) => {
+  const removeToast = React.useCallback((id) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
+
+  const addToast = React.useCallback((message, type = 'success', duration = 4000) => {
     const id = `toast_${nextToastId++}`
     setToasts(prev => [...prev, { id, message, type }])
 
     setTimeout(() => {
       removeToast(id)
     }, duration)
-  }
+  }, [removeToast])
 
-  const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }
+  const contextValue = React.useMemo(() => ({ showToast: addToast }), [addToast])
 
   return (
-    <ToastContext.Provider value={{ showToast: addToast }}>
+    <ToastContext.Provider value={contextValue}>
       {children}
 
       {/* Floating Toast Notification Container */}

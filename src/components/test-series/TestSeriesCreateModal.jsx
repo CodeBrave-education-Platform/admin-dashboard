@@ -42,7 +42,6 @@ export default function TestSeriesCreateModal({
       const payload = {
         title: title.trim(),
         target_exam_tag: targetTag.trim(),
-        description: description.trim() || 'Comprehensive NTA proctored CBT test series package.',
         thumbnail_url: thumbnailUrl.trim() || 'https://images.unsplash.com/photo-1606326608606-aa0b62935f2b?auto=format&fit=crop&w=800&q=80',
         test_distribution: {
           chapter_drills: parseInt(drillsCount) || 0,

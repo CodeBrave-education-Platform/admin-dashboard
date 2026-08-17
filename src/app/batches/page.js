@@ -15,7 +15,7 @@ import BatchRosterImportModal from '@/components/batches/BatchRosterImportModal'
 import StudentTelemetryModal from '@/components/batches/StudentTelemetryModal';
 
 function BatchesManagementContent() {
-  const supabase = createClient();
+  const supabase = React.useMemo(() => createClient(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
