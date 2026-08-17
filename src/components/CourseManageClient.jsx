@@ -1766,6 +1766,12 @@ export default function CourseManageClient({
     setIsPostingReply(true);
 
     try {
+      const { data: realProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+
       const { data, error } = await supabase
         .from('lesson_doubts')
         .insert([{
@@ -1780,15 +1786,12 @@ export default function CourseManageClient({
 
       if (error) throw error;
 
-      const mockReply = {
+      const appendedReply = {
         ...data,
-        profiles: {
-          full_name: currentUser.user_metadata?.full_name || currentUser.email.split('@')[0] || 'Instructor',
-          email: currentUser.email
-        }
+        profiles: realProfile || { full_name: currentUser.email?.split('@')[0], email: currentUser.email }
       };
 
-      setDoubts(prev => [...prev, mockReply]);
+      setDoubts(prev => [...prev, appendedReply]);
       setReplyContent('');
       triggerToast('Reply posted successfully!');
     } catch (err) {
