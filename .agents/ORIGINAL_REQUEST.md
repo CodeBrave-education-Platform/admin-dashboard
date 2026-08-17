@@ -53,3 +53,37 @@ The frontend (`UniversalPdfImporterModal.jsx`) must be updated to convert the se
 ### Frontend Logic
 - [ ] Agent-as-Judge: A reviewer agent must inspect `UniversalPdfImporterModal.jsx` and confirm it correctly reads the file as a data URL/base64 and appends it to the FormData payload without crashing.
 
+
+## 2026-08-17T05:49:57Z
+
+# Teamwork Project Prompt — Draft
+
+> Status: Launched
+> Goal: Craft prompt → get user approval → delegate to teamwork_preview
+> Requested team: Full Team
+
+Redesign the Course Management UI (`src/app/courses/page.js`) into a best-in-class, flawless, modern experience. Tear down the complex monolithic dropdown-based legacy interface and replace it with a hyper-optimized TanStack Data Grid and slide-out Drawer pattern, keeping aesthetics and speed at a premium standard. Use a very large team of agents to ensure the UI, logic, and integrations are flawless.
+
+Working directory: D:\admin dashboard
+Integrity mode: demo
+
+## Requirements
+
+### R1. UI Modernization & Architecture
+Replace the current dropdown-based empty state with a rich Data Grid (using TanStack Table) showing all courses. When a course is clicked, open a slide-out drawer (`CourseEditorDrawer.jsx`) for editing syllabus, files, and exams, removing the need for a massive blank workspace.
+
+### R2. Component Teardown
+Dismantle the 900-line monolithic `src/app/courses/page.js` file into smaller, focused components (e.g., `CourseGrid.jsx`, `CourseEditorDrawer.jsx`). Maintain the existing PDF/Docx syllabus import logic but move it into the new component architecture.
+
+### R3. Premium UX/Aesthetics
+The redesign must feel premium, using smooth animations (Framer Motion is permitted) and meticulous typography/spacing. Avoid cliché dashboard tropes. Ensure fluid responsiveness.
+
+## Acceptance Criteria
+
+### Functionality & Polish
+- [ ] The courses page loads without React hydration or runtime errors.
+- [ ] A Data Grid correctly displays existing courses from the Supabase database.
+- [ ] Clicking a course opens a slide-out drawer containing its syllabus details.
+- [ ] The 900+ line `page.js` is successfully split into at least 3 distinct component files.
+- [ ] Visual design uses harmonious colors, precise padding, and responsive layout.
+

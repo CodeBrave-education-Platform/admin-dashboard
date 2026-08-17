@@ -1,19 +1,24 @@
-## 2026-08-15T13:33:49Z
-You are Challenger 1 (Parser Stress & Edge Case Challenger).
-Your working directory is: D:\admin dashboard\.agents\challenger_1
-Your parent is the Project Orchestrator (Conversation ID: 3c1e0b3f-6e58-45e8-8e52-606049829221).
+## 2026-08-17T06:03:14Z
+You are Challenger 1 on the Course Management UI Redesign team.
+Working directory: D:\admin dashboard\.agents\challenger_1
+Project root: D:\admin dashboard
+Original Request reference: D:\admin dashboard\.agents\ORIGINAL_REQUEST.md
+Project blueprint reference: D:\admin dashboard\PROJECT.md
 
-MANDATORY: Read `D:\admin dashboard\.agents\ORIGINAL_REQUEST.md`, `D:\admin dashboard\PROJECT.md`, and inspect `D:\admin dashboard\src\app\api\admin\ai\parse-pdf\route.js`.
+TASK OBJECTIVE:
+Empirically stress-test and challenge the CourseGrid and Drawer state management:
+1. Write and execute automated validation/stress scripts (e.g. Node/Jest/Vitest/Playwright or standalone test scripts in node) to test:
+   - TanStack Table sorting by multiple columns (title, duration, display_order, created_at)
+   - Omnibar global text search filtering
+   - Audience level filtering (ALL, FOUNDATION, MAINS, ADVANCED)
+   - Status filtering (ALL, ACTIVE, INACTIVE)
+   - Pagination with large datasets (e.g., 50+ mock courses)
+   - URL sync resilience (invalid IDs, missing IDs, null states)
+2. Document test execution, test inputs, outputs, and edge cases tested.
+3. Write your findings to `D:\admin dashboard\.agents\challenger_1\challenge.md` and handoff report to `D:\admin dashboard\.agents\challenger_1\handoff.md`. State your verdict clearly: APPROVE or REQUEST_CHANGES.
+4. Send a message to the parent orchestrator when complete.
 
-Your Mission:
-1. Empirically challenge the parser in `src/app/api/admin/ai/parse-pdf/route.js` with an adversarial test harness created in your working directory.
-2. Generate 10+ complex, dirty, and unconventional edge case inputs:
-   - High question numbers (`Q.100`, `Question 150:`, `[99]`)
-   - Unconventional options: `(i)`, `(ii)`, `(iii)`, `(iv)`, `a)`, `b)`, `c)`, `d)`, `A]`, `B]`, `C]`, `D]`
-   - Mathematical expressions with integrals, square roots, fractions ($\int_0^1 x dx$, $\sqrt{x^2+y^2}$)
-   - Multiple answer key phrasings (`Answer is: (c)`, `KEY - [B]`, `Correct option is 3`)
-   - Questions with multi-paragraph explanations and derivations
-   - Extreme whitespace, missing newlines, tab characters, and OCR artifacts
-3. Execute your stress test harness using Node.js and analyze parser resilience and accuracy.
-4. Record your findings, test cases, and explicit verdict (`APPROVE` or `REQUEST_CHANGES`) in `D:\admin dashboard\.agents\challenger_1\handoff.md`.
-5. Send a message to your parent when complete citing your verdict and handoff path.
+## 2026-08-17T06:10:08Z
+**Context**: Course Management UI Redesign - Challenger 1 status check
+**Content**: Please report your progress on the CourseGrid & Drawer state empirical stress testing.
+**Action**: Send your findings and verdict once ready.

@@ -1,76 +1,72 @@
-# Project: Google Gemini PDF Parser Integration
+# Project: Course Management UI Redesign
 
 ## Architecture
-- **Framework**: Next.js (App Router) with React 18, Tailwind CSS, Lucide icons, KaTeX LaTeX math rendering.
-- **AI SDK**: `@google/genai` (v2.16.0) using modern `GoogleGenAI` client with `gemini-2.5-flash` model.
-- **Multimodal Payload**: Direct PDF binary transmission via `inlineData: { mimeType: 'application/pdf', data: '<base64>' }` bypassing client-side text extraction.
-- **Data Flow**:
-  1. User selects PDF file or pastes raw text in `UniversalPdfImporterModal.jsx`.
-  2. Browser reads PDF as Base64 Data URL via native `FileReader.readAsDataURL()`.
-  3. `FormData` payload containing `pdfBase64`, `fileName`, `mimeType`, and `rawText` is sent via HTTP POST to `/api/admin/ai/parse-pdf`.
-  4. Backend route initializes `@google/genai`, extracts clean base64 data, and calls `ai.models.generateContent` with strict system instruction and `responseMimeType: 'application/json'`.
-  5. JSON response is validated, transformed into canonical question objects, and returned to client.
-  6. Frontend modal displays questions in interactive review grid with KaTeX math rendering, allowing edits before final ingestion into Question Bank or Test Compiler.
+Modernized Next.js client-side course management dashboard decomposing the legacy 913-line `src/app/courses/page.js` monolith into a modular, high-performance TanStack Table Data Grid and Framer Motion slide-out drawer architecture.
+
+### Core Data Flow & State Architecture
+1. **`src/app/courses/page.js` (Page Controller)**:
+   - Fetches courses list from Supabase with nested counts for `lessons`, `assessments`, `course_files`.
+   - Manages global state: selected course for drawer, search/filter criteria, active modals (`CourseCreateModal`, `SyllabusImportModal`).
+   - Syncs selected course ID bidirectionally with URL search params (`?id=<course_id>`), handling browser back/forward navigation.
+   - Handles optimistic status updates and Redis cache invalidation (`invalidateCache('catalog', courseId)` and `invalidateCache('course', courseId)`).
+2. **`src/components/courses/CourseGrid.jsx` (TanStack Table Data Grid)**:
+   - Implements `@tanstack/react-table` for multi-column sorting (including `created_at`, `duration`, `display_order`), multi-field omnibar filtering (`title`, `subject`, `description`, `level`), audience level filter pills (`ALL`, `FOUNDATION`, `MAINS`, `ADVANCED`), and status filter pills (`ALL`, `ACTIVE`, `INACTIVE`).
+   - Rich column schema: Thumbnail & Title, Target Audience Tag, Lessons & Duration metrics, Assessments count, Status toggle pill (`is_active`), Quick actions (Open Drawer, Toggle Active, Delete).
+   - Filtered row model fallback for CSV export and automatic pagination index reset on filter switches.
+3. **`src/components/courses/CourseEditorDrawer.jsx` (Slide-out Management Drawer)**:
+   - AnimatePresence & Framer Motion right slide-out panel with smooth spring physics.
+   - Tabbed panels:
+     - **Overview / Details**: Course metadata, slug, audience, status, thumbnail URL, description.
+     - **Syllabus / Curriculum**: Tree/List lesson manager with reordering via global index lookup, inline editing, duration, and free preview toggle (`SyllabusTreeEditor.jsx`).
+     - **Files & Resources**: Document & PDF resource uploader to Supabase storage with file list (`CourseFilesManager.jsx`).
+     - **Exams & Assessments**: Linked assessments and quiz management.
+     - **Doubts & Live Sessions**: Doubt resolution view & live scheduling.
+4. **`src/components/courses/CourseCreateModal.jsx` (Course Blueprint Modal)**:
+   - Modal for creating new course blueprints with auto-slug generation and instant save.
+5. **`src/components/courses/SyllabusImportModal.jsx` (Universal Syllabus Importer)**:
+   - Dynamic client-side CDN loaders for `pdfjs-dist` and `mammoth.js`.
+   - Spatial 2D layout parser and enhanced regex extractor handling compound (`2h 30m`) and decimal (`1.5 hours`) durations while preserving textbook chapter headers.
+   - Interactive staging grid for verifying, reordering, and editing parsed topics before batch commit.
+
+---
 
 ## Feature Inventory
-| # | Feature | Description | Milestone | Source |
-|---|---------|-------------|-----------|--------|
-| 1 | Native Gemini PDF Parsing | Backend route receives `pdfBase64` and sends to `@google/genai` via `inlineData` with `mimeType: 'application/pdf'` | M1 | ORIGINAL_REQUEST R1 |
-| 2 | Structured JSON Output & Schema | Strict system prompt extracting `single_mcq`, `multi_mcq`, `numerical`, `assertion_reason`, `matrix_match` questions, options, answers, and explanations | M1 | ORIGINAL_REQUEST R2 |
-| 3 | Resilient Fallback Engine | Graceful fallback to deterministic regex parser for text-only inputs or when Gemini API key is not configured | M1 | Codebase Survey |
-| 4 | Frontend Base64 Ingestion | `UniversalPdfImporterModal.jsx` reads PDF file via `FileReader.readAsDataURL` and appends `pdfBase64` to FormData without client-side text extraction crashes | M2 | ORIGINAL_REQUEST R3 |
-| 5 | Clean Error Handling & Review Flow | Modal shows explicit user toasts on failure, removes misleading silent mock question injection, and preserves KaTeX review grid | M2 | Codebase Survey |
-| 6 | Programmatic Payload Verification | `test-gemini-payload.js` node script mocks `@google/genai`, invokes route logic with dummy base64 PDF, and asserts `generateContent` payload structure and JSON schema instruction | M3 | ORIGINAL_REQUEST AC1 |
-| 7 | Dual-Track E2E & Integrity Verification | Adversarial review, challenger verification, and zero-tolerance forensic audit | M4 | Project Pattern & AC2 |
+| # | Feature | Description | Milestone | Source | Status |
+|---|---------|-------------|-----------|--------|--------|
+| 1 | TanStack Table Data Grid | Modern table showing all courses with sorting, search, and audience filtering | M1 | Survey | DONE |
+| 2 | Component Teardown & Modularity | Split monolithic `page.js` into 6 modular component files | M1 | Survey | DONE |
+| 3 | Slide-out Course Editor Drawer | Smooth Framer Motion drawer for editing course details and sub-resources | M2 | Survey | DONE |
+| 4 | Interactive Curriculum & Lesson Manager | Inline lesson CRUD, reordering, duration tracking, and free preview toggle | M2 | Survey | DONE |
+| 5 | Course Creation Modal | Fast blueprint creation modal with validation and auto-slug | M1 | Survey | DONE |
+| 6 | Syllabus Document Importer Modal | PDF/Docx spatial extraction with editable staging review grid | M2 | Survey | DONE |
+| 7 | Course Files & Resources Manager | Storage upload and management for reference files | M2 | Survey | DONE |
+| 8 | Assessments & Doubts Integration | Tabbed panels for exams and student doubt metrics | M2 | Survey | DONE |
+| 9 | URL Search Param State Sync | URL query `?id=...` synchronization for direct navigation and drawer persistence | M1 | Survey | DONE |
+| 10 | Cache Invalidation & Data Integrity | Redis cache invalidation and Supabase transaction integrity | M2 | Survey | DONE |
+
+---
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Backend Gemini Route | `src/app/api/admin/ai/parse-pdf/route.js` | none | DONE |
-| M2 | Frontend Base64 Importer | `src/components/UniversalPdfImporterModal.jsx` | M1 | DONE |
-| M3 | Programmatic Test Suite | `test-gemini-payload.js`, `TEST_INFRA.md`, `TEST_READY.md` | M1, M2 | DONE |
-| M4 | Adversarial Review & Forensic Audit | Reviewers, Challengers, Forensic Auditor verification | M1, M2, M3 | DONE |
+| M1 | Core Architecture & Data Grid | Create `CourseGrid.jsx`, `CourseCreateModal.jsx`, refactor `src/app/courses/page.js` to TanStack Data Grid layout with search/filtering | none | DONE |
+| M2 | Course Editor Drawer & Import Subsystem | Create `CourseEditorDrawer.jsx`, `SyllabusTreeEditor.jsx`, `SyllabusImportModal.jsx`, and course resource tabs | M1 | DONE |
+| M3 | Comprehensive Verification & Gate Check | End-to-end testing, review by reviewers, challenger verification, forensic integrity audit | M2 | DONE |
 
-## Interface Contracts
-
-### Backend API Route: `POST /api/admin/ai/parse-pdf`
-- **Request (FormData or JSON)**:
-  - `pdfBase64` (string, optional): Base64 Data URL or raw base64 string of PDF.
-  - `rawText` (string, optional): Raw extracted or pasted text string.
-  - `fileName` (string, optional): Name of uploaded PDF file.
-  - `parserType` (string, optional): `'gemini_ai_multimodal'` | `'auto'` | `'regex'`.
-- **Response (JSON)**:
-  ```json
-  {
-    "success": true,
-    "parserType": "gemini_ai_multimodal",
-    "model": "gemini-2.5-flash",
-    "questions_count": 5,
-    "questions": [
-      {
-        "id": "pdf-q-1-1723730000000",
-        "subject": "Physics",
-        "sub_topic": "Kinematics",
-        "difficulty": "MEDIUM",
-        "formatType": "single_mcq",
-        "content": "A projectile is launched with velocity $v_0$...",
-        "diagram_url": "",
-        "options": ["$10\\text{ m/s}$", "$20\\text{ m/s}$", "$30\\text{ m/s}$", "$40\\text{ m/s}$"],
-        "correct_option_index": 1,
-        "correct_answer": "$20\\text{ m/s}$",
-        "explanation": "Using kinematic equation $v^2 = u^2 + 2as$...",
-        "marks": { "positive": 4, "negative": -1 }
-      }
-    ]
-  }
-  ```
-
-### Frontend Ingestion Contract: `UniversalPdfImporterModal.jsx` ↔ Consumers
-- Consumer callback `onConfirmIngest(questions)` receives an array of validated questions.
-- Question Bank and Test Compiler consume the returned array and map properties into application state.
+---
 
 ## Code Layout
-- `src/app/api/admin/ai/parse-pdf/route.js` — Backend Next.js API route handling Gemini PDF ingestion and regex fallback.
-- `src/components/UniversalPdfImporterModal.jsx` — Frontend React modal handling Base64 file reading, upload, and question review.
-- `test-gemini-payload.js` — Standalone Node.js test script verifying `@google/genai` mock payload, `inlineData`, and system instructions.
-- `test-parser.js` — Existing Node.js test script verifying regex text parser fallback.
+```
+src/
+├── app/
+│   └── courses/
+│       └── page.js                          # Lean orchestrator page controller (< 300 lines)
+└── components/
+    └── courses/
+        ├── CourseGrid.jsx                   # TanStack Data Grid with search/filters/badges
+        ├── CourseEditorDrawer.jsx           # Slide-out Drawer with tabbed management panels
+        ├── CourseCreateModal.jsx            # Modal for new course blueprint creation
+        ├── SyllabusTreeEditor.jsx           # Interactive curriculum & lesson manager
+        ├── SyllabusImportModal.jsx          # PDF / DOCX parser & staging grid
+        └── CourseFilesManager.jsx           # Course reference files & storage uploader
+```

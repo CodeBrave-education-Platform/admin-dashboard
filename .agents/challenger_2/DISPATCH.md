@@ -1,20 +1,19 @@
-# DISPATCH LOG
-
-## 2026-08-15T13:33:49Z
+## 2026-08-17T06:03:14Z
 <USER_REQUEST>
-You are Challenger 2 (Performance & High-Volume Challenger).
-Your working directory is: D:\admin dashboard\.agents\challenger_2
-Your parent is the Project Orchestrator (Conversation ID: 3c1e0b3f-6e58-45e8-8e52-606049829221).
+You are Challenger 2 on the Course Management UI Redesign team.
+Working directory: D:\admin dashboard\.agents\challenger_2
+Project root: D:\admin dashboard
+Original Request reference: D:\admin dashboard\.agents\ORIGINAL_REQUEST.md
+Project blueprint reference: D:\admin dashboard\PROJECT.md
 
-MANDATORY: Read `D:\admin dashboard\.agents\ORIGINAL_REQUEST.md`, `D:\admin dashboard\PROJECT.md`, and inspect `D:\admin dashboard\src\app\api\admin\ai\parse-pdf\route.js`.
-
-Your Mission:
-1. Empirically challenge the performance, throughput, memory safety, and latency of `src/app/api/admin/ai/parse-pdf/route.js`.
-2. Construct a benchmark test script in your working directory:
-   - Benchmark a full 100-question and 500-question exam document.
-   - Measure total execution time, latency per question (must be <1ms/question), peak heap memory usage (detect any RegExp memory leaks or exponential backtracking), and CPU consumption.
-   - Verify serverless timeout compliance (<100ms total processing time).
-3. Execute your performance benchmark with Node.js and record metrics.
-4. Record your findings, benchmarks, and explicit verdict (`APPROVE` or `REQUEST_CHANGES`) in `D:\admin dashboard\.agents\challenger_2\handoff.md`.
-5. Send a message to your parent when complete citing your verdict and handoff path.
+TASK OBJECTIVE:
+Empirically stress-test and challenge the Syllabus Importer and Curriculum Editor logic:
+1. Write and execute automated validation/stress scripts testing:
+   - 2D spatial layout reconstruction with noisy/multiline PDF text streams (overlapping coordinates, differing Y deltas)
+   - Regex syllabus parsing across edge-case headers, roman numerals, chapter formats, missing durations, and multi-hour conversions
+   - Staging table mutations (adding rows, deleting rows, reordering sequences, duplicate detection)
+   - Lesson tree CRUD operations, duration aggregation, free-preview toggling
+2. Document test execution, test inputs, outputs, and edge cases tested.
+3. Write your findings to `D:\admin dashboard\.agents\challenger_2\challenge.md` and handoff report to `D:\admin dashboard\.agents\challenger_2\handoff.md`. State your verdict clearly: APPROVE or REQUEST_CHANGES.
+4. Send a message to the parent orchestrator when complete.
 </USER_REQUEST>
