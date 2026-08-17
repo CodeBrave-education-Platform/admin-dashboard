@@ -76,8 +76,8 @@ export default function UniversalPdfImporterModal({
     try {
       if (selectedFile) {
         // Import pdfjs-dist (installed as npm dependency)
-        const pdfjs = await import('pdfjs-dist/build/pdf.mjs');
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).toString();
+        const pdfjs = await import('pdfjs-dist/build/pdf.js');
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.js', import.meta.url).toString();
 
         const fileArrayBuffer = await selectedFile.arrayBuffer();
         const pdfDoc = await pdfjs.getDocument({ data: fileArrayBuffer }).promise;

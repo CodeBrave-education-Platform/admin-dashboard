@@ -7,13 +7,20 @@ const nextConfig = {
   // Silence Turbopack warning when using custom webpack config in Next.js 16
   turbopack: {},
   
+  serverExternalPackages: ['pdfjs-dist'],
+  
   experimental: {
     // Prevent Next.js from loading entire index bundles for heavy libraries
     optimizePackageImports: [
       'lucide-react',
       'recharts',
       'framer-motion'
-    ]
+    ],
+    turbo: {
+      resolveAlias: {
+        canvas: false,
+      },
+    },
   },
   
   async headers() {
@@ -57,6 +64,7 @@ const nextConfig = {
         http: false,
         https: false,
         zlib: false,
+        canvas: false,
       };
     }
     
