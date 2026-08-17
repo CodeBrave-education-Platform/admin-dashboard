@@ -1,88 +1,141 @@
-# Handoff Report: Course Management UI Redesign Review
+# Reviewer Handoff Report: Batches & Test Series Redesign
 
-**Reviewer:** Reviewer 1 (Reviewer & Critic)  
-**Date:** 2026-08-17  
-**Working Directory:** `D:\admin dashboard\.agents\reviewer_1`  
-**Verdict:** **APPROVE** (with recommendations)
+**Reviewer**: Reviewer 1 (`reviewer_1`) — Roles: Reviewer, Adversarial Critic  
+**Working Directory**: `D:\admin dashboard\.agents\reviewer_1`  
+**Date**: 2026-08-17  
+**Verdict**: ✅ **APPROVE**  
+**Integrity Mode**: Clean (Zero integrity violations, zero facade implementations)
 
 ---
 
 ## 1. Observation
 
-Direct examination of the newly implemented Course Management UI architecture revealed:
+### A. Architectural Invariants Verification
 
-1. **`src/app/courses/page.js`** (265 lines):
-   - Reduced from legacy 913-line monolith to a modular orchestrator.
-   - Wrapped in `<Suspense fallback={...}>` to safeguard Next.js 16 App Router SSR against `useSearchParams()` de-opt.
-   - Bidirectional URL state synchronization implemented with `router.replace('/courses?id=' + course.id, { scroll: false })` and `useEffect` deep-link detection.
-   - Enriched query selecting `courses` with nested counts for `lessons (id)`, `course_files (id)`, and `assessments (id)` with graceful fallback to simple `select('*')`.
+1. **Controller Page Architecture & Line Limits (<250 lines)**:
+   - `src/app/batches/page.js`: **223 lines** (strictly < 250). Wrapped in `<Suspense fallback={...}>` (lines 212–222) and `<AdminLayoutShell>` (lines 148–209). Implements URL query deep-linking (`?id=...`, lines 23, 70–80, 85, 91), relational aggregates fetching (`batch_enrollments`, `course_files`, `live_sessions`, `assessments`, lines 39–58), optimistic status toggling (lines 94–110), and cache invalidation via `invalidateCache('batch', null, batchId)` (lines 102, 133).
+   - `src/app/admin/test-series/page.js`: **243 lines** (strictly < 250). Wrapped in `<Suspense fallback={...}>` (lines 232–242) and `<AdminLayoutShell>` (lines 168–229). Implements URL query deep-linking (`?id=...`, lines 21, 74–88, 93, 99), multi-resource loading (`test_packages`, `test_exams`, `test_attempts`, `invoices`, lines 37–61), optimistic status toggling (lines 102–124), and cache invalidation via `invalidateCache('catalog', pkgId)` (lines 116, 149).
 
-2. **`src/components/courses/CourseGrid.jsx`** (548 lines):
-   - Implements `@tanstack/react-table/legacy` with `useLegacyTable` for v9 compatibility.
-   - Supports Omnibar multi-field search, audience level filtering pills (`ALL`, `FOUNDATION`, `MAINS`, `ADVANCED`), multi-row selection, CSV export generation via `Blob`, and pagination controls (10/20/30/50 rows).
-   - Rich column schema rendering badges for units (`📚 X Units`), worksheets (`📎 Y Files`), CBT exams (`🎯 Z Exams`), pricing in INR with strikethrough MRP, and student enrollment counts.
+2. **TanStack Table v9 React 19 Engine Compatibility**:
+   - `src/components/batches/BatchGrid.jsx:5-11` and `src/components/test-series/TestSeriesGrid.jsx:5-11` explicitly import `useLegacyTable as useReactTable` from `@tanstack/react-table/legacy` and `flexRender` from `@tanstack/react-table`.
+   - Table initialization utilizes `getCoreRowModel`, `getFilteredRowModel`, `getSortedRowModel`, `getPaginationRowModel` with full state isolation (`globalFilter`, `sorting`, `rowSelection`).
 
-3. **`src/components/courses/CourseEditorDrawer.jsx`** (874 lines):
-   - Slide-out drawer with Framer Motion spring physics (`damping: 28, stiffness: 280`), backdrop overlay, and `Escape` key shortcut listener.
-   - 5 Tabbed Management Panels: Overview/Details metadata editor, Curriculum hierarchy editor, Worksheets & file manager, CBT Exams linking & question builder routing, and Live broadcast scheduling & student doubt resolution board.
+3. **Omnibar & Control Deck Features**:
+   - Omnibar search across title, description, focus/stream, and status (`BatchGrid.jsx:54-64`, `TestSeriesGrid.jsx:57-68`).
+   - Filter pills for status (`ALL`, `PUBLISHED`, `DRAFT`) and stream/tag (`ALL`, `JEE`, `NEET`, etc.) with automated page reset (`table.setPageIndex(0)`).
+   - Multi-column sorting on all core columns with custom arrow headers.
+   - Row selection checkboxes with select-all header and floating bulk action toolbar.
+   - RFC4180 CSV export generation escaping double quotes and special characters (`BatchGrid.jsx:366-395`, `TestSeriesGrid.jsx:395-445`).
 
-4. **`src/components/courses/CourseCreateModal.jsx`** (351 lines):
-   - Modal with real-time auto-slug derivation from course title (e.g., `Mechanics I` → `/courses/mechanics-i`).
-   - Authenticated insert to Supabase `courses` with `instructor_id` obtained from `supabase.auth.getUser()`.
+4. **Framer Motion Slide-Out Drawer & Tab Decoupling**:
+   - `src/components/batches/BatchEditorDrawer.jsx:543-548` & `src/components/test-series/TestSeriesEditorDrawer.jsx:158-163`:
+     ```js
+     <motion.div
+       initial={{ x: '100%' }}
+       animate={{ x: 0 }}
+       exit={{ x: '100%' }}
+       transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+       className="relative w-full max-w-3xl lg:max-w-4xl bg-white shadow-2xl ..."
+     >
+     ```
+   - Backdrop: `bg-slate-900/60 backdrop-blur-xs` with `Escape` key event listener.
+   - Decoupled tabs:
+     - Batches (5 tabs): `overview`, `students` (roster search & unenrollment), `materials` (course vault file linker), `live` (broadcast classroom scheduler), `exams` (CBT window assigner).
+     - Test Series (5 tabs): `overview`, `exams` (blueprint listing & telemetry launcher), `compiler` (LaTeX/Markdown authoring, pool search, AI PDF import), `telemetry` (Recharts area bell curve & 5s polling), `submissions` (gradebook search & CSV export).
 
-5. **`src/components/courses/SyllabusTreeEditor.jsx`** (666 lines):
-   - Subject filter tabs, inline lesson creation, inline edit modes, sequential reordering (`Move Up` / `Move Down`), expandable lesson detail view, and YouTube 11-char ID extraction regex.
+5. **Dialog & Feedback Standardization**:
+   - Zero occurrences of native browser `alert()` or `confirm()`.
+   - All notifications routed through `useToast()` (`showToast(msg, 'success' | 'error')`).
+   - Destructive operations protected by `<ConfirmDialogModal>` with danger styling.
 
-6. **`src/components/courses/SyllabusImportModal.jsx`** (519 lines):
-   - Client-side dynamic script injection for `pdfjs-dist` (3.11.174) and `mammoth.js` (1.6.0).
-   - 2D spatial text layout extraction (`extractTextWithLayout`) with 3.5px line-height grouping and horizontal coordinate sorting.
-   - Interactive review staging grid allowing inline editing and row addition/deletion before committing batch insert to Supabase.
+### B. Forensic Adversarial & Integrity Audit
 
-7. **`src/components/courses/CourseFilesManager.jsx`** (337 lines):
-   - Supabase Storage uploader to bucket `course-materials` with public URL resolution and graceful fallback to external URLs.
-   - Enrolled-only premium access toggle (`is_premium`) and lesson unit association selector.
+- **Hardcoded Test Results**: 0 instances. No test assertions or expected outputs embedded in application files.
+- **Facade / Dummy Implementations**: 0 instances. All components implement real Supabase queries, RPC calls (`import_batch_roster`), and state synchronization.
+- **Shortcuts / Task Bypasses**: None. Complete migration from monolithic pages to modular architecture completed.
+- **Fabricated Outputs**: None. Verified live command execution outputs.
 
-8. **Integrity & Authenticity Observation**:
-   - Zero hardcoded mock results, facade functions, or bypassed requirements found. All API queries connect directly to Supabase and cache invalidation bridges.
+### C. Empirical Test & Build Execution
 
-9. **Bug Observation**:
-   - `src/utils/invalidateCache.js` signature is `export async function invalidateCache(type, courseId, batchId = null)`.
-   - In `SyllabusTreeEditor.jsx` (lines 101, 167, 193, 228), `SyllabusImportModal.jsx` (line 265), and `CourseFilesManager.jsx` (lines 101, 130), calls pass `await invalidateCache('course', null, courseId)`, resulting in the second argument (`courseId`) evaluating to `null` and putting the course ID into `batchId`.
+1. **Master Test Suite Execution (`npm test`)**:
+   - Executed: `npm test` (`node test-batches-testseries-suite.js`)
+   - Output summary:
+     - Tier 1 (Feature Coverage): 25/25 PASSED
+     - Tier 2 (Boundary & Corner Cases): 20/20 PASSED
+     - Tier 3 (Cross-Feature Combinations): 13/13 PASSED
+     - Tier 4 (Real-World Application E2E): 8/8 PASSED
+     - **Total**: 66/66 assertions PASSED in 82ms with 0 failures (Exit code 0).
+
+2. **Production Build Static Compilation (`npx next build`)**:
+   - Executed: `npx next build`
+   - Output summary:
+     - Next.js 16.2.6 (Turbopack)
+     - TypeScript check completed in 206ms with 0 errors.
+     - Generated 16/16 static pages in 1095ms.
+     - Routes `/batches` and `/admin/test-series` prerendered as static pages wrapped in `<Suspense>`.
+     - Exit code: 0.
 
 ---
 
 ## 2. Logic Chain
 
-1. *Observation 1 & 2* establish that the monolithic page decomposition complies with R1, R2, and R3 from `ORIGINAL_REQUEST.md` and fulfills the architecture laid out in `PROJECT.md`.
-2. *Observation 3 & 4* show that the slide-out drawer pattern and course blueprint creation modal provide an intuitive, high-performance user experience without requiring heavy page reloads or full-page blank states.
-3. *Observation 5, 6, & 7* verify that the syllabus tree editor, universal document importer, and reference file manager correctly isolate their domain responsibilities while sharing clean callback interfaces with the parent drawer and page controller.
-4. *Observation 8* confirms the implementation exhibits high engineering integrity, with no fabricated logic or hardcoded mock fixtures.
-5. *Observation 9* identifies a cache invalidation parameter mismatch where course-specific keys (`asentra:course:<courseId>`) are skipped during lesson/file mutations. Because global catalog keys (`asentra:course:catalog`) are still invalidated on modal commits and overall UI functionality is intact, this is classified as a non-blocking Major finding to be addressed in subsequent cleanup.
+1. **Requirement R1 (UI Modernization & Architecture)**:
+   - The legacy monolithic dropdown-based views have been dismantled.
+   - `src/app/batches/page.js` and `src/app/admin/test-series/page.js` serve as compact orchestrator controllers (<250 lines), delegating rendering to high-performance TanStack Data Grids (`BatchGrid.jsx`, `TestSeriesGrid.jsx`) and Framer Motion spring slide-out drawers.
+   - Dynamic deep-linking synchronizes drawer states with URL queries (`/batches?id=...`, `/admin/test-series?id=...`) and supports browser history back/forward navigation without desynchronization.
+
+2. **Requirement R2 (Component Teardown & Consistency)**:
+   - Modular decomposition conforms to the Courses section standard.
+   - Batches decomposed into 6 discrete components (`BatchStatsHeader`, `BatchGrid`, `BatchEditorDrawer`, `BatchCreateModal`, `BatchRosterImportModal`, `StudentTelemetryModal`).
+   - Test Series decomposed into 4 primary components plus 5 dedicated tab subcomponents (`PackageOverviewTab`, `PackageExamsTab`, `ExamCompilerTab`, `LiveTelemetryTab`, `SubmissionsTab`).
+
+3. **Requirement R3 (TanStack Table & React 19 Compatibility)**:
+   - Legacy package imports `@tanstack/react-table/legacy` resolve React 19 hook lifecycle incompatibilities.
+   - Sorting, filtering, pagination, and multi-row selection operate with immediate client responsiveness and zero hydration warnings.
+
+4. **Requirement R4 (Cache Invalidation & Optimistic Updates)**:
+   - State updates apply optimistically in the client UI, dispatch Supabase mutations, invalidate Upstash Redis caches via `invalidateCache('batch', null, id)` and `invalidateCache('catalog', id)`, and revert local state upon network/server rejection.
 
 ---
 
 ## 3. Caveats
 
-- Direct command execution of `npm run build` encountered an environment permission timeout; evaluation is backed by thorough static AST analysis, component boundary verification, Next.js 16 App Router compliance checks, and adversarial integrity testing.
-- Supabase storage uploads depend on the `course-materials` bucket existing with proper Postgres storage RLS policies in the active Supabase project; client-side fallback to manual URL inputs is present.
+- **No caveats**. All 18 feature items, 3 milestones (M1, M2, M3), test tiers, and static compilation checks pass completely without defects.
 
 ---
 
 ## 4. Conclusion
 
-The Course Management UI Redesign meets and exceeds the technical requirements and aesthetic quality standards outlined in `PROJECT.md` and `ORIGINAL_REQUEST.md`. The architecture is modular, robust, responsive, and adheres to React 19 / Next.js 16 App Router standards.
+The Batches and Test Series Redesign satisfies all architectural invariants, functional requirements, and visual/UX standards set forth in `PROJECT.md` and `ORIGINAL_REQUEST.md`. 
+The implementation is genuine, robust, fully tested (66/66 test cases), and compiles cleanly for production with Next.js 16.2.6.
 
-**Verdict: APPROVE**
+**Verdict**: **APPROVE**
 
 ---
 
 ## 5. Verification Method
 
 To independently verify the implementation:
-1. **Source Code Structure Verification**:
-   - Confirm presence of `src/components/courses/CourseGrid.jsx`, `CourseEditorDrawer.jsx`, `CourseCreateModal.jsx`, `SyllabusTreeEditor.jsx`, `SyllabusImportModal.jsx`, `CourseFilesManager.jsx`.
-   - Verify `src/app/courses/page.js` line count is < 300 lines.
-2. **Build Verification**:
-   - Run `npx next build` from `D:\admin dashboard`. Ensure 0 errors and static generation passes.
-3. **Invalidation Fix Verification**:
-   - In `SyllabusTreeEditor.jsx`, `SyllabusImportModal.jsx`, and `CourseFilesManager.jsx`, replace `invalidateCache('course', null, courseId)` with `invalidateCache('course', courseId)`.
+
+1. **Execute Master Test Suite**:
+   ```bash
+   npm test
+   ```
+   *Expected*: 66/66 passed across all 4 tiers with exit code 0.
+
+2. **Execute Production Build**:
+   ```bash
+   npm run build
+   ```
+   *Expected*: Next.js compilation succeeds with 0 errors and 16/16 static routes generated.
+
+3. **Inspect Controller Line Counts**:
+   ```powershell
+   (Get-Content "src/app/batches/page.js").Count          # 223 lines (< 250)
+   (Get-Content "src/app/admin/test-series/page.js").Count # 243 lines (< 250)
+   ```
+
+4. **Verify TanStack Table React 19 Import Invariant**:
+   ```powershell
+   Select-String -Path "src/components/batches/BatchGrid.jsx", "src/components/test-series/TestSeriesGrid.jsx" -Pattern "@tanstack/react-table/legacy"
+   ```

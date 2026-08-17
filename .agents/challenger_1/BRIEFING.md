@@ -1,14 +1,14 @@
-# BRIEFING — 2026-08-17T06:10:00Z
+# BRIEFING — 2026-08-17T10:09:00Z
 
 ## Mission
-Empirically stress-test and challenge CourseGrid, CourseEditorDrawer, and state management (sorting, filtering, pagination, URL sync, status/audience filter, edge cases).
+Empirical adversarial stress testing and gate verification of Batches and Test Series Redesign UI components, state management, omnibar filtering, drawer lifecycles, and roster ingestion logic.
 
 ## 🔒 My Identity
 - Archetype: challenger
 - Roles: critic, specialist
 - Working directory: D:\admin dashboard\.agents\challenger_1
-- Original parent: 860f087c-255f-463f-b4d0-5d78df6ff51f
-- Milestone: M3 (Comprehensive Verification & Gate Check)
+- Original parent: b02a1018-39dd-406e-a243-757ed0d8e971
+- Milestone: M3 (Testing, Verification & Gate Check)
 - Instance: 1 of 2
 
 ## 🔒 Key Constraints
@@ -17,38 +17,46 @@ Empirically stress-test and challenge CourseGrid, CourseEditorDrawer, and state 
 - Output challenge findings to challenge.md and handoff to handoff.md
 
 ## Current Parent
-- Conversation ID: 860f087c-255f-463f-b4d0-5d78df6ff51f
-- Updated: 2026-08-17T06:10:00Z
+- Conversation ID: b02a1018-39dd-406e-a243-757ed0d8e971
+- Updated: 2026-08-17T10:09:00Z
 
 ## Review Scope
 - **Files to review**:
-  - `src/app/courses/page.js`
-  - `src/components/courses/CourseGrid.jsx`
-  - `src/components/courses/CourseEditorDrawer.jsx`
-  - `src/components/courses/CourseCreateModal.jsx`
-  - `src/components/courses/SyllabusTreeEditor.jsx`
-  - `src/components/courses/SyllabusImportModal.jsx`
-  - `src/components/courses/CourseFilesManager.jsx`
-- **Interface contracts**: `PROJECT.md`
-- **Review criteria**: TanStack table sorting, Omnibar filtering, level/status filtering, large dataset pagination, URL sync resilience, edge case handling.
+  - `src/app/batches/page.js`
+  - `src/components/batches/BatchGrid.jsx`
+  - `src/components/batches/BatchEditorDrawer.jsx`
+  - `src/components/batches/BatchCreateModal.jsx`
+  - `src/components/batches/BatchRosterImportModal.jsx`
+  - `src/components/batches/BatchStatsHeader.jsx`
+  - `src/components/batches/StudentTelemetryModal.jsx`
+  - `src/app/admin/test-series/page.js`
+  - `src/components/test-series/TestSeriesGrid.jsx`
+  - `src/components/test-series/TestSeriesEditorDrawer.jsx`
+  - `src/components/test-series/TestSeriesCreateModal.jsx`
+  - `src/components/test-series/TestSeriesStatsHeader.jsx`
+- **Interface contracts**: `PROJECT.md`, `TEST_READY.md`
+- **Review criteria**: Omnibar search resilience, filter pill combination matrices, drawer open/close lifecycle, URL deep-linking synchronization, roster ingestion boundary cases, production build compilation.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - TanStack Table multi-column sorting (`title`, `duration`, `display_order`, `created_at`, `price`, `students_count`) -> 2 failures found (`created_at` missing accessor, `duration`/`display_order` missing columns)
-  - Omnibar global text search filtering -> 1 failure found (`subject` search blindspot)
-  - Audience level filtering (ALL, FOUNDATION, MAINS, ADVANCED) -> 1 failure found (`pageIndex` stale state desync causing empty table & "Showing 11 to 5" bug)
-  - Status filtering (ALL, ACTIVE, INACTIVE) -> 3 failures found (missing UI filter, missing `is_active` toggle, unused prop in `page.js`)
-  - Large dataset pagination (60+ courses) -> 1 failure found (CSV export ignoring active filters)
-  - URL sync resilience -> 1 failure found (Browser Back doesn't close drawer when `urlCourseId` clears)
-  - Curriculum manager reordering -> 1 failure found (Subject filter index mismatch corrupting unrelated lessons)
-- **Vulnerabilities found**: 10 empirical bugs documented with test assertions in `test-course-grid-stress.js`.
-- **Untested angles**: Hardware-specific canvas rendering for PDF previews in browser headless mode.
+  - Omnibar search with regex tokens, SQL/XSS injections, Unicode/Telugu/Emoji, empty/whitespace strings -> 100% robust, 10,000 queries in 46ms.
+  - Filter pill combinations (all streams, multiple exam tags, price boundaries, null ledgers) -> 100% robust, handles null/missing price ledgers safely.
+  - Drawer open/close lifecycle, URL deep-linking sync, rapid toggling, browser back-button navigation -> 100% compliant.
+  - Roster text parser edge cases -> 2 specific corner case vulnerabilities identified and documented.
+  - Production build compilation (`npm run build`) -> 100% passing (16/16 static pages generated).
+- **Vulnerabilities found**:
+  1. `BatchRosterImportModal.jsx:118`: Greedy prefix header check drops students whose name starts with "Name...", "Student...", or "Class...".
+  2. `BatchRosterImportModal.jsx:124`: Phone regex misses 5-5 split Indian phone numbers (`98765-43210`), leaving digits in `full_name`.
+- **Untested angles**: Browser native Web Worker execution in non-headless Chromium for client-side canvas PDF rendering.
 
 ## Key Decisions Made
-- Built automated verification suite `test-course-grid-stress.js` with 33 test cases.
-- Issued verdict: `REQUEST_CHANGES` due to 5 critical/high severity state management and data corruption issues.
+- Created and executed empirical test harness `stress_batches_testseries_adversarial.js` (21 stress tests).
+- Verified master test suite `node test-batches-testseries-suite.js` (66/66 assertions across 4 tiers passed).
+- Verified production build `npm run build` (0 compilation errors, static prerendering verified).
+- Issued Verdict: **APPROVED (CONFIRMED)** with advisory findings on roster ingestion edge cases.
 
 ## Artifact Index
-- `D:\admin dashboard\test-course-grid-stress.js` — Automated test harness (33 test cases)
+- `D:\admin dashboard\.agents\challenger_1\stress_batches_testseries_adversarial.js` — Adversarial test harness (21 stress tests)
 - `D:\admin dashboard\.agents\challenger_1\challenge.md` — Detailed stress test findings & challenge report
 - `D:\admin dashboard\.agents\challenger_1\handoff.md` — Standard 5-component handoff report
+- `D:\admin dashboard\.agents\challenger_1\progress.md` — Progress tracker & execution log

@@ -218,8 +218,10 @@ function calculateBatchesKpiStats(batches = []) {
 function calculateTestSeriesKpiStats(packages = [], attempts = []) {
   const totalPackages = packages.length;
   const totalExams = packages.reduce((sum, p) => {
-    if (Array.isArray(p.test_exams)) return sum + p.test_exams.length;
-    return sum + (Number(p.total_tests_count) || 0);
+    const examCount = (Array.isArray(p.test_exams) && p.test_exams.length > 0) 
+      ? p.test_exams.length 
+      : (Number(p.total_tests_count) || 0);
+    return sum + examCount;
   }, 0);
 
   const premiumPackages = packages.filter(p => {

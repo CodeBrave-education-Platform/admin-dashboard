@@ -40,9 +40,9 @@ The Asentra Admin Dashboard (`D:\admin dashboard`) is being modernized to adopt 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Batches Module Redesign | Dismantle `src/app/batches/page.js` (<250 lines), create `BatchStatsHeader.jsx`, `BatchGrid.jsx`, `BatchEditorDrawer.jsx` (5 tabs), `BatchCreateModal.jsx`, `BatchRosterImportModal.jsx`, `StudentTelemetryModal.jsx`. | None | PLANNED |
-| M2 | Test Series Module Redesign | Dismantle `src/app/admin/test-series/` monolithic client, create `TestSeriesStatsHeader.jsx`, `TestSeriesGrid.jsx`, `TestSeriesEditorDrawer.jsx` (5 tabs), `TestSeriesCreateModal.jsx`. | None | PLANNED |
-| M3 | E2E Testing, Build Verification & Audit | E2E test suites, unit tests, `npm run build` static verification, zero hydration warnings, forensic integrity audit. | M1, M2 | PLANNED |
+| M1 | Batches Module Redesign | Dismantle `src/app/batches/page.js` (<250 lines), create `BatchStatsHeader.jsx`, `BatchGrid.jsx`, `BatchEditorDrawer.jsx` (5 tabs), `BatchCreateModal.jsx`, `BatchRosterImportModal.jsx`, `StudentTelemetryModal.jsx`. | None | DONE |
+| M2 | Test Series Module Redesign | Dismantle `src/app/admin/test-series/` monolithic client, create `TestSeriesStatsHeader.jsx`, `TestSeriesGrid.jsx`, `TestSeriesEditorDrawer.jsx` (5 tabs), `TestSeriesCreateModal.jsx`. | None | DONE |
+| M3 | E2E Testing, Build Verification & Audit | E2E test suites, unit tests, `npm run build` static verification, zero hydration warnings, forensic integrity audit. | M1, M2 | DONE |
 
 ---
 
