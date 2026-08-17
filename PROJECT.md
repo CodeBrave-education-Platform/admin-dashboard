@@ -1,57 +1,84 @@
-# Project: Course Management UI Redesign
+# Project: Batches & Test Series Admin Dashboard Redesign
 
 ## Architecture
-Modernized Next.js client-side course management dashboard decomposing the legacy 913-line `src/app/courses/page.js` monolith into a modular, high-performance TanStack Table Data Grid and Framer Motion slide-out drawer architecture.
+The Asentra Admin Dashboard (`D:\admin dashboard`) is being modernized to adopt a unified, high-performance architecture modeled after the Courses module (`src/app/courses/page.js`, `src/components/courses/CourseGrid.jsx`, `CourseEditorDrawer.jsx`).
 
-### Core Data Flow & State Architecture
-1. **`src/app/courses/page.js` (Page Controller)**:
-   - Fetches courses list from Supabase with nested counts for `lessons`, `assessments`, `course_files`.
-   - Manages global state: selected course for drawer, search/filter criteria, active modals (`CourseCreateModal`, `SyllabusImportModal`).
-   - Syncs selected course ID bidirectionally with URL search params (`?id=<course_id>`), handling browser back/forward navigation.
-   - Handles optimistic status updates and Redis cache invalidation (`invalidateCache('catalog', courseId)` and `invalidateCache('course', courseId)`).
-2. **`src/components/courses/CourseGrid.jsx` (TanStack Table Data Grid)**:
-   - Implements `@tanstack/react-table` for multi-column sorting (including `created_at`, `duration`, `display_order`), multi-field omnibar filtering (`title`, `subject`, `description`, `level`), audience level filter pills (`ALL`, `FOUNDATION`, `MAINS`, `ADVANCED`), and status filter pills (`ALL`, `ACTIVE`, `INACTIVE`).
-   - Rich column schema: Thumbnail & Title, Target Audience Tag, Lessons & Duration metrics, Assessments count, Status toggle pill (`is_active`), Quick actions (Open Drawer, Toggle Active, Delete).
-   - Filtered row model fallback for CSV export and automatic pagination index reset on filter switches.
-3. **`src/components/courses/CourseEditorDrawer.jsx` (Slide-out Management Drawer)**:
-   - AnimatePresence & Framer Motion right slide-out panel with smooth spring physics.
-   - Tabbed panels:
-     - **Overview / Details**: Course metadata, slug, audience, status, thumbnail URL, description.
-     - **Syllabus / Curriculum**: Tree/List lesson manager with reordering via global index lookup, inline editing, duration, and free preview toggle (`SyllabusTreeEditor.jsx`).
-     - **Files & Resources**: Document & PDF resource uploader to Supabase storage with file list (`CourseFilesManager.jsx`).
-     - **Exams & Assessments**: Linked assessments and quiz management.
-     - **Doubts & Live Sessions**: Doubt resolution view & live scheduling.
-4. **`src/components/courses/CourseCreateModal.jsx` (Course Blueprint Modal)**:
-   - Modal for creating new course blueprints with auto-slug generation and instant save.
-5. **`src/components/courses/SyllabusImportModal.jsx` (Universal Syllabus Importer)**:
-   - Dynamic client-side CDN loaders for `pdfjs-dist` and `mammoth.js`.
-   - Spatial 2D layout parser and enhanced regex extractor handling compound (`2h 30m`) and decimal (`1.5 hours`) durations while preserving textbook chapter headers.
-   - Interactive staging grid for verifying, reordering, and editing parsed topics before batch commit.
+### Key Architectural Invariants
+1. **Controller Pattern**: Next.js App Router server/client page wrapped in `Suspense` and `AdminLayoutShell` (<250 lines), handling SSR data fetching, client state, URL query deep-linking (`?id=...`), and cache invalidation.
+2. **TanStack Table React 19 Engine**: Using `useLegacyTable as useReactTable` from `@tanstack/react-table/legacy` and `flexRender` from `@tanstack/react-table` for zero hook-lifecycle conflicts.
+3. **Omnibar & Control Deck**: Instant client-side search across all entity fields, filter pills with automatic `table.setPageIndex(0)` reset, multi-column sorting, row selection, and floating bulk action bars with RFC4180 CSV export.
+4. **Framer Motion Slide-Out Drawer**: Spring animation (`type: 'spring', damping: 28, stiffness: 280`) with `bg-slate-900/60 backdrop-blur-xs` backdrop, URL deep-linking, `Escape` key dismissal, and isolated sub-resource management tabs.
+5. **Standardized Dialogs & Feedback**: Replaces native browser `alert()` and `confirm()` with `useToast()` from `@/components/ToastProvider` and `@/components/ConfirmDialogModal`.
+6. **Cache & State Discipline**: Optimistic UI updates on state/status mutations, followed by Supabase mutations and Upstash Redis cache invalidation (`invalidateCache`).
 
 ---
 
 ## Feature Inventory
-| # | Feature | Description | Milestone | Source | Status |
-|---|---------|-------------|-----------|--------|--------|
-| 1 | TanStack Table Data Grid | Modern table showing all courses with sorting, search, and audience filtering | M1 | Survey | DONE |
-| 2 | Component Teardown & Modularity | Split monolithic `page.js` into 6 modular component files | M1 | Survey | DONE |
-| 3 | Slide-out Course Editor Drawer | Smooth Framer Motion drawer for editing course details and sub-resources | M2 | Survey | DONE |
-| 4 | Interactive Curriculum & Lesson Manager | Inline lesson CRUD, reordering, duration tracking, and free preview toggle | M2 | Survey | DONE |
-| 5 | Course Creation Modal | Fast blueprint creation modal with validation and auto-slug | M1 | Survey | DONE |
-| 6 | Syllabus Document Importer Modal | PDF/Docx spatial extraction with editable staging review grid | M2 | Survey | DONE |
-| 7 | Course Files & Resources Manager | Storage upload and management for reference files | M2 | Survey | DONE |
-| 8 | Assessments & Doubts Integration | Tabbed panels for exams and student doubt metrics | M2 | Survey | DONE |
-| 9 | URL Search Param State Sync | URL query `?id=...` synchronization for direct navigation and drawer persistence | M1 | Survey | DONE |
-| 10 | Cache Invalidation & Data Integrity | Redis cache invalidation and Supabase transaction integrity | M2 | Survey | DONE |
+| # | Feature | Description | Milestone | Source |
+|---|---------|-------------|-----------|--------|
+| 1 | Batches Controller & URL Deep-Linking | Next.js controller with Suspense, URL query synchronization (`/batches?id=...`), back-button navigation, and layout shell integration. | M1 | Survey |
+| 2 | Batches Metric Summary Ribbon | 5 dynamic KPI cards (Total Batches, Published Cohorts, Drafts, Total Enrolled Students, Live Classes) in `BatchStatsHeader.jsx`. | M1 | Survey |
+| 3 | Batches TanStack Data Grid | Rich TanStack table with column sorting, pagination (10/20/30/50), omnibar search, filter pills (Status, Stream/Focus), row select, floating CSV export, inline status toggle in `BatchGrid.jsx`. | M1 | Survey |
+| 4 | Batches Slide-Out Editor Drawer | Framer Motion spring drawer (`BatchEditorDrawer.jsx`) with 5 tabs: Overview, Students Roster, Material Vault, Live Coordinator, Exam Scheduler. | M1 | Survey |
+| 5 | Batches Fast Creation Modal | Quick cohort establishment modal with title, price, start date, stream/target focus, and description in `BatchCreateModal.jsx`. | M1 | Survey |
+| 6 | Batches Roster Ingestion System | Multi-format roster importer (PDF, DOCX, CSV, TXT) with 2D/regex parsing, review staging table, and Supabase RPC `import_batch_roster` in `BatchRosterImportModal.jsx`. | M1 | Survey |
+| 7 | Student Telemetry Inspector | Bento grid student performance metrics inspector in `StudentTelemetryModal.jsx`. | M1 | Survey |
+| 8 | Batches Cache Invalidation & Feedback | Optimistic updates, `invalidateCache('batch', null, batchId)` integration, and `useToast()` notifications. | M1 | Survey |
+| 9 | Test Series Controller & URL Deep-Linking | Next.js controller with Suspense, URL query synchronization (`/admin/test-series?id=...`), back-button navigation, and layout shell integration. | M2 | Survey |
+| 10 | Test Series Metric Summary Ribbon | 5 dynamic KPI cards (Total Packages, Total Exams, Active Candidates, Premium Packages, Avg Score) in `TestSeriesStatsHeader.jsx`. | M2 | Survey |
+| 11 | Test Series TanStack Data Grid | Rich TanStack table with column sorting, pagination, omnibar search, filter pills (Exam Tag: JEE Main, Advanced, NEET, Foundation; Price: All, Free, Premium), row select, floating CSV export, inline status toggle in `TestSeriesGrid.jsx`. | M2 | Survey |
+| 12 | Test Series Slide-Out Editor Drawer | Framer Motion spring drawer (`TestSeriesEditorDrawer.jsx`) with 5 tabs: Overview & Commercials, Exam Blueprints, Exam Compiler & Question Pool, Live Telemetry & Proctoring Cockpit, Submissions Gradebook. | M2 | Survey |
+| 13 | Test Series Creation Modal | Fast package blueprint creation modal with title, target tag, thumbnail, description, distribution, pricing in `TestSeriesCreateModal.jsx`. | M2 | Survey |
+| 14 | Integrated Exam Compiler & AI Question Ingestion | Author questions (LaTeX/Markdown math stems), search/select from `test_questions`, or import from PDF into `test_exams.questions` JSONB inside drawer. | M2 | Survey |
+| 15 | Live Telemetry & Proctoring Cockpit | Real-time concurrent stats, Redis telemetry integration, Recharts score bell curve, and student submissions log inside drawer. | M2 | Survey |
+| 16 | Test Series Cache Invalidation & Feedback | Optimistic updates, `invalidateCache` integration, `ConfirmDialogModal`, and `useToast()` notifications. | M2 | Survey |
+| 17 | Test Infrastructure & E2E Validation | Unit and E2E test suites for Batches & Test Series verifying grid rendering, filter operations, drawer interactions, and form submissions. | M3 | Requirement |
+| 18 | Static Compilation & Hydration Verification | `npm run build` compilation with 0 errors, 0 hydration warnings, and Forensic Integrity Audit. | M3 | Requirement |
 
 ---
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | Core Architecture & Data Grid | Create `CourseGrid.jsx`, `CourseCreateModal.jsx`, refactor `src/app/courses/page.js` to TanStack Data Grid layout with search/filtering | none | DONE |
-| M2 | Course Editor Drawer & Import Subsystem | Create `CourseEditorDrawer.jsx`, `SyllabusTreeEditor.jsx`, `SyllabusImportModal.jsx`, and course resource tabs | M1 | DONE |
-| M3 | Comprehensive Verification & Gate Check | End-to-end testing, review by reviewers, challenger verification, forensic integrity audit | M2 | DONE |
+| M1 | Batches Module Redesign | Dismantle `src/app/batches/page.js` (<250 lines), create `BatchStatsHeader.jsx`, `BatchGrid.jsx`, `BatchEditorDrawer.jsx` (5 tabs), `BatchCreateModal.jsx`, `BatchRosterImportModal.jsx`, `StudentTelemetryModal.jsx`. | None | PLANNED |
+| M2 | Test Series Module Redesign | Dismantle `src/app/admin/test-series/` monolithic client, create `TestSeriesStatsHeader.jsx`, `TestSeriesGrid.jsx`, `TestSeriesEditorDrawer.jsx` (5 tabs), `TestSeriesCreateModal.jsx`. | None | PLANNED |
+| M3 | E2E Testing, Build Verification & Audit | E2E test suites, unit tests, `npm run build` static verification, zero hydration warnings, forensic integrity audit. | M1, M2 | PLANNED |
+
+---
+
+## Interface Contracts
+
+### Batches Components Contract
+- **`src/app/batches/page.js`**:
+  - State: `batches` (array), `selectedBatch` (object/null), `loading` (bool), `showCreateModal` (bool), `showRosterModal` (bool), `selectedStudent` (object/null).
+  - URL Sync: Reads `?id=` from searchParams, pushes `?id=${batch.id}` on select, pushes `/batches` on close.
+  - Mutations: `handleCreateBatch(payload)`, `handleUpdateBatch(id, updates)`, `handleDeleteBatch(id)`, `handleToggleStatus(id, currentStatus)`. All mutations call `invalidateCache('batch', null, id)` and `showToast(...)`.
+- **`src/components/batches/BatchGrid.jsx`**:
+  - Props: `{ batches, onSelectBatch, onToggleStatus, onDeleteBatch, onOpenCreateModal, loading }`.
+  - Exports: Default React component using `@tanstack/react-table/legacy`.
+- **`src/components/batches/BatchEditorDrawer.jsx`**:
+  - Props: `{ batch, isOpen, onClose, onUpdateBatch, onDeleteBatch, onOpenRosterModal, onInspectStudent }`.
+  - Tabs: `overview`, `students`, `materials`, `live`, `exams`.
+- **`src/components/batches/BatchCreateModal.jsx`**:
+  - Props: `{ isOpen, onClose, onSubmit }`.
+- **`src/components/batches/BatchRosterImportModal.jsx`**:
+  - Props: `{ isOpen, onClose, batchId, onImportSuccess }`.
+- **`src/components/batches/StudentTelemetryModal.jsx`**:
+  - Props: `{ student, isOpen, onClose }`.
+
+### Test Series Components Contract
+- **`src/app/admin/test-series/page.js`**:
+  - State: `packages` (array), `selectedPackage` (object/null), `loading` (bool), `showCreateModal` (bool).
+  - URL Sync: Reads `?id=` from searchParams, pushes `?id=${pkg.id}` on select, pushes `/admin/test-series` on close.
+  - Mutations: `handleCreatePackage(payload)`, `handleUpdatePackage(id, updates)`, `handleDeletePackage(id)`, `handleToggleStatus(id, currentStatus)`. All mutations call `invalidateCache` and `showToast(...)`.
+- **`src/components/test-series/TestSeriesGrid.jsx`**:
+  - Props: `{ packages, onSelectPackage, onToggleStatus, onDeletePackage, onOpenCreateModal, loading }`.
+  - Exports: Default React component using `@tanstack/react-table/legacy`.
+- **`src/components/test-series/TestSeriesEditorDrawer.jsx`**:
+  - Props: `{ packageData, isOpen, onClose, onUpdatePackage, onDeletePackage }`.
+  - Tabs: `overview`, `exams`, `compiler`, `telemetry`, `submissions`.
+- **`src/components/test-series/TestSeriesCreateModal.jsx`**:
+  - Props: `{ isOpen, onClose, onSubmit }`.
 
 ---
 
@@ -59,14 +86,22 @@ Modernized Next.js client-side course management dashboard decomposing the legac
 ```
 src/
 ├── app/
-│   └── courses/
-│       └── page.js                          # Lean orchestrator page controller (< 300 lines)
+│   ├── batches/
+│   │   └── page.js                     # Main controller (<250 lines) with Suspense & AdminLayoutShell
+│   └── admin/
+│       └── test-series/
+│           └── page.js                 # Main controller (<250 lines) with Suspense & AdminLayoutShell
 └── components/
-    └── courses/
-        ├── CourseGrid.jsx                   # TanStack Data Grid with search/filters/badges
-        ├── CourseEditorDrawer.jsx           # Slide-out Drawer with tabbed management panels
-        ├── CourseCreateModal.jsx            # Modal for new course blueprint creation
-        ├── SyllabusTreeEditor.jsx           # Interactive curriculum & lesson manager
-        ├── SyllabusImportModal.jsx          # PDF / DOCX parser & staging grid
-        └── CourseFilesManager.jsx           # Course reference files & storage uploader
+    ├── batches/
+    │   ├── BatchStatsHeader.jsx         # Metric summary ribbon cards
+    │   ├── BatchGrid.jsx                # TanStack Table v9 Data Grid with omnibar, sorting, filter pills
+    │   ├── BatchEditorDrawer.jsx        # Framer Motion slide-out drawer with 5 tab managers
+    │   ├── BatchCreateModal.jsx         # Cohort batch creation modal
+    │   ├── BatchRosterImportModal.jsx   # Multi-format roster importer (PDF/DOCX/CSV/TXT) + RPC
+    │   └── StudentTelemetryModal.jsx    # Student profile & performance inspector
+    └── test-series/
+        ├── TestSeriesStatsHeader.jsx    # Metric summary ribbon cards
+        ├── TestSeriesGrid.jsx           # TanStack Table v9 Data Grid with omnibar, sorting, filter pills
+        ├── TestSeriesEditorDrawer.jsx   # Framer Motion slide-out drawer with 5 tab managers
+        └── TestSeriesCreateModal.jsx    # Test package creation modal
 ```

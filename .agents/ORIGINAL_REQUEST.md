@@ -85,5 +85,36 @@ The redesign must feel premium, using smooth animations (Framer Motion is permit
 - [ ] A Data Grid correctly displays existing courses from the Supabase database.
 - [ ] Clicking a course opens a slide-out drawer containing its syllabus details.
 - [ ] The 900+ line `page.js` is successfully split into at least 3 distinct component files.
-- [ ] Visual design uses harmonious colors, precise padding, and responsive layout.
 
+## 2026-08-17T07:11:42Z
+
+# Teamwork Project Prompt — Draft
+
+> Status: Launched
+> Goal: Craft prompt → get user approval → delegate to teamwork_preview
+> Requested team: Full Team
+
+Redesign the "Batches" and "Test Series" sections of the admin dashboard to match the new best-in-class architecture implemented in the Courses section. Replace legacy interfaces with high-performance TanStack Data Grids, omnibar filtering, and Framer Motion slide-out drawers for editing. Use a very large team of agents to ensure the UI, logic, and integrations are flawless.
+
+Working directory: D:\admin dashboard
+Integrity mode: demo
+
+## Requirements
+
+### R1. UI Modernization & Architecture
+Replace the current pages for Batches and Test Series with a rich Data Grid (using TanStack Table). When a batch or test series is clicked, open a slide-out drawer for editing its respective details and settings.
+
+### R2. Component Teardown & Consistency
+Dismantle any monolithic files for these sections into smaller, focused components (e.g., `BatchGrid.jsx`, `TestSeriesGrid.jsx`, `BatchEditorDrawer.jsx`). Ensure the design system, padding, typography, and Framer Motion animations are exactly consistent with the newly created `src/components/courses/CourseGrid.jsx`.
+
+### R3. Premium UX/Aesthetics
+The redesign must feel premium, using smooth animations and meticulous typography/spacing. Ensure fluid responsiveness and avoid cliché dashboard tropes.
+
+## Acceptance Criteria
+
+### Functionality & Polish
+- [ ] The Batches and Test Series pages load without React hydration or runtime errors.
+- [ ] Data Grids correctly display existing records from the Supabase database.
+- [ ] Clicking a record opens a slide-out drawer containing its specific editable details.
+- [ ] The codebase for these sections is successfully split into focused modular component files.
+- [ ] Visual design perfectly matches the aesthetic standard established in the Courses section.

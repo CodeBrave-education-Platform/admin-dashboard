@@ -33,6 +33,7 @@ export default function UniversalPdfImporterModal({
   const [isDragging, setIsDragging] = useState(false);
   const [aiParsing, setAiParsing] = useState(false);
   const [parsedQuestions, setParsedQuestions] = useState([]);
+  const [aiProgressText, setAiProgressText] = useState('');
 
   if (!isOpen) return null;
 
@@ -70,54 +71,79 @@ export default function UniversalPdfImporterModal({
     }
 
     setAiParsing(true);
+    let allParsedQuestions = [];
 
     try {
-      const formData = new FormData();
-      const activeParserType = selectedFile 
-        ? (parserType === 'structured_table' ? 'structured_table' : 'gemini_ai_multimodal') 
-        : (parserType || 'gemini_ai_multimodal');
-      
-      formData.append('parserType', activeParserType);
-
       if (selectedFile) {
-        if (selectedFile.size > 4.4 * 1024 * 1024) {
-          showToast('File too large! Please upload a PDF under 4.4MB to bypass Vercel server limits.', 'error');
-          setAiParsing(false);
-          return;
-        }
-        // Append raw file object directly to bypass 33% Base64 overhead over network
-        formData.append('pdf', selectedFile);
-        formData.append('fileName', selectedFile.name);
-        formData.append('mimeType', selectedFile.type || 'application/pdf');
-      }
+        // Load pdf.js dynamically to avoid build-time node issues
+        const pdfjs = await new Promise((resolve, reject) => {
+          if (window.pdfjsLib) return resolve(window.pdfjsLib);
+          const script = document.createElement('script');
+          script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+          script.onload = () => {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            resolve(window.pdfjsLib);
+          };
+          script.onerror = () => reject(new Error('Failed to load PDF.js library'));
+          document.body.appendChild(script);
+        });
 
-      if (aiRawText.trim()) {
-        formData.append('rawText', aiRawText.trim());
-      }
+        const fileArrayBuffer = await selectedFile.arrayBuffer();
+        const pdfDoc = await pdfjs.getDocument({ data: fileArrayBuffer }).promise;
+        const totalPages = pdfDoc.numPages;
 
-      const res = await fetch('/api/admin/ai/parse-pdf', {
-        method: 'POST',
-        body: formData
-      });
+        for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+          setAiProgressText(`Extracting page ${pageNum} of ${totalPages}...`);
+          
+          const page = await pdfDoc.getPage(pageNum);
+          const viewport = page.getViewport({ scale: 1.5 }); // High-res scale for OCR
+          
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          
+          await page.render({ canvasContext: context, viewport: viewport }).promise;
+          const imageBase64 = canvas.toDataURL('image/jpeg', 0.9); // 90% quality JPEG
 
-      if (!res.ok) {
-        let errorMsg = `Server error (${res.status})`;
-        try {
-          const errData = await res.json();
-          if (errData && (errData.error || errData.message)) {
-            errorMsg = errData.error || errData.message;
+          const res = await fetch('/api/admin/ai/parse-pdf-page', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              imageBase64,
+              mimeType: 'image/jpeg'
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.questions)) {
+              allParsedQuestions = [...allParsedQuestions, ...data.questions];
+            }
+          } else {
+            console.warn(`Failed to parse page ${pageNum}: ${res.status}`);
           }
-        } catch (_) {
-          // ignore non-JSON response body
         }
-        showToast(`Extraction failed: ${errorMsg}`, 'error');
-        return;
+      } else if (aiRawText.trim()) {
+        const formData = new FormData();
+        formData.append('parserType', parserType || 'gemini_ai_multimodal');
+        formData.append('rawText', aiRawText.trim());
+        
+        const res = await fetch('/api/admin/ai/parse-pdf', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.questions)) {
+            allParsedQuestions = data.questions;
+          }
+        }
       }
 
-      const data = await res.json();
-
-      if (data.success && Array.isArray(data.questions) && data.questions.length > 0) {
-        const marked = data.questions.map((q, idx) => {
+      if (allParsedQuestions.length > 0) {
+        const marked = allParsedQuestions.map((q, idx) => {
           const contentStr = q.content || q.questionText || '';
           const diagramUrlStr = q.diagram_url || q.diagramUrl || '';
           const correctAns = q.correct_answer || q.correctAnswer || (Array.isArray(q.options) && typeof q.correct_option_index === 'number' ? q.options[q.correct_option_index] : '');
@@ -146,14 +172,14 @@ export default function UniversalPdfImporterModal({
         setAiStep('review');
         showToast(`🎉 Successfully extracted ${marked.length} questions!`, 'success');
       } else {
-        const errMsg = data.error || data.warning || 'No questions could be extracted from this document.';
-        showToast(`Extraction error: ${errMsg}`, 'error');
+        showToast(`Extraction error: No questions could be extracted from this document.`, 'error');
       }
     } catch (err) {
       console.error('PDF Parsing failed:', err);
       showToast(`PDF Extraction failed: ${err.message || 'Network or Server Error'}`, 'error');
     } finally {
       setAiParsing(false);
+      setAiProgressText('');
     }
   };
 
@@ -320,7 +346,7 @@ export default function UniversalPdfImporterModal({
                 {aiParsing ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Processing Gemini Multimodal PDF...</span>
+                    <span>{aiProgressText || 'Processing Gemini Multimodal...'}</span>
                   </>
                 ) : (
                   <>
