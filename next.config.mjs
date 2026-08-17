@@ -15,12 +15,7 @@ const nextConfig = {
       'lucide-react',
       'recharts',
       'framer-motion'
-    ],
-    turbo: {
-      resolveAlias: {
-        canvas: false,
-      },
-    },
+    ]
   },
   
   async headers() {

@@ -18,7 +18,15 @@ export default async function AdminStudentPage() {
       .from('profiles')
       .select('*')
       .order('created_at', { ascending: false })
-    if (dbProfiles) profiles = dbProfiles
+    if (dbProfiles) {
+      profiles = dbProfiles.map(p => ({
+        ...p,
+        name: p.full_name || 'Unknown',
+        enrolledCourses: [],
+        attemptsCount: p.weekly_tests_attempted ? parseInt(p.weekly_tests_attempted) : 0,
+        lastActive: p.last_active_date || 'N/A'
+      }))
+    }
   } catch (e) {}
 
   return (

@@ -29,33 +29,20 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
 
   const fetchStudents = async () => {
     setLoading(true)
-    const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
-    if (data) {
-      setStudents(data.map(p => ({
-        id: p.id,
-        name: p.full_name || 'Unknown User',
-        email: p.email || 'No Email',
-        joinedDate: new Date(p.created_at).toLocaleDateString(),
-        status: 'Active',
-        enrolledCourses: [], // Mock data placeholder since we don't have junction table fetch here yet
-        attemptsCount: 0,
-        bookOrdersCount: 0,
-        lastActive: 'Recently'
-      })))
-    } else {
-      // Use initials if fetching fails
-      setStudents(initialStudents.map(p => ({
-        id: p.id,
-        name: p.full_name || 'Unknown User',
-        email: p.email || 'No Email',
-        joinedDate: new Date(p.created_at).toLocaleDateString(),
-        status: 'Active',
-        enrolledCourses: [],
-        attemptsCount: 0,
-        bookOrdersCount: 0,
-        lastActive: 'Recently'
-      })))
-    }
+    const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+    const source = data || initialStudents || []
+    setStudents(source.map(p => ({
+      ...p,
+      id: p.id,
+      name: p.full_name || 'Unknown User',
+      email: p.email || 'No Email',
+      joinedDate: new Date(p.created_at).toLocaleDateString(),
+      status: 'Active',
+      enrolledCourses: [],
+      attemptsCount: p.weekly_tests_attempted ? parseInt(p.weekly_tests_attempted) : 0,
+      bookOrdersCount: 0,
+      lastActive: p.last_active_date || 'Recently'
+    })))
     setLoading(false)
   }
 
