@@ -218,7 +218,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
     }
   };
 
-  const userInitials = adminUser?.email?.substring(0, 2).toUpperCase() || 'AD';
+  const userInitials = adminUser?.email?.substring(0, 2)?.toUpperCase() || 'AD';
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-50 via-white to-emerald-50 text-slate-900 flex font-sans">
