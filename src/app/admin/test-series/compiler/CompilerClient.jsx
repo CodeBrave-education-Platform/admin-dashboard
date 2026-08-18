@@ -631,7 +631,7 @@ function CompilerClientContent({ packages = [] }) {
         targetModuleName="CBT Test Series Compiler"
         onConfirmIngest={(newQuestions) => {
           const formatted = newQuestions.map(q => ({
-            id: q.id || `q-ai-${Date.now()}`,
+            id: crypto.randomUUID(), // Force a unique ID to prevent duplicates from multiple PDF imports
             subject: q.subject || 'Physics',
             sub_topic: q.sub_topic || 'General',
             difficulty: q.difficulty || 'MEDIUM',
@@ -641,7 +641,12 @@ function CompilerClientContent({ packages = [] }) {
             correct_option_index: q.correct_option_index || 0
           }));
           setPoolQuestions(prev => [...formatted, ...prev]);
-          setSelectedQuestions(prev => [...prev, ...formatted]);
+          setSelectedQuestions(prev => {
+            // Also ensure we don't accidentally duplicate if they click ingest twice quickly
+            const newMap = new Map(prev.map(item => [item.id, item]))
+            formatted.forEach(item => newMap.set(item.id, item))
+            return Array.from(newMap.values())
+          });
         }}
       />
     </div>
