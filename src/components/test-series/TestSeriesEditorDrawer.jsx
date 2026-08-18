@@ -48,18 +48,17 @@ export default function TestSeriesEditorDrawer({
 
       if (!error && data) {
         setExams(data);
-        if (onExamsUpdated) onExamsUpdated(data);
       }
     } catch (err) {
       console.warn('[Drawer] Failed to fetch linked exams:', err.message);
     }
-  }, [packageData?.id, supabase, onExamsUpdated]);
+  }, [packageData?.id, supabase]);
 
   useEffect(() => {
-    if (packageData) {
+    if (packageData?.id) {
       fetchPackageExams();
     }
-  }, [packageData, fetchPackageExams]);
+  }, [packageData?.id, fetchPackageExams]);
 
   // Handle escape key to close drawer
   useEffect(() => {
@@ -121,7 +120,11 @@ export default function TestSeriesEditorDrawer({
       await invalidateCache('catalog', packageData.id);
 
       showToast('Exam blueprint deleted successfully', 'success');
-      setExams(prev => prev.filter(e => e.id !== deleteExamConfirmTarget.id));
+      setExams(prev => {
+        const next = prev.filter(e => e.id !== deleteExamConfirmTarget.id);
+        if (onExamsUpdated) onExamsUpdated(next);
+        return next;
+      });
       await fetchPackageExams();
     } catch (err) {
       showToast('Failed to delete exam: ' + err.message, 'error');
@@ -132,7 +135,17 @@ export default function TestSeriesEditorDrawer({
 
   // Callback when exam is compiled/updated in compiler tab
   const handleExamCompiled = async () => {
-    await fetchPackageExams();
+    try {
+      const { data } = await supabase
+        .from('test_exams')
+        .select('*')
+        .eq('package_id', packageData.id)
+        .order('created_at', { ascending: false });
+      if (data) {
+        setExams(data);
+        if (onExamsUpdated) onExamsUpdated(data);
+      }
+    } catch (e) {}
     setEditingExam(null);
     setActiveTab('exams');
   };

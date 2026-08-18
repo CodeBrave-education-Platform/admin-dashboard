@@ -11,10 +11,12 @@ import {
   Mail, Calendar, ExternalLink, Activity, Loader2
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useToast } from '@/components/ToastProvider';
 
 export default function AdminDashboardClient() {
   const router = useRouter();
   const supabase = createClient();
+  const { showToast } = useToast();
 
   const [courses, setCourses] = useState([]);
   const [students, setStudents] = useState([]);
@@ -104,11 +106,11 @@ export default function AdminDashboardClient() {
         .eq('id', userId);
 
       if (error) throw error;
-      alert(`User role updated to ${newRole} successfully!`);
+      showToast(`User role updated to ${newRole} successfully!`, 'success');
       await fetchDashboardData();
     } catch (err) {
       console.error('[Role Update Error]:', err);
-      alert('Failed to update user role: ' + err.message);
+      showToast('Failed to update user role: ' + err.message, 'error');
     }
   };
 

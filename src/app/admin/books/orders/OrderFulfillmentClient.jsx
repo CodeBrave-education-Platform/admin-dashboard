@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
+import { useToast } from '@/components/ToastProvider'
 import { 
   Truck, Search, MapPin, CheckCircle2, ArrowLeft, 
   ExternalLink, Edit3, X, Loader2, PackageCheck, Clock, ShieldAlert
@@ -11,6 +12,7 @@ import {
 
 export default function OrderFulfillmentClient({ user, profile, initialOrders }) {
   const supabase = createClient()
+  const { showToast } = useToast()
   const [orders, setOrders] = useState(initialOrders || [])
   const [activeStatus, setActiveStatus] = useState('ALL')
   const [searchQuery, setSearchQuery] = useState('')
@@ -70,7 +72,7 @@ export default function OrderFulfillmentClient({ user, profile, initialOrders })
       setTimeout(() => setToastMsg(''), 4000)
     } catch (err) {
       console.error('[FULFILLMENT_UPDATE_ERROR]:', err)
-      alert('Failed to update shipment status: ' + err.message)
+      showToast('Failed to update shipment status: ' + err.message, 'error')
     } finally {
       setLoading(false)
     }

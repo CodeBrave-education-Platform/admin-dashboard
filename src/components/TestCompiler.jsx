@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal'
+import { useToast } from '@/components/ToastProvider'
 import { 
   Plus, Search, ClipboardList, Trash2, CheckCircle2, 
   HelpCircle, Settings, Layers, Calendar, Loader2, Sparkles
@@ -25,6 +26,7 @@ export default function CompilerClient({ packages = [], initialPackages = [], ex
 
 function CompilerClientContent({ packages = [], exam = null }) {
   const supabase = createClient()
+  const { showToast } = useToast()
   const searchParams = useSearchParams()
   const packageIdParam = searchParams?.get('packageId') || searchParams?.get('id')
 
@@ -82,7 +84,7 @@ function CompilerClientContent({ packages = [], exam = null }) {
   const [parsedQuestions, setParsedQuestions] = useState([])
 
   const handleRunAiParser = () => {
-    if (!aiRawText.trim()) return alert('Please paste PDF question text or test paper content!')
+    if (!aiRawText.trim()) return showToast('Please paste PDF question text or test paper content!', 'error')
     setAiParsing(true)
     setTimeout(() => {
       const extracted = [
@@ -116,7 +118,7 @@ function CompilerClientContent({ packages = [], exam = null }) {
 
   const handleConfirmIngestion = () => {
     const toIngest = parsedQuestions.filter(q => q.selected)
-    if (toIngest.length === 0) return alert('Please select at least 1 question to ingest!')
+    if (toIngest.length === 0) return showToast('Please select at least 1 question to ingest!', 'error')
 
     setPoolQuestions(prev => [...toIngest, ...prev])
     setSelectedQuestions(prev => [...prev, ...toIngest])
@@ -124,7 +126,7 @@ function CompilerClientContent({ packages = [], exam = null }) {
     setAiStep('input')
     setAiRawText('')
     setParsedQuestions([])
-    alert(`🤖 Checked and ingested ${toIngest.length} questions into your CBT exam blueprint!`)
+    showToast(`Checked and ingested ${toIngest.length} questions into your CBT exam blueprint!`, 'success')
   }
 
   // Fetch pool questions based on filters with mock fallback
@@ -200,30 +202,30 @@ function CompilerClientContent({ packages = [], exam = null }) {
   // Save new question to pool
   const handleSaveQuestion = async (e) => {
     e.preventDefault()
-    if (!subTopic.trim()) return alert('Sub-topic is required.')
-    if (!content.trim()) return alert('Question content is required.')
+    if (!subTopic.trim()) return showToast('Sub-topic is required.', 'error')
+    if (!content.trim()) return showToast('Question content is required.', 'error')
     
     // Type specific validations
     let finalOptions = []
     let finalCorrect = null
     
     if (questionType === 'single') {
-      if (options.some(opt => !opt.trim())) return alert('All 4 option text blocks are required.')
+      if (options.some(opt => !opt.trim())) return showToast('All 4 option text blocks are required.', 'error')
       finalOptions = options
       finalCorrect = correctOptionIdx
     } else if (questionType === 'multiple') {
-      if (options.some(opt => !opt.trim())) return alert('All 4 option text blocks are required.')
-      if (correctOptionsMultiple.length === 0) return alert('Select at least one correct option.')
+      if (options.some(opt => !opt.trim())) return showToast('All 4 option text blocks are required.', 'error')
+      if (correctOptionsMultiple.length === 0) return showToast('Select at least one correct option.', 'error')
       finalOptions = options
       finalCorrect = correctOptionsMultiple
     } else if (questionType === 'integer') {
-      if (!integerAnswer.trim()) return alert('Integer answer is required.')
+      if (!integerAnswer.trim()) return showToast('Integer answer is required.', 'error')
       finalCorrect = integerAnswer.trim()
     } else if (questionType === 'blanks') {
-      if (!blankAnswer.trim()) return alert('Fill in the blanks answer is required.')
+      if (!blankAnswer.trim()) return showToast('Fill in the blanks answer is required.', 'error')
       finalCorrect = blankAnswer.trim()
     } else if (questionType === 'match') {
-      if (matrixMatch.some(m => !m.left.trim() || !m.right.trim())) return alert('All matrix rows must be filled.')
+      if (matrixMatch.some(m => !m.left.trim() || !m.right.trim())) return showToast('All matrix rows must be filled.', 'error')
       finalOptions = matrixMatch.map(m => m.left)
       finalCorrect = matrixMatch.map(m => m.right) // Or handle strictly as pairs
     }
@@ -249,7 +251,7 @@ function CompilerClientContent({ packages = [], exam = null }) {
 
       if (error) throw error
 
-      alert('Question established in global bank!')
+      showToast('Question established in global bank!', 'success')
       // Reset form (keep context like subject/topic)
       setContent('')
       setOptions(['', '', '', ''])
@@ -262,7 +264,7 @@ function CompilerClientContent({ packages = [], exam = null }) {
       // Refresh pool list
       fetchQuestionPool()
     } catch (err) {
-      alert('Save failed: ' + err.message)
+      showToast('Save failed: ' + err.message, 'error')
     } finally {
       setIsSavingQuestion(false)
     }
@@ -283,10 +285,10 @@ function CompilerClientContent({ packages = [], exam = null }) {
   // Compile Exam Blueprint OR Update Existing Exam
   const handleCompileExam = async (e) => {
     e.preventDefault()
-    if (!examTitle.trim()) return alert('Exam Title is required.')
-    if (!exam && !targetPackageId) return alert('Target package selection is required.')
-    if (selectedQuestions.length === 0) return alert('Compilation bundle must contain at least 1 question.')
-    if (!activationTimestamp) return alert('Activation timestamp is required.')
+    if (!examTitle.trim()) return showToast('Exam Title is required.', 'error')
+    if (!exam && !targetPackageId) return showToast('Target package selection is required.', 'error')
+    if (selectedQuestions.length === 0) return showToast('Compilation bundle must contain at least 1 question.', 'error')
+    if (!activationTimestamp) return showToast('Activation timestamp is required.', 'error')
 
     setIsCompiling(true)
     try {
@@ -309,7 +311,7 @@ function CompilerClientContent({ packages = [], exam = null }) {
           .eq('id', exam.id);
 
         if (updateErr) throw updateErr;
-        alert('Exam questions successfully updated!');
+        showToast('Exam questions successfully updated!', 'success');
       } else {
         // 1. Insert new exam blueprint
         const { data: newExam, error: examErr } = await supabase
@@ -343,7 +345,7 @@ function CompilerClientContent({ packages = [], exam = null }) {
           if (countErr) console.warn('[Compiler] Failed to update package count:', countErr.message)
         }
 
-        alert('CBT Exam blueprint successfully compiled and published!')
+        showToast('CBT Exam blueprint successfully compiled and published!', 'success')
         
         // Reset compilation state
         setExamTitle('')
@@ -352,7 +354,7 @@ function CompilerClientContent({ packages = [], exam = null }) {
         setActivationTimestamp('')
       }
     } catch (err) {
-      alert('Compilation failed: ' + err.message)
+      showToast('Compilation failed: ' + err.message, 'error')
     } finally {
       setIsCompiling(false)
     }

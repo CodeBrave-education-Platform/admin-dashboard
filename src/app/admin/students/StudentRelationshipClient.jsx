@@ -12,6 +12,7 @@ import {
   legacyCreateColumnHelper as createColumnHelper
 } from '@tanstack/react-table/legacy'
 import { flexRender } from '@tanstack/react-table'
+import { useToast } from '@/components/ToastProvider'
 import { 
   Users, Edit, Trash2, Plus, Search, 
   RefreshCw, Send, ArrowLeft, ChevronLeft, ChevronRight, X, ChevronDown, ChevronUp
@@ -19,6 +20,7 @@ import {
 
 export default function StudentRelationshipClient({ user, initialStudents }) {
   const supabase = createClient()
+  const { showToast } = useToast()
   const [globalFilter, setGlobalFilter] = useState('')
   const [selectedStudent, setSelectedStudent] = useState(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -100,9 +102,9 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
     if (!error) {
       fetchStudents()
       setDrawerOpen(false)
-      alert(`🎉 Student profile for ${editName} updated successfully!`)
+      showToast(`Student profile for ${editName} updated successfully!`, 'success')
     } else {
-      alert(`Error updating student profile`)
+      showToast(`Error updating student profile`, 'error')
     }
   }
 
@@ -111,7 +113,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
       const { error } = await supabase.from('profiles').delete().eq('id', studentId)
       if (!error) {
         fetchStudents()
-        alert(`Student "${studentName}" has been removed from the platform.`)
+        showToast(`Student "${studentName}" has been removed from the platform.`, 'success')
       }
     }
   }
@@ -149,7 +151,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
   const handleBroadcastAnnouncement = (e) => {
     e.preventDefault()
     if (!announcementMsg.trim()) return
-    alert(`📢 Notification broadcasted to all enrolled students:\n\n"${announcementMsg}"`)
+    showToast(`Notification broadcasted to all enrolled students: "${announcementMsg}"`, 'info')
     setAnnouncementMsg('')
   }
 
@@ -265,7 +267,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
       : table.getFilteredRowModel().rows.map(r => r.original)
 
     if (exportData.length === 0) {
-      alert('No student records to export.')
+      showToast('No student records to export.', 'error')
       return
     }
 

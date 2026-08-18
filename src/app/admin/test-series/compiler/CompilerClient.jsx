@@ -5,6 +5,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal'
+import { useToast } from '@/components/ToastProvider'
 import { 
   Plus, Search, ClipboardList, Trash2, CheckCircle2, 
   HelpCircle, Settings, Layers, Calendar, Loader2, Sparkles
@@ -25,6 +26,7 @@ export default function CompilerClient({ packages = [], initialPackages = [] }) 
 
 function CompilerClientContent({ packages = [] }) {
   const supabase = createClient()
+  const { showToast } = useToast()
   const searchParams = useSearchParams()
   const packageIdParam = searchParams?.get('packageId') || searchParams?.get('id')
 
@@ -57,58 +59,8 @@ function CompilerClientContent({ packages = [] }) {
   const [activationTimestamp, setActivationTimestamp] = useState('')
   const [isCompiling, setIsCompiling] = useState(false)
 
-  // AI PDF Question Importer & Review State
+  // AI PDF Question Importer State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false)
-  const [aiRawText, setAiRawText] = useState('')
-  const [aiParsing, setAiParsing] = useState(false)
-  const [aiStep, setAiStep] = useState('input')
-  const [parsedQuestions, setParsedQuestions] = useState([])
-
-  const handleRunAiParser = () => {
-    if (!aiRawText.trim()) return alert('Please paste PDF question text or test paper content!')
-    setAiParsing(true)
-    setTimeout(() => {
-      const extracted = [
-        {
-          id: `q-ai-1-${Date.now()}`,
-          subject: 'Physics',
-          sub_topic: 'Electrostatics',
-          difficulty: 'HARD',
-          content: 'A parallel plate capacitor is charged and then disconnected from the battery. If the distance between plates is doubled, the potential difference across plates will:',
-          options: ['Double', 'Halve', 'Remain Same', 'Quadruple'],
-          correct_option_index: 0,
-          selected: true
-        },
-        {
-          id: `q-ai-2-${Date.now()}`,
-          subject: 'Chemistry',
-          sub_topic: 'Chemical Bonding',
-          difficulty: 'MEDIUM',
-          content: 'Which of the following molecules has a linear shape according to VSEPR theory?',
-          options: ['CO₂', 'H₂O', 'SO₂', 'O₃'],
-          correct_option_index: 0,
-          selected: true
-        }
-      ]
-
-      setParsedQuestions(extracted)
-      setAiParsing(false)
-      setAiStep('review')
-    }, 1000)
-  }
-
-  const handleConfirmIngestion = () => {
-    const toIngest = parsedQuestions.filter(q => q.selected)
-    if (toIngest.length === 0) return alert('Please select at least 1 question to ingest!')
-
-    setPoolQuestions(prev => [...toIngest, ...prev])
-    setSelectedQuestions(prev => [...prev, ...toIngest])
-    setIsAiModalOpen(false)
-    setAiStep('input')
-    setAiRawText('')
-    setParsedQuestions([])
-    alert(`🤖 Checked and ingested ${toIngest.length} questions into your CBT exam blueprint!`)
-  }
 
   // Fetch pool questions based on filters with mock fallback
   const fetchQuestionPool = async () => {
@@ -183,9 +135,9 @@ function CompilerClientContent({ packages = [] }) {
   // Save new question to pool
   const handleSaveQuestion = async (e) => {
     e.preventDefault()
-    if (!subTopic.trim()) return alert('Sub-topic is required.')
-    if (!content.trim()) return alert('Question content is required.')
-    if (options.some(opt => !opt.trim())) return alert('All 4 option text blocks are required.')
+    if (!subTopic.trim()) return showToast('Sub-topic is required.', 'error')
+    if (!content.trim()) return showToast('Question content is required.', 'error')
+    if (options.some(opt => !opt.trim())) return showToast('All 4 option text blocks are required.', 'error')
 
     setIsSavingQuestion(true)
     try {
@@ -204,7 +156,7 @@ function CompilerClientContent({ packages = [] }) {
 
       if (error) throw error
 
-      alert('Question established in global bank!')
+      showToast('Question established in global bank!', 'success')
       // Reset form
       setSubTopic('')
       setContent('')
@@ -214,7 +166,7 @@ function CompilerClientContent({ packages = [] }) {
       // Refresh pool list
       fetchQuestionPool()
     } catch (err) {
-      alert('Save failed: ' + err.message)
+      showToast('Save failed: ' + err.message, 'error')
     } finally {
       setIsSavingQuestion(false)
     }
@@ -235,10 +187,10 @@ function CompilerClientContent({ packages = [] }) {
   // Compile Exam Blueprint
   const handleCompileExam = async (e) => {
     e.preventDefault()
-    if (!examTitle.trim()) return alert('Exam Title is required.')
-    if (!targetPackageId) return alert('Target package selection is required.')
-    if (selectedQuestions.length === 0) return alert('Compilation bundle must contain at least 1 question.')
-    if (!activationTimestamp) return alert('Activation timestamp is required.')
+    if (!examTitle.trim()) return showToast('Exam Title is required.', 'error')
+    if (!targetPackageId) return showToast('Target package selection is required.', 'error')
+    if (selectedQuestions.length === 0) return showToast('Compilation bundle must contain at least 1 question.', 'error')
+    if (!activationTimestamp) return showToast('Activation timestamp is required.', 'error')
 
     setIsCompiling(true)
     try {
@@ -274,7 +226,7 @@ function CompilerClientContent({ packages = [] }) {
         if (countErr) console.warn('[Compiler] Failed to update package count:', countErr.message)
       }
 
-      alert('CBT Exam blueprint successfully compiled and published!')
+      showToast('CBT Exam blueprint successfully compiled and published!', 'success')
       
       // Reset compilation state
       setExamTitle('')
@@ -282,7 +234,7 @@ function CompilerClientContent({ packages = [] }) {
       setExamDuration('180')
       setActivationTimestamp('')
     } catch (err) {
-      alert('Compilation failed: ' + err.message)
+      showToast('Compilation failed: ' + err.message, 'error')
     } finally {
       setIsCompiling(false)
     }

@@ -69,7 +69,7 @@ export function ToastProvider({ children }) {
 export function useToast() {
   const context = useContext(ToastContext)
   if (!context) {
-    return { showToast: (msg) => alert(msg) }
+    return { showToast: (msg, type = 'info') => console.warn(`[Toast fallback]: ${msg}`) }
   }
   return context
 }

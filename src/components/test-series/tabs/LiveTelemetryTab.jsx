@@ -17,7 +17,7 @@ export default function LiveTelemetryTab({
   selectedExamId = null
 }) {
   const supabase = createClient();
-  const packageExams = (exams || []).filter(e => e.package_id === packageData?.id);
+  const packageExams = React.useMemo(() => (exams || []).filter(e => e.package_id === packageData?.id), [exams, packageData?.id]);
   
   const [activeExamId, setActiveExamId] = useState(
     selectedExamId || (packageExams[0]?.id || null)
@@ -30,7 +30,7 @@ export default function LiveTelemetryTab({
     } else if (!activeExamId && packageExams.length > 0) {
       setActiveExamId(packageExams[0].id);
     }
-  }, [selectedExamId, packageExams]);
+  }, [selectedExamId, packageExams, activeExamId]);
 
   // Telemetry States
   const [activeStudents, setActiveStudents] = useState(0);

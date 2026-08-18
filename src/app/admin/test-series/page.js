@@ -164,6 +164,10 @@ function TestSeriesManagementContent() {
     ? Math.round(attempts.reduce((sum, att) => sum + (att.score || 0), 0) / attempts.length) 
     : 0;
 
+  const handleExamsUpdated = useCallback((updatedExams) => {
+    setExams(updatedExams);
+  }, []);
+
   return (
     <AdminLayoutShell
       title="Test Series & CBT Assessment Studio"
@@ -202,10 +206,7 @@ function TestSeriesManagementContent() {
         onClose={handleCloseDrawer}
         onPackageUpdated={handlePackageUpdated}
         onPackageDeleted={handlePackageDeleted}
-        onExamsUpdated={(updatedExams) => {
-          setExams(updatedExams);
-          fetchDashboardData();
-        }}
+        onExamsUpdated={handleExamsUpdated}
       />
 
       {/* Fast Test Package Blueprint Creation Modal */}

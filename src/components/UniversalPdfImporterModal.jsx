@@ -18,6 +18,56 @@ const readFileAsBase64 = (file) => {
   });
 };
 
+const loadPdfJs = () => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('PDF.js can only be loaded in a browser context'));
+      return;
+    }
+    const existing = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+    if (existing) {
+      if (!existing.GlobalWorkerOptions) {
+        existing.GlobalWorkerOptions = {};
+      }
+      if (!existing.GlobalWorkerOptions.workerSrc) {
+        existing.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      window.pdfjsLib = existing;
+      resolve(existing);
+      return;
+    }
+    const scriptSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    const workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let script = document.querySelector(`script[src="${scriptSrc}"]`);
+    if (!script) {
+      script = document.createElement('script');
+      script.src = scriptSrc;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    const onScriptLoad = () => {
+      const pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+      if (pdfjsLib) {
+        if (!pdfjsLib.GlobalWorkerOptions) {
+          pdfjsLib.GlobalWorkerOptions = {};
+        }
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+        window.pdfjsLib = pdfjsLib;
+        resolve(pdfjsLib);
+      } else {
+        reject(new Error('Failed to access PDF.js library instance'));
+      }
+    };
+    if (window.pdfjsLib || window['pdfjs-dist/build/pdf']) {
+      onScriptLoad();
+    } else {
+      script.addEventListener('load', onScriptLoad);
+      script.addEventListener('error', () => reject(new Error('Failed to load PDF.js engine from CDN')));
+    }
+  });
+};
+
 export default function UniversalPdfImporterModal({ 
   isOpen, 
   onClose, 
@@ -38,8 +88,9 @@ export default function UniversalPdfImporterModal({
   if (!isOpen) return null;
 
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
     }
   };
 
@@ -57,10 +108,10 @@ export default function UniversalPdfImporterModal({
 
   const handleDrop = (e) => {
     e.preventDefault();
-    e.stopPropagation();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setSelectedFile(e.dataTransfer.files[0]);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      setSelectedFile(file);
     }
   };
 
@@ -75,10 +126,7 @@ export default function UniversalPdfImporterModal({
 
     try {
       if (selectedFile) {
-        // Import pdfjs-dist (installed as npm dependency)
-        const pdfjs = await import('pdfjs-dist/build/pdf.js');
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.js', import.meta.url).toString();
-
+        const pdfjs = await loadPdfJs();
         const fileArrayBuffer = await selectedFile.arrayBuffer();
         const pdfDoc = await pdfjs.getDocument({ data: fileArrayBuffer }).promise;
         const totalPages = pdfDoc.numPages;

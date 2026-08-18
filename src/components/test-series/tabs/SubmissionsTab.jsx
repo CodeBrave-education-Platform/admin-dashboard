@@ -20,8 +20,9 @@ export default function SubmissionsTab({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedExamFilter, setSelectedExamFilter] = useState('ALL');
 
-  const packageExams = (exams || []).filter(e => e.package_id === packageData?.id);
-  const examIds = packageExams.map(e => e.id);
+  const packageExams = useMemo(() => (exams || []).filter(e => e.package_id === packageData?.id), [exams, packageData?.id]);
+  const examIds = useMemo(() => packageExams.map(e => e.id), [packageExams]);
+  const examIdsKey = examIds.join(',');
 
   // Fetch all attempts for this package's exams
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function SubmissionsTab({
     };
 
     fetchAttempts();
-  }, [packageData?.id, exams]);
+  }, [packageData?.id, examIdsKey]);
 
   // Filter attempts
   const filteredAttempts = useMemo(() => {

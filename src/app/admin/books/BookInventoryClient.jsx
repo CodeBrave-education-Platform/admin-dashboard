@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/utils/supabase/client'
 import Link from 'next/link'
 import ConfirmDialogModal from '@/components/ConfirmDialogModal'
+import { useToast } from '@/components/ToastProvider'
 import { 
   Book, Plus, Search, Edit3, Trash2, CheckCircle2, 
   Truck, ArrowRight, ShieldAlert, Sparkles, X, Eye, PackageCheck, RefreshCw, Loader2
@@ -13,6 +14,7 @@ import {
 
 export default function BookInventoryClient({ user, profile, initialBooks }) {
   const supabase = createClient()
+  const { showToast } = useToast()
   const [books, setBooks] = useState(initialBooks || [])
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTag, setActiveTag] = useState('ALL')
@@ -117,7 +119,7 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
       setTimeout(() => setToastMsg(''), 4000)
     } catch (err) {
       console.error('[BOOK_SAVE_ERROR]:', err)
-      alert('Failed to save book: ' + err.message)
+      showToast('Failed to save book: ' + err.message, 'error')
     } finally {
       setLoading(false)
     }
@@ -136,7 +138,7 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
           setToastMsg(`🗑️ Removed "${title}"`)
           setTimeout(() => setToastMsg(''), 4000)
         } catch (err) {
-          alert('Failed to delete book: ' + err.message)
+          showToast('Failed to delete book: ' + err.message, 'error')
         } finally {
           setConfirmDialog(prev => ({ ...prev, isOpen: false }))
         }

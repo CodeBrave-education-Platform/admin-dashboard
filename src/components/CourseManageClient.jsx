@@ -143,20 +143,47 @@ const loadPdfJs = () => {
       reject(new Error('PDF.js can only be loaded in a browser context'));
       return;
     }
-    if (window.pdfjsLib) {
-      resolve(window.pdfjsLib);
+    const existing = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+    if (existing) {
+      if (!existing.GlobalWorkerOptions) {
+        existing.GlobalWorkerOptions = {};
+      }
+      if (!existing.GlobalWorkerOptions.workerSrc) {
+        existing.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      window.pdfjsLib = existing;
+      resolve(existing);
       return;
     }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => {
-      const pdfjsLib = window['pdfjs-dist/build/pdf'];
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-      window.pdfjsLib = pdfjsLib;
-      resolve(pdfjsLib);
+    const scriptSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    const workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let script = document.querySelector(`script[src="${scriptSrc}"]`);
+    if (!script) {
+      script = document.createElement('script');
+      script.src = scriptSrc;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    const onScriptLoad = () => {
+      const pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+      if (pdfjsLib) {
+        if (!pdfjsLib.GlobalWorkerOptions) {
+          pdfjsLib.GlobalWorkerOptions = {};
+        }
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+        window.pdfjsLib = pdfjsLib;
+        resolve(pdfjsLib);
+      } else {
+        reject(new Error('Failed to access PDF.js library instance'));
+      }
     };
-    script.onerror = (err) => reject(new Error('Failed to load PDF.js compiler from CDN'));
-    document.head.appendChild(script);
+    if (window.pdfjsLib || window['pdfjs-dist/build/pdf']) {
+      onScriptLoad();
+    } else {
+      script.addEventListener('load', onScriptLoad);
+      script.addEventListener('error', (err) => reject(new Error('Failed to load PDF.js compiler from CDN')));
+    }
   });
 };
 

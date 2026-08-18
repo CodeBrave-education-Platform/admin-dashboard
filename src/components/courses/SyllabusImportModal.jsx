@@ -14,24 +14,47 @@ const loadPdfJs = () => {
       reject(new Error('PDF.js can only be loaded in a browser context'));
       return;
     }
-    if (window.pdfjsLib) {
-      resolve(window.pdfjsLib);
+    const existing = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+    if (existing) {
+      if (!existing.GlobalWorkerOptions) {
+        existing.GlobalWorkerOptions = {};
+      }
+      if (!existing.GlobalWorkerOptions.workerSrc) {
+        existing.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      }
+      window.pdfjsLib = existing;
+      resolve(existing);
       return;
     }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    script.onload = () => {
-      const pdfjsLib = window['pdfjs-dist/build/pdf'];
+    const scriptSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    const workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let script = document.querySelector(`script[src="${scriptSrc}"]`);
+    if (!script) {
+      script = document.createElement('script');
+      script.src = scriptSrc;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    const onScriptLoad = () => {
+      const pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
       if (pdfjsLib) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        if (!pdfjsLib.GlobalWorkerOptions) {
+          pdfjsLib.GlobalWorkerOptions = {};
+        }
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
         window.pdfjsLib = pdfjsLib;
         resolve(pdfjsLib);
       } else {
-        reject(new Error('PDF.js loaded but object not found'));
+        reject(new Error('Failed to access PDF.js library instance'));
       }
     };
-    script.onerror = () => reject(new Error('Failed to load PDF.js from CDN'));
-    document.head.appendChild(script);
+    if (window.pdfjsLib || window['pdfjs-dist/build/pdf']) {
+      onScriptLoad();
+    } else {
+      script.addEventListener('load', onScriptLoad);
+      script.addEventListener('error', () => reject(new Error('Failed to load PDF.js engine from CDN')));
+    }
   });
 };
 
@@ -45,13 +68,26 @@ const loadMammoth = () => {
       resolve(window.mammoth);
       return;
     }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
-    script.onload = () => {
+    const scriptSrc = 'https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js';
+    let script = document.querySelector(`script[src="${scriptSrc}"]`);
+    if (!script) {
+      script = document.createElement('script');
+      script.src = scriptSrc;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    if (window.mammoth) {
       resolve(window.mammoth);
-    };
-    script.onerror = () => reject(new Error('Failed to load Mammoth docx parser from CDN'));
-    document.head.appendChild(script);
+    } else {
+      script.addEventListener('load', () => {
+        if (window.mammoth) {
+          resolve(window.mammoth);
+        } else {
+          reject(new Error('Failed to access Mammoth docx library instance'));
+        }
+      });
+      script.addEventListener('error', () => reject(new Error('Failed to load Mammoth docx parser from CDN')));
+    }
   });
 };
 

@@ -5,12 +5,14 @@ import { createClient } from '@/utils/supabase/client'
 import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal'
 import ConfirmDialogModal from '@/components/ConfirmDialogModal'
 import KatexRenderer from '@/components/KatexRenderer'
+import { useToast } from '@/components/ToastProvider'
 import { 
   HelpCircle, Plus, Search, Filter, Image as ImageIcon, Sparkles, 
   CheckCircle2, Edit3, Trash2, FileText, ArrowRight, Layers, UploadCloud, Eye
 } from 'lucide-react'
 
 export default function QuestionBankClient({ user }) {
+  const { showToast } = useToast()
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     title: '',
@@ -168,7 +170,7 @@ export default function QuestionBankClient({ user }) {
 
   const handleRunAiParser = () => {
     if (!aiRawText.trim()) {
-      alert('Please paste raw question paper text to parse!')
+      showToast('Please paste raw question paper text to parse!', 'error')
       return
     }
 
@@ -213,7 +215,7 @@ export default function QuestionBankClient({ user }) {
   const handleConfirmIngestion = () => {
     const toIngest = parsedQuestions.filter(q => q.selected)
     if (toIngest.length === 0) {
-      alert('Please select at least 1 question to ingest!')
+      showToast('Please select at least 1 question to ingest!', 'error')
       return
     }
 
@@ -222,7 +224,7 @@ export default function QuestionBankClient({ user }) {
     setAiStep('input')
     setAiRawText('')
     setParsedQuestions([])
-    alert(`🎉 Successfully checked and ingested ${toIngest.length} questions into Question Bank!`)
+    showToast(`Successfully checked and ingested ${toIngest.length} questions into Question Bank!`, 'success')
   }
 
   const filteredQuestions = questions.filter(q => {
