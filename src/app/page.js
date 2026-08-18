@@ -67,7 +67,7 @@ export default function RootGatePage() {
             </div>
             <div className="space-y-1.5">
               <h3 className="font-extrabold text-sm text-slate-800 tracking-wide">Zero-Trust Identity Gate</h3>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black font-sans mt-1">Securing ASENTRA-Beta-Console</p>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest font-black font-sans mt-1">ASENTRA Admin Console</p>
               <p className="text-xs text-slate-500 mt-2 font-medium">Verifying Supabase administrative credentials...</p>
             </div>
           </>

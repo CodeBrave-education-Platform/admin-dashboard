@@ -50,8 +50,8 @@ export default function BookInventoryClient({ user, profile, initialBooks }) {
       price: '549',
       original_price: '799',
       stock_quantity: '50',
-      cover_url: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=800&q=80',
-      sample_pdf_url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+      cover_url: '',
+      sample_pdf_url: '',
       is_active: true
     })
     setIsModalOpen(true)

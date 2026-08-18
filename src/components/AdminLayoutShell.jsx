@@ -334,7 +334,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
 
           <div className="flex items-center gap-3">
             <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-wider">
-              ASENTRA Beta
+              ASENTRA
             </span>
             <ThemeToggle />
           </div>
