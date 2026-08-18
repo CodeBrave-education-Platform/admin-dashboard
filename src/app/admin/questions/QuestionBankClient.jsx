@@ -137,18 +137,31 @@ export default function QuestionBankClient({ user }) {
 
     const saveToDb = async () => {
       if (editingQuestion) {
-        await supabase.from('questions').update(newQ).eq('id', editingQuestion.id)
+        const { error } = await supabase.from('questions').update(newQ).eq('id', editingQuestion.id)
+        if (error) {
+          showToast(`Error updating question: ${error.message}`, 'error')
+          return
+        }
         setQuestions(questions.map(q => q.id === editingQuestion.id ? newQ : q))
+        showToast('Question updated successfully!', 'success')
       } else {
         const payload = { ...newQ }
         delete payload.id
         const { data, error } = await supabase.from('questions').insert([payload]).select().single()
-        setQuestions([data || newQ, ...questions])
+        
+        if (error) {
+          console.error("Insert error:", error)
+          showToast(`Database Error: ${error.message}`, 'error')
+          return
+        }
+        
+        setQuestions([data, ...questions])
+        showToast('New question added to bank!', 'success')
       }
+      setIsAuthorModalOpen(false)
     }
+    
     saveToDb()
-
-    setIsAuthorModalOpen(false)
   }
 
   const handleDeleteQuestion = (id) => {
@@ -212,14 +225,35 @@ export default function QuestionBankClient({ user }) {
     }, 1000)
   }
 
-  const handleConfirmIngestion = () => {
+  const handleConfirmIngestion = async () => {
     const toIngest = parsedQuestions.filter(q => q.selected)
     if (toIngest.length === 0) {
       showToast('Please select at least 1 question to ingest!', 'error')
       return
     }
 
-    setQuestions([...toIngest, ...questions])
+    const payloads = toIngest.map(q => {
+      const payload = { ...q }
+      delete payload.id
+      delete payload.selected
+      // Map AI fields to DB columns
+      payload.content = q.questionText
+      payload.sub_topic = q.topic
+      payload.format_type = q.formatType
+      payload.diagram_url = q.diagramUrl
+      payload.correct_answer = q.correctAnswer
+      return payload
+    })
+
+    const { data, error } = await supabase.from('questions').insert(payloads).select()
+    
+    if (error) {
+      console.error("AI Ingest Error:", error)
+      showToast(`Database Error: ${error.message}`, 'error')
+      return
+    }
+
+    setQuestions([...(data || payloads), ...questions])
     setIsAiModalOpen(false)
     setAiStep('input')
     setAiRawText('')
