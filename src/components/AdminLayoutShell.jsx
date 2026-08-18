@@ -32,8 +32,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed 
 
   const testingSection = [
     { label: 'Test Packages', href: '/admin/test-series', icon: Package },
-    { label: 'Question Bank', href: '/admin/questions', icon: HelpCircle },
-    { label: 'Test Series', href: '/admin/test-series/compiler', icon: Award }
+    { label: 'Question Bank', href: '/admin/questions', icon: HelpCircle }
   ];
 
   const allNavItems = [
