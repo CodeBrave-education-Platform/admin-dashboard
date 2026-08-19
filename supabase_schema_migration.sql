@@ -245,7 +245,30 @@ ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS reading_material TEXT;
 ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS is_free_preview BOOLEAN DEFAULT false;
 ALTER TABLE public.lessons ADD COLUMN IF NOT EXISTS is_free BOOLEAN DEFAULT false;
 
--- 10. COURSE FILES / WORKSHEETS TABLE (Relates to both Courses and Batches)
+-- 10. LESSON DOUBTS & Q&A THREADS TABLE
+CREATE TABLE IF NOT EXISTS public.lesson_doubts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lesson_id UUID REFERENCES public.lessons(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
+    parent_id UUID REFERENCES public.lesson_doubts(id) ON DELETE CASCADE,
+    content TEXT,
+    question_text TEXT,
+    resolved BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.lesson_doubts ADD COLUMN IF NOT EXISTS lesson_id UUID REFERENCES public.lessons(id) ON DELETE CASCADE;
+ALTER TABLE public.lesson_doubts ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE;
+ALTER TABLE public.lesson_doubts ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES public.lesson_doubts(id) ON DELETE CASCADE;
+ALTER TABLE public.lesson_doubts ADD COLUMN IF NOT EXISTS content TEXT;
+ALTER TABLE public.lesson_doubts ADD COLUMN IF NOT EXISTS question_text TEXT;
+ALTER TABLE public.lesson_doubts ADD COLUMN IF NOT EXISTS resolved BOOLEAN DEFAULT false;
+ALTER TABLE public.lesson_doubts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE public.lesson_doubts DROP CONSTRAINT IF EXISTS lesson_doubts_user_id_fkey;
+ALTER TABLE public.lesson_doubts DROP CONSTRAINT IF EXISTS fk_lesson_doubts_user_profiles;
+ALTER TABLE public.lesson_doubts ADD CONSTRAINT fk_lesson_doubts_user_profiles FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE;
+
+-- 11. COURSE FILES / WORKSHEETS TABLE (Relates to both Courses and Batches)
 CREATE TABLE IF NOT EXISTS public.course_files (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     course_id UUID REFERENCES public.courses(id) ON DELETE CASCADE,
@@ -544,3 +567,8 @@ CREATE INDEX IF NOT EXISTS idx_enrollments_course_id ON public.enrollments(cours
 CREATE INDEX IF NOT EXISTS idx_enrollments_user_id ON public.enrollments(user_id);
 CREATE INDEX IF NOT EXISTS idx_assessment_attempts_assessment_id ON public.assessment_attempts(assessment_id);
 CREATE INDEX IF NOT EXISTS idx_assessment_attempts_user_id ON public.assessment_attempts(user_id);
+CREATE INDEX IF NOT EXISTS idx_lesson_doubts_lesson_id ON public.lesson_doubts(lesson_id);
+CREATE INDEX IF NOT EXISTS idx_lesson_doubts_user_id ON public.lesson_doubts(user_id);
+CREATE INDEX IF NOT EXISTS idx_lesson_doubts_parent_id ON public.lesson_doubts(parent_id);
+CREATE INDEX IF NOT EXISTS idx_lesson_doubts_created_at ON public.lesson_doubts(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_lesson_doubts_resolved ON public.lesson_doubts(resolved);

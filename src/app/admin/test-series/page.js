@@ -99,27 +99,33 @@ function TestSeriesManagementContent() {
     router.replace('/admin/test-series', { scroll: false });
   };
 
-  const handleTogglePackageStatus = async (pkgId, nextStatus) => {
+  const handleTogglePackageStatus = async (pkgOrId, nextStatus) => {
+    const pkgId = typeof pkgOrId === 'object' && pkgOrId !== null ? pkgOrId.id : pkgOrId;
+    const currentPkg = packages.find(p => p.id === pkgId);
+    const targetStatus = typeof nextStatus === 'boolean'
+      ? nextStatus
+      : (typeof pkgOrId === 'object' && pkgOrId !== null ? !(pkgOrId.is_active !== false) : !(currentPkg?.is_active !== false));
+
     // Optimistic UI state update
-    setPackages(prev => prev.map(p => p.id === pkgId ? { ...p, is_active: nextStatus } : p));
-    setSelectedPackage(prev => prev?.id === pkgId ? { ...prev, is_active: nextStatus } : prev);
+    setPackages(prev => prev.map(p => p.id === pkgId ? { ...p, is_active: targetStatus } : p));
+    setSelectedPackage(prev => prev?.id === pkgId ? { ...prev, is_active: targetStatus } : prev);
 
     try {
       const { error } = await supabase
         .from('test_packages')
-        .update({ is_active: nextStatus })
+        .update({ is_active: targetStatus })
         .eq('id', pkgId);
 
       if (error) throw error;
 
-      showToast(`Package status set to ${nextStatus ? 'Active' : 'Inactive'}`, 'success');
+      showToast(`Package status set to ${targetStatus ? 'Active' : 'Inactive'}`, 'success');
       await invalidateCache('catalog', pkgId);
     } catch (err) {
       console.error('[Toggle Package Status Error]:', err.message);
       showToast('Failed to update package status: ' + err.message, 'error');
       // Revert optimistic update
-      setPackages(prev => prev.map(p => p.id === pkgId ? { ...p, is_active: !nextStatus } : p));
-      setSelectedPackage(prev => prev?.id === pkgId ? { ...prev, is_active: !nextStatus } : prev);
+      setPackages(prev => prev.map(p => p.id === pkgId ? { ...p, is_active: !targetStatus } : p));
+      setSelectedPackage(prev => prev?.id === pkgId ? { ...prev, is_active: !targetStatus } : prev);
     }
   };
 
@@ -183,17 +189,19 @@ function TestSeriesManagementContent() {
           averageScore={averageScore}
         />
 
-        {/* TanStack Table Data Grid */}
+        {/* Bento Grid Layout */}
         <TestSeriesGrid
           packages={packages}
           isLoading={loading}
           packageEnrollments={packageEnrollments}
+          selectedPackage={selectedPackage}
           onSelectPackage={handleSelectPackage}
           onCreatePackageClick={() => setIsCreateModalOpen(true)}
           onTogglePackageStatus={handleTogglePackageStatus}
-          onDeletePackage={(pkgId) => {
+          onDeletePackage={(pkgOrId) => {
+            const pkgId = typeof pkgOrId === 'object' && pkgOrId !== null ? pkgOrId.id : pkgOrId;
             const match = packages.find(p => p.id === pkgId);
-            setDeleteConfirmTarget(match || { id: pkgId, title: 'Test Package' });
+            setDeleteConfirmTarget(match || (typeof pkgOrId === 'object' && pkgOrId !== null ? pkgOrId : { id: pkgId, title: 'Test Package' }));
           }}
         />
       </div>

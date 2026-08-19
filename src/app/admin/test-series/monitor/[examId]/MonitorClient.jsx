@@ -156,7 +156,7 @@ export default function MonitorClient({ exam }) {
                 >
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-black text-slate-800 leading-none truncate">
-                      {att.profiles?.full_name || att.profiles?.email.split('@')[0]}
+                      {att.profiles?.full_name || att.profiles?.email?.split('@')[0] || 'Candidate'}
                     </h4>
                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1 block">
                       Duration: {formatDuration(att.total_duration_seconds)}

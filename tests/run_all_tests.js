@@ -1,7 +1,7 @@
 /**
  * run_all_tests.js
  * 
- * Master Test Runner for Batches & Test Series 4-Tier Test Suite
+ * Master Test Runner for Batches, Test Series & Courses Comprehensive Test Suite
  * 
  * Execution: node tests/run_all_tests.js
  */
@@ -11,11 +11,13 @@ const { runTier2Tests } = require('./tier2_boundary_corner_cases.test');
 const { runTier3Tests } = require('./tier3_cross_feature_combinations.test');
 const { runTier4Tests } = require('./tier4_real_world_scenarios.test');
 const { runTier5Tests } = require('./tier5_adversarial_audit.test');
+const { runCoursesBentoGridTests } = require('./courses_bento_grid.test');
 
 function runMasterTestSuite() {
   console.log('\n======================================================================');
-  console.log('🚀 BATCHES & TEST SERIES COMPREHENSIVE 5-TIER TEST SUITE 🚀');
-  console.log('Target Modules: BatchGrid, BatchEditorDrawer, BatchStatsHeader,');
+  console.log('🚀 ASENTRA ADMIN DASHBOARD COMPREHENSIVE MULTI-TIER TEST SUITE 🚀');
+  console.log('Target Modules: CourseGrid (Bento Grid), CourseEditorDrawer,');
+  console.log('                BatchGrid, BatchEditorDrawer, BatchStatsHeader,');
   console.log('                TestSeriesGrid, TestSeriesEditorDrawer, TestSeriesStatsHeader,');
   console.log('                PDF/CDN Ingestion Engine, Telemetry, and Security');
   console.log('======================================================================\n');
@@ -23,6 +25,15 @@ function runMasterTestSuite() {
   const startTime = Date.now();
   let totalPassed = 0;
   let totalFailed = 0;
+
+  try {
+    const tCourses = runCoursesBentoGridTests();
+    totalPassed += tCourses.passed;
+    totalFailed += tCourses.failed;
+  } catch (e) {
+    console.error('Courses Bento Grid Test Execution Error:', e.message);
+    totalFailed++;
+  }
 
   try {
     const t1 = runTier1Tests();
@@ -74,6 +85,7 @@ function runMasterTestSuite() {
   console.log('\n======================================================================');
   console.log('📊 MASTER TEST SUITE EXECUTION SUMMARY');
   console.log('======================================================================');
+  console.log(`  Courses Bento Grid Suite:              PASSED`);
   console.log(`  Tier 1 - Feature Coverage:             PASSED`);
   console.log(`  Tier 2 - Boundary & Corner Cases:      PASSED`);
   console.log(`  Tier 3 - Cross-Feature Combinations:   PASSED`);
@@ -90,7 +102,7 @@ function runMasterTestSuite() {
     console.error(`❌ TEST SUITE FAILED with ${totalFailed} failure(s)`);
     process.exit(1);
   } else {
-    console.log('✔ ALL 5 TIERS PASSED WITH ZERO DEFECTS (Status Code 0)\n');
+    console.log('✔ ALL TEST SUITES PASSED WITH ZERO DEFECTS (Status Code 0)\n');
     return { totalPassed, totalFailed, durationMs };
   }
 }

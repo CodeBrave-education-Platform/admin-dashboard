@@ -1,426 +1,284 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
-import Link from 'next/link'
-import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal'
-import ConfirmDialogModal from '@/components/ConfirmDialogModal'
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
-import { createClient } from '@/utils/supabase/client'
-import { 
-  BookOpen, Plus, Edit, Trash2, Search, CheckCircle2, GripVertical,
-  Package, GraduationCap, ArrowLeft, Star, Users, DollarSign, Sparkles 
-} from 'lucide-react'
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { createClient } from '@/utils/supabase/client';
+import { invalidateCache } from '@/utils/invalidateCache';
+import AdminLayoutShell from '@/components/AdminLayoutShell';
+import { useToast } from '@/components/ToastProvider';
+import ConfirmDialogModal from '@/components/ConfirmDialogModal';
+import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal';
+import CourseGrid from '@/components/courses/CourseGrid';
+import CourseEditorDrawer from '@/components/courses/CourseEditorDrawer';
+import CourseCreateModal from '@/components/courses/CourseCreateModal';
+import SyllabusImportModal from '@/components/courses/SyllabusImportModal';
+import { BookOpen, Layers, Users, Sparkles, Plus, UploadCloud } from 'lucide-react';
 
-export default function CourseStudioClient({ user }) {
-  const supabase = createClient()
-  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false)
-  const [courses, setCourses] = useState([])
-  const [loading, setLoading] = useState(true)
-  // Data fetched from Supabase
+function CourseStudioContent({ user }) {
+  const supabase = createClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { showToast } = useToast();
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingCourse, setEditingCourse] = useState(null)
-  const [confirmDialog, setConfirmDialog] = useState({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => {}
-  })
+  const urlCourseId = searchParams.get('id') || searchParams.get('courseId');
 
-  // Form fields
-  const [formTitle, setFormTitle] = useState('')
-  const [formInstructor, setFormInstructor] = useState('')
-  const [formSubject, setFormSubject] = useState('Physics')
-  const [formLevel, setFormLevel] = useState('JEE Advanced')
-  const [formPrice, setFormPrice] = useState(2999)
-  const [formOriginalPrice, setFormOriginalPrice] = useState(4999)
-  const [formBookKit, setFormBookKit] = useState('')
-  const [formThumbnail, setFormThumbnail] = useState('')
-  const [formDescription, setFormDescription] = useState('')
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
+  const [importTargetCourse, setImportTargetCourse] = useState(null);
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
 
-  const fetchCourses = async () => {
-    setLoading(true)
-    const { data, error } = await supabase.from('courses').select('*').order('created_at', { ascending: false })
-    if (data) {
-      setCourses(data.map(c => ({
-        id: c.id,
-        title: c.title,
-        instructor: c.instructor_name || 'Instructor',
-        subject: c.subject || 'Subject',
-        level: c.level || 'Level',
-        price: c.price || 0,
-        originalPrice: c.original_price || c.price || 0,
-        studentsCount: c.students_count || 0,
-        badge: c.badge || '',
-        bookKit: c.book_kit || '',
-        thumbnail_url: c.thumbnail_url || '',
-        description: c.description || ''
-      })))
+  // Fetch courses with nested curriculum counts from Supabase
+  const fetchCourses = useCallback(async () => {
+    try {
+      setLoading(true);
+      let query = supabase
+        .from('courses')
+        .select(`
+          *,
+          lessons (id),
+          course_files (id),
+          assessments (id)
+        `)
+        .order('created_at', { ascending: false });
+
+      const { data, error } = await query;
+
+      if (error) {
+        // Fallback to simple select if relations differ
+        const fallback = await supabase
+          .from('courses')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (fallback.error) throw fallback.error;
+        setCourses(fallback.data || []);
+      } else {
+        const enriched = (data || []).map(c => ({
+          ...c,
+          lessons_count: c.lessons?.length ?? 0,
+          files_count: c.course_files?.length ?? 0,
+          exams_count: c.assessments?.length ?? 0
+        }));
+        setCourses(enriched);
+      }
+    } catch (err) {
+      console.error('[Fetch Studio Courses Error]:', err.message);
+      showToast('Failed to load courses catalog', 'error');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false)
-  }
+  }, [supabase, showToast]);
 
   useEffect(() => {
-    fetchCourses()
-  }, [])
+    fetchCourses();
+  }, [fetchCourses]);
 
-  const handleOpenCreate = () => {
-    setEditingCourse(null)
-    setFormTitle('')
-    setFormInstructor('Asentra Senior Faculty')
-    setFormSubject('Physics')
-    setFormLevel('JEE Advanced')
-    setFormPrice(2499)
-    setFormOriginalPrice(4499)
-    setFormBookKit('Complete Printed Textbook Box Set')
-    setIsModalOpen(true)
-  }
-
-  const handleOpenEdit = (course) => {
-    setEditingCourse(course)
-    setFormTitle(course.title)
-    setFormInstructor(course.instructor)
-    setFormSubject(course.subject)
-    setFormLevel(course.level)
-    setFormPrice(course.price)
-    setFormOriginalPrice(course.originalPrice)
-    setFormBookKit(course.bookKit)
-    setIsModalOpen(true)
-  }
-
-  const handleSaveCourse = async (e) => {
-    e.preventDefault()
-    if (!formTitle.trim()) return
-
-    if (editingCourse) {
-      const { error } = await supabase.from('courses').update({
-        title: formTitle.trim(),
-        instructor_name: formInstructor.trim(),
-        subject: formSubject,
-        level: formLevel,
-        price: Number(formPrice),
-        book_kit: formBookKit.trim(),
-        thumbnail_url: formThumbnail.trim() || editingCourse.thumbnail_url,
-        description: formDescription.trim() || editingCourse.description
-      }).eq('id', editingCourse.id)
-
-      if (!error) fetchCourses()
-    } else {
-      const { error } = await supabase.from('courses').insert([{
-        title: formTitle.trim(),
-        instructor_name: formInstructor.trim(),
-        subject: formSubject,
-        level: formLevel,
-        price: Number(formPrice),
-        students_count: 0,
-        badge: '⚡ New Release',
-        book_kit: formBookKit.trim() || 'Standard Textbook Kit',
-        thumbnail_url: formThumbnail.trim() || 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-        description: formDescription.trim() || 'Complete syllabus breakdown with textbook kit.'
-      }])
-
-      if (!error) fetchCourses()
-    }
-
-    setIsModalOpen(false)
-  }
-
-  const handleDeleteCourse = (id, title) => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Delete Course',
-      message: `⚠️ Are you sure you want to delete course blueprint "${title}"? This cannot be undone.`,
-      onConfirm: async () => {
-        const { error } = await supabase.from('courses').delete().eq('id', id)
-        if (!error) fetchCourses()
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }))
+  // URL deep-linking sync (?id=...)
+  useEffect(() => {
+    if (courses.length > 0) {
+      if (urlCourseId) {
+        const match = courses.find(c => c.id === urlCourseId);
+        if (match) {
+          setSelectedCourse(match);
+          setIsDrawerOpen(true);
+        }
+      } else if (isDrawerOpen) {
+        setIsDrawerOpen(false);
+        setSelectedCourse(null);
       }
-    })
-  }
+    }
+  }, [urlCourseId, courses]);
 
-  const handleDragEnd = (result) => {
-    if (!result.destination) return
+  const handleSelectCourse = (course) => {
+    setSelectedCourse(course);
+    setIsDrawerOpen(true);
+    router.replace(`/admin/courses?id=${course.id}`, { scroll: false });
+  };
 
-    const items = Array.from(courses)
-    const [reorderedItem] = items.splice(result.source.index, 1)
-    items.splice(result.destination.index, 0, reorderedItem)
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+    setSelectedCourse(null);
+    router.replace('/admin/courses', { scroll: false });
+  };
 
-    setCourses(items)
-  }
+  const handleToggleCourseStatus = async (target, nextStatus) => {
+    const courseId = typeof target === 'object' && target?.id ? target.id : target;
+    const currentCourse = courses.find(c => c.id === courseId);
+    const targetStatus = nextStatus !== undefined ? nextStatus : (currentCourse ? !currentCourse.is_active : true);
 
-  const filteredCourses = courses.filter(c => 
-    c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.instructor.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.subject.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+    // Optimistic UI state update
+    setCourses(prev => prev.map(c => c.id === courseId ? { ...c, is_active: targetStatus } : c));
+    setSelectedCourse(prev => prev?.id === courseId ? { ...prev, is_active: targetStatus } : prev);
+
+    try {
+      const { error } = await supabase
+        .from('courses')
+        .update({ is_active: targetStatus })
+        .eq('id', courseId);
+
+      if (error) throw error;
+
+      showToast(`Course status updated to ${targetStatus ? 'Active' : 'Inactive'}`, 'success');
+      await invalidateCache('catalog', courseId);
+      await invalidateCache('course', courseId);
+    } catch (err) {
+      console.error('[Toggle Studio Course Status Error]:', err.message);
+      showToast('Failed to update course status: ' + err.message, 'error');
+      // Revert optimistic update
+      setCourses(prev => prev.map(c => c.id === courseId ? { ...c, is_active: !targetStatus } : c));
+      setSelectedCourse(prev => prev?.id === courseId ? { ...prev, is_active: !targetStatus } : prev);
+    }
+  };
+
+  const handleCourseCreated = (newCourse) => {
+    setCourses(prev => [newCourse, ...prev]);
+    handleSelectCourse(newCourse);
+  };
+
+  const handleCourseUpdated = (updatedCourse) => {
+    setCourses(prev => prev.map(c => c.id === updatedCourse.id ? { ...c, ...updatedCourse } : c));
+    setSelectedCourse(prev => prev?.id === updatedCourse.id ? { ...prev, ...updatedCourse } : prev);
+  };
+
+  const handleCourseDeleted = async (courseId) => {
+    setCourses(prev => prev.filter(c => c.id !== courseId));
+    if (selectedCourse?.id === courseId) {
+      handleCloseDrawer();
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmTarget) return;
+    try {
+      const { error } = await supabase.from('courses').delete().eq('id', deleteConfirmTarget.id);
+      if (error) throw error;
+      showToast('Course blueprint successfully deleted', 'success');
+      await invalidateCache('catalog', deleteConfirmTarget.id);
+      await invalidateCache('course', deleteConfirmTarget.id);
+      handleCourseDeleted(deleteConfirmTarget.id);
+    } catch (err) {
+      showToast('Failed to delete course: ' + err.message, 'error');
+    } finally {
+      setDeleteConfirmTarget(null);
+    }
+  };
+
+  // Quick stats calculations
+  const totalCourses = courses.length;
+  const foundationCount = courses.filter(c => (c.level || '').toLowerCase() === 'foundation').length;
+  const mainsCount = courses.filter(c => (c.level || '').toLowerCase() === 'mains').length;
+  const advancedCount = courses.filter(c => (c.level || '').toLowerCase() === 'advanced').length;
+  const totalStudents = courses.reduce((acc, c) => acc + (c.students_count || 0), 0);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans p-6 md:p-10 space-y-8 select-none">
-      {/* Top Header - Light Theme */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link href="/dashboard" className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1 font-bold">
-              <ArrowLeft className="w-4 h-4" /> Admin Console
-            </Link>
+    <AdminLayoutShell
+      title="Course & Batch Blueprint Studio"
+      subtitle="Architect competitive course syllabi, manage CBT examinations, and configure physical textbook box sets"
+    >
+      <div className="space-y-6">
+        {/* Header Metric Summary Ribbon */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3.5">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-wider">Total Blueprints</span>
+              <BookOpen className="w-4 h-4 text-indigo-600" />
+            </div>
+            <p className="text-xl font-black text-slate-900 dark:text-white font-mono">{totalCourses}</p>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Course & Batch Blueprint Studio</h1>
-          <p className="text-xs text-slate-500 font-medium mt-1">
-            Create, edit, price, and manage competitive course syllabi and bundled physical textbook kits.
-          </p>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-wider">Foundation</span>
+              <span className="w-2 h-2 rounded-full bg-sky-500" />
+            </div>
+            <p className="text-xl font-black text-slate-900 dark:text-white font-mono">{foundationCount}</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-wider">Mains</span>
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+            </div>
+            <p className="text-xl font-black text-slate-900 dark:text-white font-mono">{mainsCount}</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xs">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-wider">Advanced</span>
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+            </div>
+            <p className="text-xl font-black text-slate-900 dark:text-white font-mono">{advancedCount}</p>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xs col-span-2 sm:col-span-4 lg:col-span-1">
+            <div className="flex items-center justify-between text-slate-400 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-wider">Active Candidates</span>
+              <Users className="w-4 h-4 text-emerald-600" />
+            </div>
+            <p className="text-xl font-black text-emerald-700 dark:text-emerald-400 font-mono">{totalStudents.toLocaleString()}</p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setIsPdfModalOpen(true)}
-            className="px-4 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
-          >
-            <Sparkles className="w-4 h-4" />
-            <span>Import Course Quiz from PDF</span>
-          </button>
-
-          <button
-            onClick={handleOpenCreate}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Publish New Course</span>
-          </button>
-        </div>
+        {/* Bento Grid Layout Component */}
+        <CourseGrid
+          courses={courses}
+          isLoading={loading}
+          onSelectCourse={handleSelectCourse}
+          onCreateCourse={() => setIsCreateModalOpen(true)}
+          onCreateCourseClick={() => setIsCreateModalOpen(true)}
+          onImportSyllabusClick={(course) => {
+            setImportTargetCourse(course || selectedCourse || courses[0] || null);
+            setIsImportModalOpen(true);
+          }}
+          onImportSyllabus={(course) => {
+            setImportTargetCourse(course || selectedCourse || courses[0] || null);
+            setIsImportModalOpen(true);
+          }}
+          onToggleCourseStatus={handleToggleCourseStatus}
+          onDeleteCourse={async (target) => {
+            const courseId = typeof target === 'object' && target?.id ? target.id : target;
+            const match = courses.find(c => c.id === courseId);
+            setDeleteConfirmTarget(match || (typeof target === 'object' ? target : { id: courseId, title: 'Course' }));
+          }}
+        />
       </div>
 
-      {/* Search Toolbar - Light Theme */}
-      <div className="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="relative w-80">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-            placeholder="Search course title, subject or instructor..."
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-2 text-xs text-slate-900 outline-none focus:border-indigo-600 font-bold"
-          />
-        </div>
+      {/* Slide-out Course Management Drawer */}
+      <CourseEditorDrawer
+        isOpen={isDrawerOpen}
+        course={selectedCourse}
+        onClose={handleCloseDrawer}
+        onCourseUpdated={handleCourseUpdated}
+        onCourseDeleted={handleCourseDeleted}
+        onImportSyllabusRequested={(course) => {
+          setImportTargetCourse(course);
+          setIsImportModalOpen(true);
+        }}
+      />
 
-        <span className="text-xs text-slate-500 font-bold">{filteredCourses.length} Published Blueprints</span>
-      </div>
+      {/* Fast Blueprint Creation Modal */}
+      <CourseCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCourseCreated={handleCourseCreated}
+      />
 
-      {/* Course Catalog Table - Light Theme */}
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-sans">
-            <thead className="bg-slate-50 text-slate-500 font-black uppercase text-[10px] tracking-wider border-b border-slate-200">
-              <tr>
-                <th className="p-4 w-10"></th>
-                <th className="p-4">Course Blueprint</th>
-                <th className="p-4">Subject & Level</th>
-                <th className="p-4">Pricing</th>
-                <th className="p-4">Enrolled Candidates</th>
-                <th className="p-4">Bundled Textbook Kit</th>
-                <th className="p-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="courses">
-                {(provided) => (
-                  <tbody 
-                    className="divide-y divide-slate-100 font-medium text-slate-700"
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                  >
-                    {filteredCourses.map((course, index) => (
-                      <Draggable key={course.id} draggableId={course.id} index={index}>
-                        {(provided, snapshot) => (
-                          <tr 
-                            className={`transition ${snapshot.isDragging ? 'bg-indigo-50/80 shadow-lg' : 'hover:bg-slate-50/80'}`}
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                          >
-                            <td className="p-4 w-10">
-                              <div {...provided.dragHandleProps} className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-slate-600">
-                                <GripVertical className="w-5 h-5" />
-                              </div>
-                            </td>
-                            <td className="p-4">
-                              <div className="space-y-0.5">
-                                <h4 className="font-bold text-slate-900 text-sm">{course.title}</h4>
-                                <p className="text-slate-400 text-[11px]">Instructor: {course.instructor}</p>
-                              </div>
-                            </td>
-
-                            <td className="p-4">
-                              <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg font-bold">
-                                {course.subject} • {course.level}
-                              </span>
-                            </td>
-
-                            <td className="p-4 font-bold text-slate-900 font-mono">
-                              ₹{course.price} <span className="text-slate-400 text-[11px] line-through">₹{course.originalPrice}</span>
-                            </td>
-
-                            <td className="p-4">
-                              <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg font-bold">
-                                {course.studentsCount} Students
-                              </span>
-                            </td>
-
-                            <td className="p-4 text-slate-500 text-[11px]">
-                              {course.bookKit}
-                            </td>
-
-                            <td className="p-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleOpenEdit(course)}
-                                  className="p-1.5 bg-slate-100 hover:bg-slate-200 text-indigo-700 border border-slate-200 rounded-lg transition cursor-pointer"
-                                  title="Edit Blueprint"
-                                >
-                                  <Edit className="w-3.5 h-3.5" />
-                                </button>
-
-                                <button
-                                  onClick={() => handleDeleteCourse(course.id, course.title)}
-                                  className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-lg transition cursor-pointer"
-                                  title="Delete Blueprint"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </tbody>
-                )}
-              </Droppable>
-            </DragDropContext>
-          </table>
-        </div>
-      </div>
-
-      {/* Create / Edit Modal - Light Theme */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-50">
-          <form onSubmit={handleSaveCourse} className="bg-white border border-slate-200 p-8 rounded-3xl max-w-lg w-full space-y-6 shadow-2xl">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-              <h3 className="text-lg font-black text-slate-900">
-                {editingCourse ? `Edit ${editingCourse.title}` : 'Publish New Course Blueprint'}
-              </h3>
-              <button type="button" onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
-            </div>
-
-            <div className="space-y-4 text-xs font-medium">
-              <div className="space-y-1">
-                <label className="text-slate-500 font-bold block uppercase text-[10px]">Course Title</label>
-                <input
-                  type="text"
-                  value={formTitle}
-                  onChange={e => setFormTitle(e.target.value)}
-                  placeholder="e.g. JEE Mains & Advanced Complete Physics Mastery 2026"
-                  required
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Subject</label>
-                  <select
-                    value={formSubject}
-                    onChange={e => setFormSubject(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
-                  >
-                    <option value="Physics">Physics</option>
-                    <option value="Chemistry">Chemistry</option>
-                    <option value="Mathematics">Mathematics</option>
-                    <option value="Biology">Biology</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Target Level</label>
-                  <select
-                    value={formLevel}
-                    onChange={e => setFormLevel(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
-                  >
-                    <option value="JEE Advanced">JEE Advanced</option>
-                    <option value="JEE Mains">JEE Mains</option>
-                    <option value="NEET UG">NEET UG</option>
-                    <option value="Foundation">Foundation</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Course Fee (₹)</label>
-                  <input
-                    type="number"
-                    value={formPrice}
-                    onChange={e => setFormPrice(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-slate-500 font-bold block uppercase text-[10px]">Original MRP (₹)</label>
-                  <input
-                    type="number"
-                    value={formOriginalPrice}
-                    onChange={e => setFormOriginalPrice(e.target.value)}
-                    required
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-bold"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-500 font-bold block uppercase text-[10px]">Instructor Name & Role</label>
-                <input
-                  type="text"
-                  value={formInstructor}
-                  onChange={e => setFormInstructor(e.target.value)}
-                  placeholder="e.g. Dr. H.C. Verma & Asentra Team"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-medium"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-slate-500 font-bold block uppercase text-[10px]">Included Bundled Book Kit Title</label>
-                <input
-                  type="text"
-                  value={formBookKit}
-                  onChange={e => setFormBookKit(e.target.value)}
-                  placeholder="e.g. Mechanics 2-Vol Printed Hardcopy Kit"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-indigo-600 font-medium"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl transition cursor-pointer"
-              >
-                Save Course Blueprint
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* Universal Document Syllabus Importer Modal */}
+      <SyllabusImportModal
+        isOpen={isImportModalOpen}
+        course={importTargetCourse}
+        onClose={() => {
+          setIsImportModalOpen(false);
+          setImportTargetCourse(null);
+        }}
+        onLessonsImported={async () => {
+          await fetchCourses();
+        }}
+      />
 
       {/* PDF Importer Modal */}
       <UniversalPdfImporterModal
@@ -429,13 +287,28 @@ export default function CourseStudioClient({ user }) {
         contextType="course_material"
       />
 
+      {/* Safe Deletion Confirmation Dialog */}
       <ConfirmDialogModal
-        isOpen={confirmDialog.isOpen}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        isOpen={!!deleteConfirmTarget}
+        title="Delete Course Blueprint"
+        message={`Are you sure you want to permanently delete "${deleteConfirmTarget?.title || 'this course'}" and all its lessons, worksheets, and exams?`}
+        confirmLabel="Permanently Delete"
+        type="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteConfirmTarget(null)}
       />
-    </div>
-  )
+    </AdminLayoutShell>
+  );
+}
+
+export default function CourseStudioClient({ user }) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-600"></div>
+      </div>
+    }>
+      <CourseStudioContent user={user} />
+    </Suspense>
+  );
 }

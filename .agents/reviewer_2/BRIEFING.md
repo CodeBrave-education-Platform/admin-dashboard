@@ -1,57 +1,64 @@
-# BRIEFING — 2026-08-17T15:37:45+05:30
+# BRIEFING — 2026-08-19T23:31:00+05:30
 
 ## Mission
-Perform comprehensive Quality and Adversarial Review (Reviewer 2) for the Batches and Test Series redesign against Course module reference, verify component contracts, searchParams sync, toast notifications, confirmation modals, error handling, clean build, and test suite.
+Perform rigorous Quality and Adversarial Review (Reviewer 2 - Database, Auth & API Architecture Reviewer) for Next.js 16 async `cookies()` in `requireAdmin()`, `MonitorClient.jsx` null safety, Telemetry API marks scheme normalization, `lesson_doubts` DDL, foreign key cascades & indexes, and Upstash Redis cache invalidation & Supabase SSR integration.
 
 ## 🔒 My Identity
 - Archetype: reviewer_and_adversarial_critic
 - Roles: reviewer, critic
 - Working directory: D:\admin dashboard\.agents\reviewer_2
-- Original parent: b02a1018-39dd-406e-a243-757ed0d8e971
-- Milestone: Batches and Test Series Redesign Review
-- Instance: 2 of 2
+- Original parent: 52d3047a-1612-4b1f-885b-9535e7be9cb5
+- Milestone: Database, Auth & API Architecture QA Review
+- Instance: 2 of 4
 
 ## 🔒 Key Constraints
-- Review-only — do NOT modify implementation code directly unless instructed
-- Objectively evaluate code quality, component contracts, error handling, toast & dialog behaviors
-- Check integrity violations (hardcoded test results, facade implementations, shortcut bypasses, fabricated outputs)
-- Verify claims via independent testing and code inspection
+- Review-only — do NOT modify implementation code directly
+- Actively check for integrity violations (hardcoded test results, fake implementations, bypasses)
+- Stress-test Next.js 16 async cookies, edge-cases in telemetry calculation, null safety, schema cascading, and caching
+- Verify claims via independent code analysis and test executions
 
 ## Current Parent
-- Conversation ID: b02a1018-39dd-406e-a243-757ed0d8e971
-- Updated: 2026-08-17T15:37:45+05:30
+- Conversation ID: 52d3047a-1612-4b1f-885b-9535e7be9cb5
+- Updated: 2026-08-19T23:31:00+05:30
 
 ## Review Scope
-- **Files to review**: `src/app/batches/page.js`, `src/components/batches/*`, `src/app/admin/test-series/page.js`, `src/components/test-series/*`, `src/app/courses/page.js`, `src/components/courses/*`, `src/components/ToastProvider.jsx`, `src/components/ConfirmDialogModal.jsx`.
+- **Files to review**:
+  - `src/utils/auth-server.js`
+  - `src/app/admin/test-series/monitor/[examId]/MonitorClient.jsx`
+  - `src/app/api/admin/test-series/telemetry/route.js`
+  - `supabase_schema_migration.sql`
+  - `src/utils/supabase/server.js`, `src/utils/supabase/client.js`, `src/utils/invalidateCache.js`
 - **Interface contracts**: `PROJECT.md`, `TEST_READY.md`, `ORIGINAL_REQUEST.md`
-- **Review criteria**: Correctness, component contracts, imports/exports, dynamic searchParams sync, back-button handling, UI consistency with Course module, error handling, toast feedback, ConfirmDialogModal integration, npm test, npm run build.
+- **Review criteria**: Correctness, security, async cookies handling, null safety, SQL DDL cascade constraints & performance indexes, Redis cache invalidation, E2E test execution (`node tests/e2e/run_e2e_tests.js`), and `npm run build`.
 
 ## Review Checklist
 - **Items reviewed**:
-  - `src/app/courses/page.js`, `CourseGrid.jsx`, `CourseEditorDrawer.jsx` (Reference Architecture)
-  - `src/app/batches/page.js`, `BatchStatsHeader.jsx`, `BatchGrid.jsx`, `BatchEditorDrawer.jsx`, `BatchCreateModal.jsx`, `BatchRosterImportModal.jsx`, `StudentTelemetryModal.jsx`
-  - `src/app/admin/test-series/page.js`, `TestSeriesStatsHeader.jsx`, `TestSeriesGrid.jsx`, `TestSeriesEditorDrawer.jsx`, `TestSeriesCreateModal.jsx`
-  - `src/components/test-series/tabs/*` (`PackageOverviewTab.jsx`, `PackageExamsTab.jsx`, `ExamCompilerTab.jsx`, `LiveTelemetryTab.jsx`, `SubmissionsTab.jsx`)
-  - `src/components/ConfirmDialogModal.jsx`, `src/components/ToastProvider.jsx`
-  - `tests/*` test harness, mock data, and 4-tier suites
-  - `npm test` and `npm run build` execution logs
+  - `src/utils/auth-server.js` (Async `cookies()`, SSR `@supabase/ssr`, role whitelist `admin|teacher|instructor`)
+  - `src/app/admin/test-series/monitor/[examId]/MonitorClient.jsx` (Optional chaining on email split, interval cleanup)
+  - `src/app/api/admin/test-series/telemetry/route.js` (Normalization `positive_marks ?? positive ?? 4`, zero-division protection)
+  - `supabase_schema_migration.sql` (`lesson_doubts` DDL, hierarchical cascade, FK cascades, invoice ledger preservation `SET NULL`, performance indexes)
+  - `src/utils/invalidateCache.js` (Direct Upstash Redis REST purge with fallback webhook dispatch)
+  - `node tests/e2e/run_e2e_tests.js` (87/87 tests passed)
+  - `node tests/run_all_tests.js` (119/119 tests passed)
+  - `npm run build` (Next.js 16 build succeeded with 0 errors, 16/16 static pages generated)
 - **Verdict**: APPROVE
-- **Unverified claims**: None. All claims independently verified.
+- **Unverified claims**: None.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Empty dataset / zero-state rendering in KPI ribbon and grid -> verified safe without NaN/crashes
-  - URL searchParams synchronization (`?id=...`) and back-button navigation -> verified bidirectional sync and dismissal
-  - Error rollback on optimistic updates -> verified in both batches and test series status toggles
-  - Memory leak on live telemetry polling -> verified setInterval cleared on unmount
-  - XSS / Injection strings / KaTeX LaTeX formulas -> verified preserved and handled safely
-- **Vulnerabilities found**: None that compromise system integrity or violate requirements.
+  - Next.js 16 async `cookies()` compatibility -> Verified `await cookies()` resolves properly without synchronous read errors.
+  - Null/undefined profiles & email in `MonitorClient.jsx` -> Verified optional chaining safely falls back to 'Candidate'.
+  - Legacy vs modern marks scheme in Telemetry API -> Verified fallback chain handles `positive_marks`, `positive`, and default 4.
+  - Cascade deletion on blueprints -> Verified linked exams/lessons cascade, while `invoices` preserve financial ledger via `SET NULL`.
+  - Upstash Redis cache invalidation -> Verified multi-key Redis DEL with fallback webhook dispatch.
+  - Integrity violation checks -> Verified zero hardcoded outputs, zero facade implementations.
+- **Vulnerabilities found**: None. System is resilient against null references, concurrency, and cascade locks.
 - **Untested angles**: None.
 
 ## Key Decisions Made
-- Confirmed full architectural parity with the Courses reference module.
-- Verified all component contracts, toast notifications, confirmation dialogs, error handling paths, and cache invalidation.
-- Issued APPROVE verdict.
+- Confirmed full compliance with Next.js 16 App Router asynchronous headers/cookies paradigm.
+- Confirmed database integrity, cascading foreign keys, and indexes in `supabase_schema_migration.sql`.
+- Formally issued APPROVE verdict.
 
 ## Artifact Index
 - `D:\admin dashboard\.agents\reviewer_2\DISPATCH.md` — Dispatch log

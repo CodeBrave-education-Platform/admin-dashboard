@@ -6,7 +6,7 @@ import { cookies } from 'next/headers'
  * Use this to wrap sensitive Server Actions and API Routes.
  */
 export async function requireAdmin() {
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,

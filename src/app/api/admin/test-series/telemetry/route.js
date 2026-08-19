@@ -80,7 +80,9 @@ export async function GET(request) {
       // Calculate max possible score from marks scheme
       const firstAttempt = attempts[0]
       const totalQ = firstAttempt.test_exams?.total_questions || 90
-      const posMarks = firstAttempt.test_exams?.marks_scheme?.positive_marks || 4
+      const posMarks = firstAttempt.test_exams?.marks_scheme?.positive_marks 
+        ?? firstAttempt.test_exams?.marks_scheme?.positive 
+        ?? 4
       const maxScore = totalQ * posMarks
 
       // Group scores into percentages

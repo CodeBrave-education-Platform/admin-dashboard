@@ -103,28 +103,32 @@ function CoursesManagementContent() {
     router.replace('/courses', { scroll: false });
   };
 
-  const handleToggleCourseStatus = async (courseId, nextStatus) => {
+  const handleToggleCourseStatus = async (target, nextStatus) => {
+    const courseId = typeof target === 'object' && target?.id ? target.id : target;
+    const currentCourse = courses.find(c => c.id === courseId);
+    const targetStatus = nextStatus !== undefined ? nextStatus : (currentCourse ? !currentCourse.is_active : true);
+
     // Optimistic state update
-    setCourses(prev => prev.map(c => c.id === courseId ? { ...c, is_active: nextStatus } : c));
-    setSelectedCourse(prev => prev?.id === courseId ? { ...prev, is_active: nextStatus } : prev);
+    setCourses(prev => prev.map(c => c.id === courseId ? { ...c, is_active: targetStatus } : c));
+    setSelectedCourse(prev => prev?.id === courseId ? { ...prev, is_active: targetStatus } : prev);
 
     try {
       const { error } = await supabase
         .from('courses')
-        .update({ is_active: nextStatus })
+        .update({ is_active: targetStatus })
         .eq('id', courseId);
 
       if (error) throw error;
 
-      showToast(`Course status updated to ${nextStatus ? 'Active' : 'Inactive'}`, 'success');
+      showToast(`Course status updated to ${targetStatus ? 'Active' : 'Inactive'}`, 'success');
       await invalidateCache('catalog', courseId);
       await invalidateCache('course', courseId);
     } catch (err) {
       console.error('[Toggle Course Status Error]:', err.message);
       showToast('Failed to update course status: ' + err.message, 'error');
       // Revert optimistic update
-      setCourses(prev => prev.map(c => c.id === courseId ? { ...c, is_active: !nextStatus } : c));
-      setSelectedCourse(prev => prev?.id === courseId ? { ...prev, is_active: !nextStatus } : prev);
+      setCourses(prev => prev.map(c => c.id === courseId ? { ...c, is_active: !targetStatus } : c));
+      setSelectedCourse(prev => prev?.id === courseId ? { ...prev, is_active: !targetStatus } : prev);
     }
   };
 
@@ -217,20 +221,26 @@ function CoursesManagementContent() {
           </div>
         </div>
 
-        {/* TanStack Table Data Grid */}
+        {/* Bento Grid Layout Component */}
         <CourseGrid
           courses={courses}
           isLoading={loading}
           onSelectCourse={handleSelectCourse}
+          onCreateCourse={() => setIsCreateModalOpen(true)}
           onCreateCourseClick={() => setIsCreateModalOpen(true)}
           onImportSyllabusClick={(course) => {
             setImportTargetCourse(course || selectedCourse || courses[0] || null);
             setIsImportModalOpen(true);
           }}
+          onImportSyllabus={(course) => {
+            setImportTargetCourse(course || selectedCourse || courses[0] || null);
+            setIsImportModalOpen(true);
+          }}
           onToggleCourseStatus={handleToggleCourseStatus}
-          onDeleteCourse={async (courseId) => {
+          onDeleteCourse={async (target) => {
+            const courseId = typeof target === 'object' && target?.id ? target.id : target;
             const match = courses.find(c => c.id === courseId);
-            setDeleteConfirmTarget(match || { id: courseId, title: 'Course' });
+            setDeleteConfirmTarget(match || (typeof target === 'object' ? target : { id: courseId, title: 'Course' }));
           }}
         />
       </div>
