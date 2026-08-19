@@ -8,7 +8,8 @@ import UniversalPdfImporterModal from '@/components/UniversalPdfImporterModal';
 import { 
   Plus, Search, ClipboardList, Trash2, CheckCircle2, 
   Layers, Clock, Award, Loader2, Sparkles, AlertCircle,
-  HelpCircle, Check, ArrowRight
+  HelpCircle, Check, ArrowRight, ArrowUp, ArrowDown, MoveUp, MoveDown,
+  Edit2, Eye, Filter, RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
 
@@ -30,7 +31,7 @@ export default function ExamCompilerTab({
   const [content, setContent] = useState('');
   const [options, setOptions] = useState(['', '', '', '']);
   const [correctOptionIdx, setCorrectOptionIdx] = useState(0);
-  const [correctOptionsMultiple, setCorrectOptionsMultiple] = useState([]);
+  const [correctOptionsMultiple, setCorrectOptionsMultiple] = useState([0]);
   const [integerAnswer, setIntegerAnswer] = useState('');
   const [blankAnswer, setBlankAnswer] = useState('');
   const [matrixMatch, setMatrixMatch] = useState([
@@ -43,7 +44,7 @@ export default function ExamCompilerTab({
   const [qMarksNeg, setQMarksNeg] = useState('-1');
   const [isSavingQuestion, setIsSavingQuestion] = useState(false);
 
-  // Question Pool State
+  // Question Pool State (from canonical public.question_bank)
   const [poolSubject, setPoolSubject] = useState('All');
   const [poolDifficulty, setPoolDifficulty] = useState('All');
   const [poolSearch, setPoolSearch] = useState('');
@@ -63,74 +64,142 @@ export default function ExamCompilerTab({
   // AI PDF Modal State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
-  // Sync editingExam if provided
+  // Load editingExam & linked questions from junction table
   useEffect(() => {
-    if (editingExam) {
-      setExamTitle(editingExam.title || '');
-      setExamDuration(editingExam.duration_minutes ? String(editingExam.duration_minutes) : '180');
-      setPositiveMarks(editingExam.marks_scheme?.positive_marks ? String(editingExam.marks_scheme.positive_marks) : '4');
-      setNegativeMarks(editingExam.marks_scheme?.negative_marks ? String(Math.abs(editingExam.marks_scheme.negative_marks)) : '1');
-      setIsLiveRanking(editingExam.is_live_ranking ?? true);
-      setActivationTimestamp(
-        editingExam.activation_timestamp ? new Date(editingExam.activation_timestamp).toISOString().slice(0, 16) : ''
-      );
-      if (Array.isArray(editingExam.questions)) {
-        setSelectedQuestions(editingExam.questions);
+    const loadExamData = async () => {
+      if (editingExam) {
+        setExamTitle(editingExam.title || '');
+        setExamDuration(editingExam.duration_minutes ? String(editingExam.duration_minutes) : '180');
+        setPositiveMarks(editingExam.marks_scheme?.positive_marks ? String(editingExam.marks_scheme.positive_marks) : '4');
+        setNegativeMarks(editingExam.marks_scheme?.negative_marks ? String(Math.abs(editingExam.marks_scheme.negative_marks)) : '1');
+        setIsLiveRanking(editingExam.is_live_ranking ?? true);
+        setActivationTimestamp(
+          editingExam.activation_timestamp ? new Date(editingExam.activation_timestamp).toISOString().slice(0, 16) : ''
+        );
+
+        // Fetch linked questions from canonical public.exam_questions junction table
+        try {
+          const { data: junctionData, error: juncError } = await supabase
+            .from('exam_questions')
+            .select(`
+              id,
+              exam_id,
+              question_id,
+              order_index,
+              section,
+              marks_positive,
+              marks_negative,
+              question_bank:question_id (
+                id,
+                content,
+                format_type,
+                type,
+                subject,
+                topic,
+                sub_topic,
+                difficulty,
+                options,
+                correct_option_index,
+                correct_answer,
+                explanation,
+                diagram_url,
+                marks_positive,
+                marks_negative,
+                tags
+              )
+            `)
+            .eq('exam_id', editingExam.id)
+            .order('order_index', { ascending: true });
+
+          if (!juncError && junctionData && junctionData.length > 0) {
+            const mapped = junctionData.map(j => {
+              const qb = j.question_bank || {};
+              return {
+                ...qb,
+                id: j.question_id || qb.id,
+                junction_id: j.id,
+                question_id: j.question_id,
+                order_index: j.order_index,
+                section: j.section || 'Section A',
+                marks_positive: j.marks_positive ?? qb.marks_positive ?? 4,
+                marks_negative: j.marks_negative ?? qb.marks_negative ?? -1
+              };
+            });
+            setSelectedQuestions(mapped);
+          } else if (Array.isArray(editingExam.questions)) {
+            // Fallback to legacy JSON questions
+            setSelectedQuestions(editingExam.questions);
+          }
+        } catch (err) {
+          console.warn('[ExamCompilerTab] Error fetching junction questions, fallback to exam JSON:', err);
+          if (Array.isArray(editingExam.questions)) {
+            setSelectedQuestions(editingExam.questions);
+          }
+        }
+      } else {
+        setExamTitle('');
+        setExamDuration('180');
+        setPositiveMarks('4');
+        setNegativeMarks('1');
+        setIsLiveRanking(true);
+        setActivationTimestamp('');
+        setSelectedQuestions([]);
       }
-    } else {
-      setExamTitle('');
-      setExamDuration('180');
-      setPositiveMarks('4');
-      setNegativeMarks('1');
-      setIsLiveRanking(true);
-      setActivationTimestamp('');
-      setSelectedQuestions([]);
-    }
+    };
+
+    loadExamData();
   }, [editingExam]);
 
-  // Fetch question pool
+  // Fetch question pool from canonical public.question_bank
   const fetchQuestionPool = async () => {
     setIsLoadingPool(true);
     try {
-      let query = supabase.from('test_questions').select('*');
+      let query = supabase.from('question_bank').select('*').eq('is_active', true);
+      
       if (poolSubject !== 'All') {
         query = query.eq('subject', poolSubject);
       }
       if (poolDifficulty !== 'All') {
-        query = query.eq('difficulty', poolDifficulty);
+        query = query.ilike('difficulty', poolDifficulty);
       }
-      if (poolSearch) {
-        query = query.ilike('content', `%${poolSearch}%`);
+      if (poolSearch.trim()) {
+        const term = poolSearch.trim();
+        query = query.or(`content.ilike.%${term}%,topic.ilike.%${term}%,sub_topic.ilike.%${term}%`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
-      if (error) {
-        // Fallback default sample questions
-        setPoolQuestions([
-          {
-            id: 'sample-q-101',
-            subject: 'Physics',
-            sub_topic: 'Rotational Dynamics',
-            difficulty: 'hard',
-            content: 'A solid sphere of mass M and radius R rolls down an inclined plane of angle $\\theta$ without slipping. Find center of mass acceleration.',
-            options: ['(5/7) g sin θ', '(2/5) g sin θ', '(3/5) g sin θ', '(1/2) g sin θ'],
-            correct_option_index: 0
-          },
-          {
-            id: 'sample-q-102',
-            subject: 'Chemistry',
-            sub_topic: 'Thermodynamics',
-            difficulty: 'medium',
-            content: 'For the reaction $N_2 + 3H_2 \\rightleftharpoons 2NH_3$, calculate Gibbs Free Energy $\\Delta G^{\\circ}$.',
-            options: ['-33.2 kJ/mol', '+16.5 kJ/mol', '0 kJ/mol', '-50.1 kJ/mol'],
-            correct_option_index: 0
-          }
-        ]);
-      } else {
-        setPoolQuestions(data || []);
-      }
+      if (error) throw error;
+
+      setPoolQuestions(data || []);
     } catch (err) {
-      console.warn('[Compiler Tab] Pool fetch fallback');
+      console.warn('[Compiler Tab] Canonical Question Bank pool fetch error:', err.message);
+      // Fallback sample questions if table is initially empty
+      setPoolQuestions([
+        {
+          id: 'sample-qb-101',
+          subject: 'Physics',
+          topic: 'Rotational Dynamics',
+          sub_topic: 'Rotational Dynamics',
+          difficulty: 'HARD',
+          format_type: 'single_mcq',
+          content: 'A solid sphere of mass M and radius R rolls down an inclined plane of angle $\\theta$ without slipping. Find center of mass acceleration.',
+          options: ['(5/7) g sin θ', '(2/5) g sin θ', '(3/5) g sin θ', '(1/2) g sin θ'],
+          correct_option_index: 0,
+          correct_answer: '(5/7) g sin θ'
+        },
+        {
+          id: 'sample-qb-102',
+          subject: 'Chemistry',
+          topic: 'Thermodynamics',
+          sub_topic: 'Thermodynamics',
+          difficulty: 'MEDIUM',
+          format_type: 'single_mcq',
+          content: 'For the reaction $N_2 + 3H_2 \\rightleftharpoons 2NH_3$, calculate Gibbs Free Energy $\\Delta G^{\\circ}$.',
+          options: ['-33.2 kJ/mol', '+16.5 kJ/mol', '0 kJ/mol', '-50.1 kJ/mol'],
+          correct_option_index: 0,
+          correct_answer: '-33.2 kJ/mol'
+        }
+      ]);
     } finally {
       setIsLoadingPool(false);
     }
@@ -140,11 +209,11 @@ export default function ExamCompilerTab({
     fetchQuestionPool();
   }, [poolSubject, poolDifficulty]);
 
-  // Save single question to bank
+  // Save single authored question directly to public.question_bank
   const handleSaveQuestion = async (e) => {
     e.preventDefault();
     if (!subTopic.trim()) {
-      showToast('Sub-topic is required', 'error');
+      showToast('Topic / Sub-topic is required', 'error');
       return;
     }
     if (!content.trim()) {
@@ -152,17 +221,22 @@ export default function ExamCompilerTab({
       return;
     }
 
-    let finalOptions = null;
-    let finalCorrect = null;
+    let finalOptions = [];
+    let finalCorrect = 0;
+    let finalCorrectAns = '';
+    let formatType = 'single_mcq';
 
     if (questionType === 'single') {
+      formatType = 'single_mcq';
       if (options.some(opt => !opt.trim())) {
         showToast('All 4 option choices are required', 'error');
         return;
       }
       finalOptions = options;
       finalCorrect = correctOptionIdx;
+      finalCorrectAns = options[correctOptionIdx] || `Option ${String.fromCharCode(65 + correctOptionIdx)}`;
     } else if (questionType === 'multiple') {
+      formatType = 'multi_mcq';
       if (options.some(opt => !opt.trim())) {
         showToast('All 4 option choices are required', 'error');
         return;
@@ -172,62 +246,75 @@ export default function ExamCompilerTab({
         return;
       }
       finalOptions = options;
-      finalCorrect = correctOptionsMultiple;
+      finalCorrect = correctOptionsMultiple[0];
+      finalCorrectAns = correctOptionsMultiple.map(i => options[i]).join(', ');
     } else if (questionType === 'integer') {
+      formatType = 'numerical';
       if (!integerAnswer.trim()) {
         showToast('Integer numerical answer is required', 'error');
         return;
       }
-      finalCorrect = integerAnswer.trim();
+      finalOptions = [];
+      finalCorrect = 0;
+      finalCorrectAns = integerAnswer.trim();
     } else if (questionType === 'blanks') {
+      formatType = 'blanks';
       if (!blankAnswer.trim()) {
         showToast('Blank answer phrase is required', 'error');
         return;
       }
-      finalCorrect = blankAnswer.trim();
+      finalOptions = [];
+      finalCorrect = 0;
+      finalCorrectAns = blankAnswer.trim();
     } else if (questionType === 'match') {
+      formatType = 'matrix_match';
       if (matrixMatch.some(m => !m.left.trim() || !m.right.trim())) {
         showToast('All matrix pairs must be filled', 'error');
         return;
       }
-      finalOptions = matrixMatch.map(m => m.left);
-      finalCorrect = matrixMatch.map(m => m.right);
+      finalOptions = matrixMatch.map(m => `${m.left} -> ${m.right}`);
+      finalCorrect = 0;
+      finalCorrectAns = matrixMatch.map(m => m.right).join(', ');
     }
 
     setIsSavingQuestion(true);
     try {
       const payload = {
         subject,
+        topic: subTopic.trim(),
         sub_topic: subTopic.trim(),
-        difficulty,
-        section: section.trim(),
-        question_type: questionType,
+        difficulty: difficulty.toUpperCase(),
+        section: section.trim() || 'Section A',
+        format_type: formatType,
+        type: formatType === 'numerical' ? 'numerical' : 'mcq',
         content: content.trim(),
         options: finalOptions,
         correct_option_index: finalCorrect,
-        marks_positive: parseInt(qMarksPos) || 4,
-        marks_negative: Math.abs(parseInt(qMarksNeg)) * -1 || -1
+        correct_answer: finalCorrectAns,
+        marks_positive: parseFloat(qMarksPos) || 4,
+        marks_negative: Math.abs(parseFloat(qMarksNeg)) * -1 || -1,
+        tags: ['Author Studio']
       };
 
       const { data, error } = await supabase
-        .from('test_questions')
+        .from('question_bank')
         .insert([payload])
         .select()
         .single();
 
       if (error) throw error;
 
-      showToast('Question saved to global bank & added to paper!', 'success');
+      showToast('Question saved to canonical Question Bank & added to Blueprint!', 'success');
       
-      const createdQ = data || { id: `q-${Date.now()}`, ...payload };
+      const createdQ = data || { id: `qb-${Date.now()}`, ...payload };
       setPoolQuestions(prev => [createdQ, ...prev]);
-      setSelectedQuestions(prev => [...prev, createdQ]);
+      setSelectedQuestions(prev => [...prev, { ...createdQ, section: section.trim() || 'Section A' }]);
 
       // Reset form
       setContent('');
       setOptions(['', '', '', '']);
       setCorrectOptionIdx(0);
-      setCorrectOptionsMultiple([]);
+      setCorrectOptionsMultiple([0]);
       setIntegerAnswer('');
       setBlankAnswer('');
       setMatrixMatch([
@@ -246,25 +333,81 @@ export default function ExamCompilerTab({
 
   const handleToggleSelectQuestion = (q) => {
     setSelectedQuestions(prev => {
-      const exists = prev.some(item => item.id === q.id);
+      const exists = prev.some(item => item.id === q.id || item.question_id === q.id);
       if (exists) {
-        return prev.filter(item => item.id !== q.id);
+        return prev.filter(item => item.id !== q.id && item.question_id !== q.id);
       } else {
-        return [...prev, q];
+        return [...prev, { ...q, section: q.section || section || 'Section A' }];
       }
     });
   };
 
-  // AI Ingestion Callback
-  const handleAiQuestionsIngested = (extractedQuestions) => {
-    if (!Array.isArray(extractedQuestions) || extractedQuestions.length === 0) return;
-    
-    setPoolQuestions(prev => [...extractedQuestions, ...prev]);
-    setSelectedQuestions(prev => [...prev, ...extractedQuestions]);
-    showToast(`Ingested ${extractedQuestions.length} questions into exam blueprint!`, 'success');
+  const handleMoveQuestion = (index, direction) => {
+    if (direction === 'up' && index > 0) {
+      const copy = [...selectedQuestions];
+      const temp = copy[index - 1];
+      copy[index - 1] = copy[index];
+      copy[index] = temp;
+      setSelectedQuestions(copy);
+    } else if (direction === 'down' && index < selectedQuestions.length - 1) {
+      const copy = [...selectedQuestions];
+      const temp = copy[index + 1];
+      copy[index + 1] = copy[index];
+      copy[index] = temp;
+      setSelectedQuestions(copy);
+    }
   };
 
-  // Compile Exam Handler
+  const handleRemoveBlueprintQuestion = (id) => {
+    setSelectedQuestions(prev => prev.filter(q => q.id !== id && q.question_id !== id));
+  };
+
+  const handleUpdateSectionOverride = (id, newSection) => {
+    setSelectedQuestions(prev => prev.map(q => {
+      if (q.id === id || q.question_id === id) {
+        return { ...q, section: newSection };
+      }
+      return q;
+    }));
+  };
+
+  // AI Ingestion Callback
+  const handleAiQuestionsIngested = async (extractedQuestions) => {
+    if (!Array.isArray(extractedQuestions) || extractedQuestions.length === 0) return;
+    
+    try {
+      const payloads = extractedQuestions.map(q => ({
+        content: q.content || q.questionText || 'Untitled Question',
+        format_type: q.formatType || q.format_type || 'single_mcq',
+        type: 'mcq',
+        subject: q.subject || 'General',
+        topic: q.sub_topic || q.topic || 'General',
+        sub_topic: q.sub_topic || q.topic || 'General',
+        difficulty: (q.difficulty || 'MEDIUM').toUpperCase(),
+        options: Array.isArray(q.options) ? q.options : [],
+        correct_option_index: typeof q.correct_option_index === 'number' ? q.correct_option_index : 0,
+        correct_answer: q.correct_answer || q.correctAnswer || '',
+        explanation: q.explanation || '',
+        diagram_url: q.diagram_url || q.diagramUrl || null,
+        marks_positive: q.marks?.positive || 4,
+        marks_negative: q.marks?.negative || -1,
+        tags: ['AI Importer']
+      }));
+
+      const { data, error } = await supabase.from('question_bank').insert(payloads).select();
+      if (error) throw error;
+
+      const inserted = data || payloads;
+      setPoolQuestions(prev => [...inserted, ...prev]);
+      setSelectedQuestions(prev => [...prev, ...inserted.map(q => ({ ...q, section: 'Section A' }))]);
+      showToast(`Ingested ${inserted.length} questions into Question Bank & Blueprint!`, 'success');
+    } catch (err) {
+      console.error('[AI Ingest Error]:', err);
+      showToast('Error ingesting AI questions: ' + err.message, 'error');
+    }
+  };
+
+  // Compile Exam & Save Junction Relationships
   const handleCompileExam = async (e) => {
     e.preventDefault();
     if (!examTitle.trim()) {
@@ -292,16 +435,18 @@ export default function ExamCompilerTab({
         duration_minutes: parseInt(examDuration) || 180,
         total_questions: selectedQuestions.length,
         marks_scheme: {
-          positive_marks: parseInt(positiveMarks) || 4,
-          negative_marks: Math.abs(parseInt(negativeMarks)) * -1 || -1
+          positive_marks: parseFloat(positiveMarks) || 4,
+          negative_marks: Math.abs(parseFloat(negativeMarks)) * -1 || -1
         },
         is_live_ranking: isLiveRanking,
-        activation_timestamp: new Date(activationTimestamp).toISOString(),
-        questions: selectedQuestions
+        activation_timestamp: new Date(activationTimestamp).toISOString()
       };
 
+      let targetExamId = editingExam?.id;
+      let finalExamRecord = null;
+
       if (editingExam?.id) {
-        // Update existing exam
+        // Update existing exam row
         const { data: updatedExam, error: updateErr } = await supabase
           .from('test_exams')
           .update(examPayload)
@@ -310,11 +455,9 @@ export default function ExamCompilerTab({
           .single();
 
         if (updateErr) throw updateErr;
-
-        showToast('Exam blueprint successfully updated!', 'success');
-        if (onExamCompiled) onExamCompiled(updatedExam || { id: editingExam.id, ...examPayload });
+        finalExamRecord = updatedExam || { id: editingExam.id, ...examPayload };
       } else {
-        // Insert new exam
+        // Insert new test_exams record
         const { data: newExam, error: insertErr } = await supabase
           .from('test_exams')
           .insert([examPayload])
@@ -322,6 +465,8 @@ export default function ExamCompilerTab({
           .single();
 
         if (insertErr) throw insertErr;
+        targetExamId = newExam.id;
+        finalExamRecord = newExam || { id: targetExamId, ...examPayload };
 
         // Increment package total tests count
         const newCount = (packageData.total_tests_count || 0) + 1;
@@ -329,17 +474,50 @@ export default function ExamCompilerTab({
           .from('test_packages')
           .update({ total_tests_count: newCount })
           .eq('id', packageData.id);
+      }
 
-        await invalidateCache('catalog', packageData.id);
+      // Save/Update junction records in public.exam_questions
+      if (targetExamId) {
+        // Clean up previous junction mappings for this exam
+        await supabase.from('exam_questions').delete().eq('exam_id', targetExamId);
 
-        showToast('Exam blueprint compiled and scheduled!', 'success');
+        // Prepare relational junction rows
+        const junctionRows = selectedQuestions.map((q, idx) => ({
+          exam_id: targetExamId,
+          question_id: q.id || q.question_id,
+          order_index: idx + 1,
+          section: q.section || 'Section A',
+          marks_positive: q.marks_positive ?? parseFloat(positiveMarks) ?? 4,
+          marks_negative: q.marks_negative ?? (Math.abs(parseFloat(negativeMarks)) * -1) ?? -1
+        }));
 
-        // Reset state
+        if (junctionRows.length > 0) {
+          const { error: juncInsertErr } = await supabase
+            .from('exam_questions')
+            .insert(junctionRows);
+
+          if (juncInsertErr) {
+            console.warn('[ExamCompilerTab] Junction insert error:', juncInsertErr.message);
+          }
+        }
+      }
+
+      await invalidateCache('catalog', packageData.id);
+
+      showToast(
+        editingExam
+          ? 'Exam blueprint & relational question links successfully updated!'
+          : 'Exam blueprint compiled and published to Test Package!',
+        'success'
+      );
+
+      if (!editingExam) {
         setExamTitle('');
         setSelectedQuestions([]);
         setActivationTimestamp('');
-        if (onExamCompiled) onExamCompiled(newExam || { id: `exam-${Date.now()}`, ...examPayload });
       }
+
+      if (onExamCompiled) onExamCompiled(finalExamRecord);
     } catch (err) {
       console.error('[Compile Exam Error]:', err.message);
       showToast('Failed to compile exam: ' + err.message, 'error');
@@ -349,7 +527,7 @@ export default function ExamCompilerTab({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
         <div>
@@ -390,10 +568,10 @@ export default function ExamCompilerTab({
         {/* Col 1 & 2: Authoring & Question Pool */}
         <div className="lg:col-span-2 space-y-6">
           {/* Section A: MCQ Authoring Form */}
-          <div className="bg-slate-50/70 border border-slate-200 p-5 sm:p-6 rounded-3xl space-y-4">
+          <div className="bg-slate-50/70 border border-slate-200 p-4 sm:p-6 rounded-3xl space-y-4">
             <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
               <Plus className="w-4 h-4 text-indigo-600" />
-              <span>Author Single Question (LaTeX / Markdown)</span>
+              <span>Author Question to Global Bank & Blueprint</span>
             </h4>
 
             <form onSubmit={handleSaveQuestion} className="space-y-4">
@@ -410,6 +588,8 @@ export default function ExamCompilerTab({
                     <option value="Chemistry">Chemistry</option>
                     <option value="Mathematics">Mathematics</option>
                     <option value="Biology">Biology</option>
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="General">General</option>
                   </select>
                 </div>
 
@@ -597,7 +777,7 @@ export default function ExamCompilerTab({
               )}
 
               {/* Answer Key Selector & Submit */}
-              <div className="flex items-center justify-between gap-4 pt-3 border-t border-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-200">
                 {questionType === 'single' && (
                   <div className="space-y-1">
                     <span className="text-[9px] font-bold text-slate-500 uppercase block">Correct Answer</span>
@@ -665,12 +845,12 @@ export default function ExamCompilerTab({
           </div>
 
           {/* Section B: Global Question Bank Pool Browser */}
-          <div className="bg-white border border-slate-200 p-5 sm:p-6 rounded-3xl space-y-4 shadow-2xs">
+          <div className="bg-white border border-slate-200 p-4 sm:p-6 rounded-3xl space-y-4 shadow-2xs">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-indigo-600" />
                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                  Select from Question Bank Pool ({poolQuestions.length})
+                  Select from Central Question Bank ({poolQuestions.length})
                 </h4>
               </div>
               <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-lg">
@@ -690,6 +870,8 @@ export default function ExamCompilerTab({
                 <option value="Chemistry">Chemistry</option>
                 <option value="Mathematics">Mathematics</option>
                 <option value="Biology">Biology</option>
+                <option value="Computer Science">Computer Science</option>
+                <option value="General">General</option>
               </select>
 
               <select
@@ -724,7 +906,7 @@ export default function ExamCompilerTab({
             </div>
 
             {/* Question Pool List */}
-            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
               {isLoadingPool ? (
                 <div className="flex justify-center py-10">
                   <Loader2 className="w-6 h-6 text-indigo-500 animate-spin" />
@@ -735,14 +917,14 @@ export default function ExamCompilerTab({
                 </div>
               ) : (
                 poolQuestions.map(q => {
-                  const isSelected = selectedQuestions.some(item => item.id === q.id);
+                  const isSelected = selectedQuestions.some(item => item.id === q.id || item.question_id === q.id);
                   return (
                     <div
                       key={q.id}
                       onClick={() => handleToggleSelectQuestion(q)}
                       className={`p-3.5 border rounded-2xl flex items-start gap-3 transition select-none cursor-pointer ${
                         isSelected
-                          ? 'bg-indigo-50/40 border-indigo-300 shadow-2xs'
+                          ? 'bg-indigo-50/50 border-indigo-300 shadow-2xs'
                           : 'bg-slate-50 border-slate-200 hover:border-slate-300'
                       }`}
                     >
@@ -753,10 +935,10 @@ export default function ExamCompilerTab({
                         className="mt-0.5 accent-indigo-600 cursor-pointer h-4 w-4 shrink-0 rounded"
                       />
                       <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex items-center gap-2 text-[9px] font-black uppercase text-slate-500">
+                        <div className="flex flex-wrap items-center gap-2 text-[9px] font-black uppercase text-slate-500">
                           <span className="text-indigo-700 font-extrabold">{q.subject}</span>
                           <span>•</span>
-                          <span>{q.sub_topic}</span>
+                          <span>{q.topic || q.sub_topic || 'General'}</span>
                           <span>•</span>
                           <span className={
                             (q.difficulty || '').toLowerCase() === 'easy' ? 'text-emerald-600' :
@@ -777,9 +959,9 @@ export default function ExamCompilerTab({
           </div>
         </div>
 
-        {/* Col 3: Exam Blueprint Configuration & Save */}
+        {/* Col 3: Exam Blueprint Configuration & Question Ordering */}
         <div className="space-y-6">
-          <div className="bg-white border border-slate-200 p-6 rounded-3xl space-y-5 shadow-sm sticky top-4">
+          <div className="bg-white border border-slate-200 p-5 sm:p-6 rounded-3xl space-y-5 shadow-sm sticky top-4">
             <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
               <ClipboardList className="w-5 h-5 text-indigo-600" />
               <h4 className="font-black text-xs uppercase text-slate-800 tracking-wider">
@@ -865,6 +1047,86 @@ export default function ExamCompilerTab({
                 />
               </div>
 
+              {/* Selected Questions List with Reordering */}
+              <div className="space-y-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-black uppercase text-slate-700 tracking-wider">
+                    Paper Questions Sequence ({selectedQuestions.length})
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-semibold">Reorder & Section</span>
+                </div>
+
+                <div className="space-y-2 max-h-56 overflow-y-auto pr-1 custom-scrollbar">
+                  {selectedQuestions.length === 0 ? (
+                    <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-slate-400 text-xs font-bold">
+                      No questions added to paper blueprint yet. Select from pool on the left.
+                    </div>
+                  ) : (
+                    selectedQuestions.map((q, idx) => (
+                      <div
+                        key={q.id || idx}
+                        className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-xs"
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center gap-1.5 font-black text-slate-800 truncate">
+                            <span className="w-5 h-5 rounded-md bg-indigo-100 text-indigo-700 text-[10px] flex items-center justify-center shrink-0">
+                              {idx + 1}
+                            </span>
+                            <span className="truncate max-w-[120px] text-[11px]">{q.subject}</span>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleMoveQuestion(idx, 'up')}
+                              disabled={idx === 0}
+                              className="p-1 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                              title="Move Up"
+                            >
+                              <ArrowUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveQuestion(idx, 'down')}
+                              disabled={idx === selectedQuestions.length - 1}
+                              className="p-1 bg-white border border-slate-200 rounded text-slate-600 hover:bg-slate-100 disabled:opacity-30 cursor-pointer"
+                              title="Move Down"
+                            >
+                              <ArrowDown className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBlueprintQuestion(q.id)}
+                              className="p-1 bg-rose-50 border border-rose-200 text-rose-600 rounded hover:bg-rose-100 cursor-pointer"
+                              title="Remove from paper"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-slate-600 truncate">
+                          {q.content || q.questionText}
+                        </p>
+
+                        <div className="flex items-center justify-between pt-1">
+                          <input
+                            type="text"
+                            value={q.section || 'Section A'}
+                            onChange={e => handleUpdateSectionOverride(q.id, e.target.value)}
+                            placeholder="Section"
+                            className="bg-white border border-slate-200 rounded px-2 py-0.5 text-[10px] font-bold text-slate-700 w-24"
+                          />
+                          <span className="text-[10px] font-bold text-emerald-600">
+                            +{q.marks_positive ?? positiveMarks} / {q.marks_negative ?? negativeMarks}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
               {/* Summary Card */}
               <div className="p-4 bg-indigo-50/70 border border-indigo-100 rounded-2xl space-y-2">
                 <div className="flex justify-between items-center text-xs font-bold text-indigo-950">
@@ -874,7 +1136,7 @@ export default function ExamCompilerTab({
                 <div className="flex justify-between items-center text-xs font-bold text-indigo-950">
                   <span>Total Max Marks:</span>
                   <span className="font-mono text-sm font-black text-indigo-700">
-                    {selectedQuestions.length * (parseInt(positiveMarks) || 4)} pts
+                    {selectedQuestions.reduce((acc, q) => acc + (parseFloat(q.marks_positive) || parseFloat(positiveMarks) || 4), 0)} pts
                   </span>
                 </div>
               </div>
@@ -885,7 +1147,7 @@ export default function ExamCompilerTab({
                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-2 shadow-xs disabled:opacity-60"
               >
                 {isCompiling ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                <span>{editingExam ? 'Save Blueprint Updates' : 'Compile & Publish Exam'}</span>
+                <span>{editingExam ? 'Save Blueprint & Question Links' : 'Compile & Publish Exam'}</span>
               </button>
             </form>
           </div>

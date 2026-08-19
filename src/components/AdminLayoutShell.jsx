@@ -10,7 +10,7 @@ import {
 import CommandPalette from '@/components/CommandPalette';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
-function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed }) {
+function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed, onNavigate }) {
   const searchParams = useSearchParams();
   const activeItemId = searchParams?.get('id') || searchParams?.get('courseId') || searchParams?.get('batchId');
 
@@ -46,6 +46,12 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed 
   const sortedHrefs = allNavItems.map(item => item.href).sort((a, b) => b.length - a.length);
   const activeHref = sortedHrefs.find(href => pathname === href || pathname.startsWith(href + '/'));
 
+  const handleLinkClick = () => {
+    if (typeof onNavigate === 'function') {
+      onNavigate();
+    }
+  };
+
   const renderNavGroup = (title, items) => (
     <div className="space-y-1">
       {title && !collapsed && (
@@ -59,6 +65,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed 
           <Link
             key={item.href}
             href={item.href}
+            onClick={handleLinkClick}
             title={collapsed ? item.label : undefined}
             className={`flex items-center justify-between p-3 rounded-2xl text-xs font-bold transition-all select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
               isActive 
@@ -87,7 +94,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed 
       {/* Dynamic Courses Sub-Section */}
       {!collapsed && (
         <div className="pt-2 border-t border-slate-100">
-          <span className="px-3.5 text-[9px] font-black text-slate-450 uppercase tracking-widest block mb-2.5">
+          <span className="px-3.5 text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2.5">
             Active Courses
           </span>
           <div className="space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar px-1">
@@ -105,6 +112,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed 
                   <Link
                     key={c.id}
                     href={`/courses?id=${c.id}`}
+                    onClick={handleLinkClick}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition-all select-none cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
                       isActive
                         ? 'bg-blue-50/80 text-blue-700 shadow-sm border-l-2 border-blue-500'
@@ -124,7 +132,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed 
       {/* Dynamic Batches Sub-Section */}
       {!collapsed && (
         <div className="pt-2 border-t border-slate-100">
-          <span className="px-3.5 text-[9px] font-black text-slate-455 uppercase tracking-widest block mb-2.5">
+          <span className="px-3.5 text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2.5">
             Active Batches
           </span>
           <div className="space-y-1 max-h-[160px] overflow-y-auto custom-scrollbar px-1">
@@ -142,10 +150,11 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed 
                   <Link
                     key={b.id}
                     href={`/batches?id=${b.id}`}
+                    onClick={handleLinkClick}
                     className={`flex items-center justify-between px-3 py-2 rounded-xl text-[11px] font-bold transition select-none cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
                       isActive
                         ? 'bg-emerald-50 text-emerald-700 font-bold shadow-2xs border-l-2 border-emerald-600'
-                        : 'text-slate-500 hover:text-slate-850 hover:bg-slate-50'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
                     }`}
                   >
                     <span className="truncate max-w-[170px]">{b.title}</span>
@@ -175,6 +184,11 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
   const [batches, setBatches] = useState([]);
   const [loadingSidebarData, setLoadingSidebarData] = useState(true);
 
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   useEffect(() => {
     const fetchUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -183,7 +197,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
       if (!user && !hasAdminCookie) {
         router.replace('/login');
       } else {
-        setAdminUser(user || { email: 'admin@Asentra.edu.in' });
+        setAdminUser(user || { email: 'admin@asentra.edu.in' });
         try {
           const [coursesRes, batchesRes] = await Promise.all([
             supabase.from('courses').select('id, title').order('title', { ascending: true }),
@@ -226,22 +240,22 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
       {sidebarOpen && (
         <div 
           onClick={() => setSidebarOpen(false)}
-          className="lg:hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 cursor-pointer"
+          className="lg:hidden fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-40 cursor-pointer transition-opacity"
         />
       )}
 
       {/* Persistent Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 bg-white/80 backdrop-blur-xl border-r border-slate-100 z-50 transform lg:translate-x-0 lg:static lg:flex lg:flex-col transition-all duration-300 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      <aside className={`fixed inset-y-0 left-0 bg-white/90 backdrop-blur-xl border-r border-slate-100 z-50 transform lg:translate-x-0 lg:static lg:flex lg:flex-col transition-all duration-300 ${
+        sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
       } ${collapsed ? 'w-20' : 'w-64'}`}>
         {/* Brand wordmark logo */}
         <div className={`h-16 px-4 border-b border-slate-200 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
           {!collapsed ? (
-            <Link href="/dashboard" className="flex items-center gap-2">
+            <Link href="/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2">
               <img src="/asentra-logo.png" alt="ASENTRA Logo" className="h-10 w-auto object-contain" />
             </Link>
           ) : (
-            <Link href="/dashboard" className="flex items-center justify-center w-8 h-8 bg-indigo-600 text-white rounded-lg font-black shrink-0">
+            <Link href="/dashboard" onClick={() => setSidebarOpen(false)} className="flex items-center justify-center w-8 h-8 bg-indigo-600 text-white rounded-lg font-black shrink-0">
               A
             </Link>
           )}
@@ -249,7 +263,8 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
           {!collapsed && (
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1 text-slate-400 hover:text-slate-600"
+              className="lg:hidden p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              aria-label="Close sidebar"
             >
               <X className="w-5 h-5" />
             </button>
@@ -273,6 +288,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
             batches={batches}
             loadingSidebarData={loadingSidebarData}
             collapsed={collapsed}
+            onNavigate={() => setSidebarOpen(false)}
           />
         </Suspense>
 
@@ -294,7 +310,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
             onClick={handleSignOut}
             disabled={loggingOut}
             title={collapsed ? "Sign Out" : undefined}
-            className={`w-full flex items-center justify-center gap-2.5 p-3 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-bold transition cursor-pointer select-none disabled:opacity-50`}
+            className={`w-full flex items-center justify-center gap-2.5 p-3 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-600 hover:text-rose-600 rounded-xl text-xs font-bold transition cursor-pointer select-none disabled:opacity-50 min-h-[44px]`}
           >
             {loggingOut ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -310,17 +326,19 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         
         {/* Header bar */}
-        <header className="h-16 px-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white/60 backdrop-blur-2xl sticky top-0 z-30">
+        <header className="h-16 px-4 sm:px-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white/60 backdrop-blur-2xl sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-1.5 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl"
+              className="lg:hidden p-2 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl transition cursor-pointer min-h-[40px] min-w-[40px] flex items-center justify-center"
+              aria-label="Open menu"
             >
               <Menu className="w-4 h-4" />
             </button>
             <button 
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden lg:block p-1.5 bg-white/60 backdrop-blur border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl transition cursor-pointer"
+              className="hidden lg:flex p-2 bg-white/60 backdrop-blur border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl transition cursor-pointer items-center justify-center"
+              aria-label="Toggle collapse"
             >
               <Menu className="w-4 h-4" />
             </button>
@@ -332,7 +350,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-wider">
+            <span className="px-2.5 py-1 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-lg text-[9px] font-black uppercase tracking-wider">
               ASENTRA
             </span>
             <ThemeToggle />
@@ -340,7 +358,7 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
         </header>
 
         {/* Viewport content */}
-        <main className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+        <main className="flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar">
           {children}
         </main>
       </div>

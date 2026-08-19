@@ -15,8 +15,24 @@ import { flexRender } from '@tanstack/react-table'
 import { useToast } from '@/components/ToastProvider'
 import { 
   Users, Edit, Trash2, Plus, Search, 
-  RefreshCw, Send, ArrowLeft, ChevronLeft, ChevronRight, X, ChevronDown, ChevronUp
+  RefreshCw, Send, ArrowLeft, ChevronLeft, ChevronRight, X, ChevronDown, ChevronUp,
+  GraduationCap, Calendar, Clock, BookOpen, Award
 } from 'lucide-react'
+
+// Safe date formatter to avoid SSR hydration mismatch
+const formatDateSafe = (dateStr) => {
+  if (!dateStr) return 'N/A'
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return 'N/A'
+    const day = String(d.getDate()).padStart(2, '0')
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const year = d.getFullYear()
+    return `${day}/${month}/${year}`
+  } catch {
+    return 'N/A'
+  }
+}
 
 export default function StudentRelationshipClient({ user, initialStudents }) {
   const supabase = createClient()
@@ -49,9 +65,9 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
         id: p.id,
         name: p.full_name || 'Unknown User',
         email: p.email || 'No Email',
-        joinedDate: p.created_at ? (!isNaN(new Date(p.created_at).getTime()) ? new Date(p.created_at).toLocaleDateString() : 'N/A') : 'N/A',
+        joinedDate: formatDateSafe(p.created_at),
         status: 'Active',
-        enrolledCourses: [],
+        enrolledCourses: Array.isArray(p.enrolled_courses) ? p.enrolled_courses : [],
         attemptsCount: p.weekly_tests_attempted ? (parseInt(p.weekly_tests_attempted) || 0) : 0,
         bookOrdersCount: 0,
         lastActive: p.last_active_date || 'Recently'
@@ -69,9 +85,9 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
         id: p.id,
         name: p.full_name || 'Unknown User',
         email: p.email || 'No Email',
-        joinedDate: p.created_at ? (!isNaN(new Date(p.created_at).getTime()) ? new Date(p.created_at).toLocaleDateString() : 'N/A') : 'N/A',
+        joinedDate: formatDateSafe(p.created_at),
         status: 'Active',
-        enrolledCourses: [],
+        enrolledCourses: Array.isArray(p.enrolled_courses) ? p.enrolled_courses : [],
         attemptsCount: p.weekly_tests_attempted ? (parseInt(p.weekly_tests_attempted) || 0) : 0,
         bookOrdersCount: 0,
         lastActive: p.last_active_date || 'Recently'
@@ -135,7 +151,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
   const handleGrantNewCourse = (studentId) => {
     const courseTitle = prompt("Enter Course Title to Grant Access to Student:", "JEE Advanced Mastery")
     if (courseTitle) {
-      const newCourse = { id: `c-granted-${Date.now()}`, title: courseTitle, accessDate: new Date().toLocaleDateString('en-GB') }
+      const newCourse = { id: `c-granted-${Date.now()}`, title: courseTitle, accessDate: formatDateSafe(new Date()) }
       setStudents(students.map(s => {
         if (s.id === studentId) {
           return { ...s, enrolledCourses: [newCourse, ...s.enrolledCourses] }
@@ -296,9 +312,9 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
   }
 
   return (
-    <div className="p-6 md:p-10 space-y-8 select-none max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-10 space-y-6 md:space-y-8 select-none max-w-7xl mx-auto">
       {/* Top Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 backdrop-blur-2xl p-6 rounded-3xl border border-white shadow-sm">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/60 backdrop-blur-2xl p-5 sm:p-6 rounded-3xl border border-white shadow-sm">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Link href="/dashboard" className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 font-bold">
@@ -307,7 +323,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Student Manager</h1>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            Hyper-optimized data grid for managing student enrollments and content access.
+            Directory of enrolled student candidates, course permissions, and CBT performance records.
           </p>
         </div>
 
@@ -320,7 +336,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
       </div>
 
       {/* Broadcast Announcement Bar */}
-      <form onSubmit={handleBroadcastAnnouncement} className="bg-white p-5 rounded-3xl border border-slate-100 flex flex-col md:flex-row items-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <form onSubmit={handleBroadcastAnnouncement} className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 shadow-xs">
         <div className="flex items-center gap-2 text-xs font-black text-violet-600 shrink-0">
           <Send className="w-4 h-4" />
           <span>Broadcast:</span>
@@ -334,50 +350,52 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
         />
         <button
           type="submit"
-          className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-black text-xs rounded-xl transition shadow-md shadow-violet-500/20 cursor-pointer shrink-0"
+          className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white font-black text-xs rounded-xl transition shadow-md shadow-violet-500/20 cursor-pointer shrink-0 text-center"
         >
           Send
         </button>
       </form>
 
-      {/* TanStack Table Container */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden flex flex-col">
-        {/* Table Toolbar */}
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <div className="relative w-80">
+      {/* Responsive Grid / Table Container */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-xs overflow-hidden flex flex-col">
+        {/* Table Toolbar with Mobile Breakpoints */}
+        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 bg-slate-50/50">
+          <div className="relative w-full sm:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               value={globalFilter ?? ''}
               onChange={e => setGlobalFilter(String(e.target.value))}
               placeholder="Omnibar Search (Name, ID, Email)..."
-              className="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-4 py-2.5 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold transition shadow-sm"
+              className="w-full bg-white border border-slate-200 rounded-xl pl-11 pr-4 py-2 text-xs text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold transition shadow-xs"
             />
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end gap-2">
             <span className="text-[11px] text-slate-500 font-bold mr-2">
               Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
             </span>
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition cursor-pointer"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition cursor-pointer"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                className="p-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-50 disabled:opacity-50 transition cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Data Grid */}
-        <div className="overflow-x-auto min-h-[400px]">
+        {/* Desktop Table View (hidden on <640px) */}
+        <div className="hidden sm:block overflow-x-auto min-h-[380px]">
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50/80 text-slate-500 font-black uppercase text-[10px] tracking-wider border-b border-slate-100">
               {table.getHeaderGroups().map(headerGroup => (
@@ -406,7 +424,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
               ) : table.getRowModel().rows.length === 0 ? (
                 <tr>
                   <td colSpan={columns.length} className="p-10 text-center text-slate-400 font-bold">
-                    No records found.
+                    No student candidate records found.
                   </td>
                 </tr>
               ) : (
@@ -423,20 +441,102 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile Card Degradation View (visible on <640px) */}
+        <div className="block sm:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="p-8 text-center space-y-2">
+              <RefreshCw className="w-6 h-6 animate-spin text-blue-500 mx-auto" />
+              <p className="text-xs font-bold text-slate-400">Loading student directory...</p>
+            </div>
+          ) : table.getRowModel().rows.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 text-xs font-bold">
+              No student candidate records found.
+            </div>
+          ) : (
+            table.getRowModel().rows.map(row => {
+              const student = row.original
+              const isSelected = row.getIsSelected()
+
+              return (
+                <div
+                  key={row.id}
+                  className={`p-4 space-y-3 transition ${isSelected ? 'bg-blue-50/40' : 'hover:bg-slate-50'}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5 min-w-0">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 mt-0.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer shrink-0"
+                        checked={isSelected}
+                        onChange={row.getToggleSelectedHandler()}
+                      />
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-slate-900 text-sm truncate">{student.name}</h4>
+                        <p className="text-slate-500 text-[11px] font-mono truncate">{student.email}</p>
+                        <span className="text-[9px] font-mono text-slate-400">ID: {student.id?.substring(0, 8)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => handleOpenDrawer(student)}
+                        className="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg font-bold text-[11px] transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <Edit className="w-3 h-3" />
+                        <span>Manage</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteStudent(student.id, student.name)}
+                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-500 rounded-lg transition cursor-pointer"
+                        title="Delete Student"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-slate-600">
+                      <BookOpen className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span className="font-bold text-emerald-700">
+                        {(student.enrolledCourses || []).length} Courses
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-600">
+                      <Award className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <span className="font-bold text-slate-800">
+                        {student.attemptsCount || 0} CBT Tests
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-400 text-[10px]">
+                      <Calendar className="w-3 h-3 shrink-0" />
+                      <span>Joined: {student.joinedDate}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-slate-400 text-[10px]">
+                      <Clock className="w-3 h-3 shrink-0" />
+                      <span>Active: {student.lastActive}</span>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
       </div>
 
       {/* Bulk Action Sticky Bar (Appears when rows selected) */}
       {selectedCount > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl px-6 py-4 flex items-center gap-6 z-40 animate-fade-in-up">
-          <div className="text-white font-bold text-sm">
-            <span className="text-blue-400">{selectedCount}</span> students selected
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 shadow-2xl rounded-2xl px-5 sm:px-6 py-3.5 sm:py-4 flex items-center gap-4 sm:gap-6 z-40 max-w-[95vw]">
+          <div className="text-white font-bold text-xs sm:text-sm whitespace-nowrap">
+            <span className="text-blue-400">{selectedCount}</span> selected
           </div>
-          <div className="flex gap-3">
-            <button onClick={handleBulkExport} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer">
+          <div className="flex gap-2 sm:gap-3">
+            <button onClick={handleBulkExport} className="px-3 sm:px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap">
               Export CSV
             </button>
-            <button onClick={handleBulkDelete} className="px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-xl text-xs font-bold transition border border-rose-500/20 cursor-pointer">
-              Bulk Delete
+            <button onClick={handleBulkDelete} className="px-3 sm:px-4 py-2 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded-xl text-xs font-bold transition border border-rose-500/20 cursor-pointer whitespace-nowrap">
+              Delete
             </button>
           </div>
         </div>
@@ -446,21 +546,21 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
       {drawerOpen && selectedStudent && (
         <>
           {/* Backdrop */}
-          <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-50 transition-opacity" onClick={() => setDrawerOpen(false)} />
+          <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm z-50 transition-opacity" onClick={() => setDrawerOpen(false)} />
           
           {/* Right Drawer */}
-          <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col animate-slide-left border-l border-slate-100">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
+          <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-2xl z-50 flex flex-col border-l border-slate-100">
+            <div className="flex justify-between items-center p-5 sm:p-6 border-b border-slate-100 bg-slate-50/50">
               <div>
-                <h3 className="text-lg font-black text-slate-900 tracking-tight">Manage Student</h3>
-                <p className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-widest">{selectedStudent.id?.substring(0,12) || 'N/A'}</p>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">Manage Student</h3>
+                <p className="text-[10px] font-bold text-slate-500 mt-0.5 font-mono uppercase tracking-wider">{selectedStudent.id?.substring(0, 12) || 'N/A'}</p>
               </div>
               <button onClick={() => setDrawerOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900 rounded-xl transition cursor-pointer">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6 custom-scrollbar">
               <div className="space-y-4">
                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-2">Profile Details</h4>
                 <div className="space-y-1">
@@ -469,7 +569,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
                     type="text"
                     value={editName}
                     onChange={e => setEditName(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold transition"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold transition text-xs"
                   />
                 </div>
                 <div className="space-y-1">
@@ -478,7 +578,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
                     type="email"
                     value={editEmail}
                     onChange={e => setEditEmail(e.target.value)}
-                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold transition"
+                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold transition text-xs"
                   />
                 </div>
               </div>
@@ -519,10 +619,10 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
               </div>
             </div>
 
-            <div className="p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
+            <div className="p-5 sm:p-6 border-t border-slate-100 bg-slate-50 flex gap-3">
               <button
                 onClick={() => setDrawerOpen(false)}
-                className="flex-1 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs rounded-xl transition cursor-pointer shadow-sm"
+                className="flex-1 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold text-xs rounded-xl transition cursor-pointer shadow-xs"
               >
                 Cancel
               </button>
