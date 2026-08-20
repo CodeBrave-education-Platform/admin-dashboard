@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
 
-export default function ExamCompilerTab({
-  packageData,
+export default function CourseExamCompilerTab({
+  courseData,
   editingExam = null,
   onExamCompiled,
   onCancelEdit
@@ -64,7 +64,7 @@ export default function ExamCompilerTab({
   // AI PDF Modal State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
-  // Load editingExam & linked questions from junction table
+  // Load editingExam & linked questions
   useEffect(() => {
     const loadExamData = async () => {
       if (editingExam) {
@@ -74,64 +74,25 @@ export default function ExamCompilerTab({
         setNegativeMarks(editingExam.marks_scheme?.negative_marks ? String(Math.abs(editingExam.marks_scheme.negative_marks)) : '1');
         setIsLiveRanking(editingExam.is_live_ranking ?? true);
         setActivationTimestamp(
-          editingExam.activation_timestamp ? new Date(editingExam.activation_timestamp).toISOString().slice(0, 16) : ''
+          editingExam.activation_timestamp ? new Date(editingExam.activation_timestamp).toISOString().slice(0, 16) : (editingExam.start_window ? new Date(editingExam.start_window).toISOString().slice(0, 16) : '')
         );
 
-        // Fetch linked questions from canonical public.exam_questions junction table
+        // Fetch questions from public.questions table for assessments
         try {
-          const { data: junctionData, error: juncError } = await supabase
-            .from('exam_questions')
-            .select(`
-              id,
-              exam_id,
-              question_id,
-              order_index,
-              section,
-              marks_positive,
-              marks_negative,
-              question_bank:question_id (
-                id,
-                content,
-                format_type,
-                type,
-                subject,
-                topic,
-                sub_topic,
-                difficulty,
-                options,
-                correct_option_index,
-                correct_answer,
-                explanation,
-                diagram_url,
-                marks_positive,
-                marks_negative,
-                tags
-              )
-            `)
-            .eq('exam_id', editingExam.id)
-            .order('order_index', { ascending: true });
+          const { data: qData, error: qError } = await supabase
+            .from('questions')
+            .select('*')
+            .eq('assessment_id', editingExam.id)
+            .order('id', { ascending: true });
 
-          if (!juncError && junctionData && junctionData.length > 0) {
-            const mapped = junctionData.map(j => {
-              const qb = j.question_bank || {};
-              return {
-                ...qb,
-                id: j.question_id || qb.id,
-                junction_id: j.id,
-                question_id: j.question_id,
-                order_index: j.order_index,
-                section: j.section || 'Section A',
-                marks_positive: j.marks_positive ?? qb.marks_positive ?? 4,
-                marks_negative: j.marks_negative ?? qb.marks_negative ?? -1
-              };
-            });
-            setSelectedQuestions(mapped);
+          if (!qError && qData && qData.length > 0) {
+            setSelectedQuestions(qData);
           } else if (Array.isArray(editingExam.questions)) {
             // Fallback to legacy JSON questions
             setSelectedQuestions(editingExam.questions);
           }
         } catch (err) {
-          console.warn('[ExamCompilerTab] Error fetching junction questions, fallback to exam JSON:', err);
+          console.warn('[CourseExamCompilerTab] Error fetching questions, fallback to exam JSON:', err);
           if (Array.isArray(editingExam.questions)) {
             setSelectedQuestions(editingExam.questions);
           }
@@ -407,15 +368,15 @@ export default function ExamCompilerTab({
     }
   };
 
-  // Compile Exam & Save Junction Relationships
+  // Compile Exam & Save Relationships
   const handleCompileExam = async (e) => {
     e.preventDefault();
     if (!examTitle.trim()) {
       showToast('Exam Title is required', 'error');
       return;
     }
-    if (!packageData?.id) {
-      showToast('Parent test package is missing', 'error');
+    if (!courseData?.id) {
+      showToast('Parent course is missing', 'error');
       return;
     }
     if (selectedQuestions.length === 0) {
@@ -430,16 +391,11 @@ export default function ExamCompilerTab({
     setIsCompiling(true);
     try {
       const examPayload = {
-        package_id: packageData.id,
+        course_id: courseData.id,
         title: examTitle.trim(),
         duration_minutes: parseInt(examDuration) || 180,
-        total_questions: selectedQuestions.length,
-        marks_scheme: {
-          positive_marks: parseFloat(positiveMarks) || 4,
-          negative_marks: Math.abs(parseFloat(negativeMarks)) * -1 || -1
-        },
-        is_live_ranking: isLiveRanking,
-        activation_timestamp: new Date(activationTimestamp).toISOString()
+        type: 'jee_mock',
+        start_window: new Date(activationTimestamp).toISOString()
       };
 
       let targetExamId = editingExam?.id;
@@ -448,7 +404,7 @@ export default function ExamCompilerTab({
       if (editingExam?.id) {
         // Update existing exam row
         const { data: updatedExam, error: updateErr } = await supabase
-          .from('test_exams')
+          .from('assessments')
           .update(examPayload)
           .eq('id', editingExam.id)
           .select()
@@ -457,9 +413,9 @@ export default function ExamCompilerTab({
         if (updateErr) throw updateErr;
         finalExamRecord = updatedExam || { id: editingExam.id, ...examPayload };
       } else {
-        // Insert new test_exams record
+        // Insert new assessments record
         const { data: newExam, error: insertErr } = await supabase
-          .from('test_exams')
+          .from('assessments')
           .insert([examPayload])
           .select()
           .single();
@@ -467,47 +423,41 @@ export default function ExamCompilerTab({
         if (insertErr) throw insertErr;
         targetExamId = newExam.id;
         finalExamRecord = newExam || { id: targetExamId, ...examPayload };
-
-        // Increment package total tests count
-        const newCount = (packageData.total_tests_count || 0) + 1;
-        await supabase
-          .from('test_packages')
-          .update({ total_tests_count: newCount })
-          .eq('id', packageData.id);
       }
 
-      // Save/Update junction records in public.exam_questions
+      // Save records in public.questions
       if (targetExamId) {
-        // Clean up previous junction mappings for this exam
-        await supabase.from('exam_questions').delete().eq('exam_id', targetExamId);
+        // Clean up previous questions for this exam
+        await supabase.from('questions').delete().eq('assessment_id', targetExamId);
 
-        // Prepare relational junction rows
-        const junctionRows = selectedQuestions.map((q, idx) => ({
-          exam_id: targetExamId,
-          question_id: q.id || q.question_id,
-          order_index: idx + 1,
-          section: q.section || 'Section A',
+        // Prepare relational rows
+        const questionRows = selectedQuestions.map((q, idx) => ({
+          assessment_id: targetExamId,
+          content: q.content,
+          options: q.options || [],
+          correct_option_index: q.correct_option_index || 0,
           marks_positive: q.marks_positive ?? parseFloat(positiveMarks) ?? 4,
-          marks_negative: q.marks_negative ?? (Math.abs(parseFloat(negativeMarks)) * -1) ?? -1
+          marks_negative: q.marks_negative ?? (Math.abs(parseFloat(negativeMarks)) * -1) ?? -1,
+          explanation: q.explanation || null
         }));
 
-        if (junctionRows.length > 0) {
+        if (questionRows.length > 0) {
           const { error: juncInsertErr } = await supabase
-            .from('exam_questions')
-            .insert(junctionRows);
+            .from('questions')
+            .insert(questionRows);
 
           if (juncInsertErr) {
-            console.warn('[ExamCompilerTab] Junction insert error:', juncInsertErr.message);
+            console.warn('[CourseExamCompilerTab] Question insert error:', juncInsertErr.message);
           }
         }
       }
 
-      await invalidateCache('catalog', packageData.id);
+      await invalidateCache('catalog', courseData.id);
 
       showToast(
         editingExam
-          ? 'Exam blueprint & relational question links successfully updated!'
-          : 'Exam blueprint compiled and published to Test Package!',
+          ? 'Assessment successfully updated!'
+          : 'Assessment compiled and published to Course!',
         'success'
       );
 
@@ -538,7 +488,7 @@ export default function ExamCompilerTab({
             </h3>
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Package: <span className="font-bold text-slate-700">{packageData?.title}</span> • {selectedQuestions.length} Questions in Blueprint
+            Course: <span className="font-bold text-slate-700">{courseData?.title}</span> • {selectedQuestions.length} Questions in Blueprint
           </p>
         </div>
 

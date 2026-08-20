@@ -13,6 +13,7 @@ import {
 import { useToast } from '@/components/ToastProvider';
 import SyllabusTreeEditor from './SyllabusTreeEditor';
 import CourseFilesManager from './CourseFilesManager';
+import CourseExamCompilerTab from '@/components/courses/CourseExamCompilerTab';
 
 export default function CourseEditorDrawer({
   isOpen,
@@ -62,31 +63,29 @@ export default function CourseEditorDrawer({
   const [newSessionTime, setNewSessionTime] = useState('');
   const [isAddingSession, setIsAddingSession] = useState(false);
 
-  // Sync course prop with internal states
+  const [editingExam, setEditingExam] = useState(null);
+
+  // Use Effect: Load Subresources when course changes
   useEffect(() => {
-    if (course) {
-      setTitle(course.title || '');
-      setDescription(course.description || '');
-      setPrice(course.price !== undefined && course.price !== null ? String(course.price) : '0');
-      setOriginalPrice(course.original_price ? String(course.original_price) : '');
-      setLevel(course.level || 'foundation');
-      setSubject(course.subject || 'General');
-      setStartDate(course.start_date || '');
-      setEndDate(course.end_date || '');
-      setThumbnailUrl(course.thumbnail_url || '');
-      setBadge(course.badge || '');
+    if (!isOpen || !course?.id) return;
 
-      const generated = (course.title || '')
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-');
-      setSlug(generated);
+    setTitle(course.title || '');
+    setSlug(course.slug || '');
+    setDescription(course.description || '');
+    setPrice(course.price !== undefined && course.price !== null ? String(course.price) : '0');
+    setOriginalPrice(course.original_price ? String(course.original_price) : '');
+    setLevel(course.level || 'foundation');
+    setSubject(course.subject || 'General');
+    setStartDate(course.start_date || '');
+    setEndDate(course.end_date || '');
+    setThumbnailUrl(course.thumbnail_url || '');
+    setBadge(course.badge || '');
 
-      fetchSubresources(course.id);
-    }
-  }, [course]);
+    setActiveTab('overview');
+    setEditingExam(null);
+
+    fetchSubresources(course.id);
+  }, [course, isOpen]);
 
   // Handle escape key to close drawer
   useEffect(() => {
@@ -409,6 +408,7 @@ export default function CourseEditorDrawer({
             { id: 'syllabus', label: `Curriculum (${lessons.length})`, icon: Layers },
             { id: 'files', label: `Worksheets (${files.length})`, icon: FileText },
             { id: 'exams', label: `Exams & CBT (${exams.length})`, icon: ClipboardList },
+            { id: 'compiler', label: editingExam ? 'Edit Assessment' : 'Exam Compiler', icon: Layers },
             { id: 'live_doubts', label: `Live & Doubts (${liveSessions.length + doubts.length})`, icon: Video }
           ].map(tab => {
             const Icon = tab.icon;
@@ -417,7 +417,10 @@ export default function CourseEditorDrawer({
               <button
                 key={tab.id}
                 type="button"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  if (tab.id !== 'compiler') setEditingExam(null);
+                }}
                 className={`py-3.5 px-3 text-xs font-black transition border-b-2 flex items-center gap-2 shrink-0 cursor-pointer ${
                   isActive
                     ? 'border-indigo-600 text-indigo-600 bg-white/60'
@@ -737,12 +740,16 @@ export default function CourseEditorDrawer({
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <a
-                            href={`/admin/test-series?courseId=${course.id}`}
-                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded-lg transition"
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingExam(exam);
+                              setActiveTab('compiler');
+                            }}
+                            className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold rounded-lg transition cursor-pointer"
                           >
                             Build Questions
-                          </a>
+                          </button>
                           <button
                             type="button"
                             onClick={() => handleDeleteExam(exam.id)}
@@ -757,6 +764,23 @@ export default function CourseEditorDrawer({
                 )}
               </div>
             </div>
+          )}
+
+          {/* TAB: COMPILER */}
+          {activeTab === 'compiler' && (
+            <CourseExamCompilerTab
+              courseData={course}
+              editingExam={editingExam}
+              onExamCompiled={(updatedExam) => {
+                setExams(prev => prev.map(e => e.id === updatedExam.id ? updatedExam : e));
+                setEditingExam(null);
+                setActiveTab('exams');
+              }}
+              onCancelEdit={() => {
+                setEditingExam(null);
+                setActiveTab('exams');
+              }}
+            />
           )}
 
           {/* TAB 5: LIVE SESSIONS & DOUBTS */}

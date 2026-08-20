@@ -17,7 +17,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="scroll-smooth" suppressHydrationWarning>
-      <body className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 min-h-screen antialiased select-none font-sans transition-colors duration-200">
+      <body className="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 min-h-screen antialiased select-none font-sans transition-colors duration-200 overflow-x-hidden">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ToastProvider>
             <GlobalModalOverrides>
