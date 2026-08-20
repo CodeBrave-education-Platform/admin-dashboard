@@ -98,7 +98,7 @@ export default function RootGatePage() {
             </div>
             <button
               onClick={() => {
-                supabase.auth.signOut().then(() => router.replace('/login'))
+                supabase.auth.signOut().then(() => window.location.href = '/login')
               }}
               className="px-5 py-2.5 bg-slate-900 hover:bg-slate-850 border border-slate-950 text-white rounded-xl text-xs font-bold transition select-none cursor-pointer w-full"
             >

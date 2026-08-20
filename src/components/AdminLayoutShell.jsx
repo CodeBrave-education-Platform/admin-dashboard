@@ -222,10 +222,12 @@ export default function AdminLayoutShell({ children, title, subtitle }) {
         document.cookie = "admin_session=; path=/; max-age=0";
       }
       await supabase.auth.signOut();
-      router.refresh();
-      router.replace('/login');
+      window.location.href = '/login';
     } catch (err) {
       console.error('[Sign Out Error]:', err);
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
     } finally {
       setLoggingOut(false);
     }
