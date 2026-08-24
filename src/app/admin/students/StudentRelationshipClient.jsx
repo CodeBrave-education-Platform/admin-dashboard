@@ -44,34 +44,85 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
   // Student directory state
   const [students, setStudents] = useState([])
   const [loading, setLoading] = useState(true)
+  const [availableCourses, setAvailableCourses] = useState([])
+  const [grantCourseModalOpen, setGrantCourseModalOpen] = useState(false)
+  const [selectedCourseToGrant, setSelectedCourseToGrant] = useState('')
+  const [grantingLoading, setGrantingLoading] = useState(false)
 
   // Form edit states
   const [editName, setEditName] = useState('')
   const [editEmail, setEditEmail] = useState('')
   const [announcementMsg, setAnnouncementMsg] = useState('')
+  const [isBroadcasting, setIsBroadcasting] = useState(false)
+
+  const fetchAvailableCourses = async () => {
+    try {
+      const { data } = await supabase
+        .from('courses')
+        .select('id, title, price, level')
+        .order('title')
+      if (data) setAvailableCourses(data)
+    } catch (e) {
+      console.warn('[Fetch Courses Warning]:', e?.message)
+    }
+  }
 
   const fetchStudents = async () => {
     setLoading(true)
     try {
-      const { data, error } = await supabase.from('profiles').select('*')
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          enrollments (
+            id,
+            course_id,
+            status,
+            created_at,
+            courses (
+              id,
+              title,
+              thumbnail_url
+            )
+          ),
+          assessment_attempts (
+            id
+          )
+        `)
       const source = (data && !error) ? data : (initialStudents || [])
       const sorted = [...source].filter(Boolean).sort((a, b) => {
         const timeA = a?.created_at ? (!isNaN(new Date(a.created_at).getTime()) ? new Date(a.created_at).getTime() : 0) : 0
         const timeB = b?.created_at ? (!isNaN(new Date(b.created_at).getTime()) ? new Date(b.created_at).getTime() : 0) : 0
         return timeB - timeA
       })
-      setStudents(sorted.map(p => ({
-        ...p,
-        id: p.id,
-        name: p.full_name || 'Unknown User',
-        email: p.email || 'No Email',
-        joinedDate: formatDateSafe(p.created_at),
-        status: 'Active',
-        enrolledCourses: Array.isArray(p.enrolled_courses) ? p.enrolled_courses : [],
-        attemptsCount: p.weekly_tests_attempted ? (parseInt(p.weekly_tests_attempted) || 0) : 0,
-        bookOrdersCount: 0,
-        lastActive: p.last_active_date || 'Recently'
-      })))
+      setStudents(sorted.map(p => {
+        const activeEnrollments = (p.enrollments || [])
+          .filter(e => e.status !== 'cancelled')
+          .map(e => ({
+            id: e.courses?.id || e.course_id,
+            enrollmentId: e.id,
+            title: e.courses?.title || 'Enrolled Course',
+            accessDate: formatDateSafe(e.created_at),
+            status: e.status || 'active'
+          }))
+
+        const attemptsTotal = Array.isArray(p.assessment_attempts)
+          ? p.assessment_attempts.length
+          : (p.weekly_tests_attempted ? (parseInt(p.weekly_tests_attempted) || 0) : 0)
+
+        return {
+          ...p,
+          id: p.id,
+          name: p.full_name || 'Unknown User',
+          email: p.email || 'No Email',
+          joinedDate: formatDateSafe(p.created_at),
+          status: 'Active',
+          enrolledCourses: activeEnrollments,
+          attemptsCount: attemptsTotal,
+          bookOrdersCount: 0,
+          lastActive: p.last_active_date || 'Recently'
+        }
+      }))
     } catch (e) {
       console.warn('[Fetch Students Warning]:', e?.message)
       const source = initialStudents || []
@@ -87,8 +138,8 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
         email: p.email || 'No Email',
         joinedDate: formatDateSafe(p.created_at),
         status: 'Active',
-        enrolledCourses: Array.isArray(p.enrolled_courses) ? p.enrolled_courses : [],
-        attemptsCount: p.weekly_tests_attempted ? (parseInt(p.weekly_tests_attempted) || 0) : 0,
+        enrolledCourses: Array.isArray(p.enrolledCourses) ? p.enrolledCourses : [],
+        attemptsCount: p.attemptsCount ?? (p.weekly_tests_attempted ? (parseInt(p.weekly_tests_attempted) || 0) : 0),
         bookOrdersCount: 0,
         lastActive: p.last_active_date || 'Recently'
       })))
@@ -99,6 +150,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
 
   useEffect(() => {
     fetchStudents()
+    fetchAvailableCourses()
   }, [])
 
   const handleOpenDrawer = (student) => {
@@ -120,7 +172,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
       setDrawerOpen(false)
       showToast(`Student profile for ${editName} updated successfully!`, 'success')
     } else {
-      showToast(`Error updating student profile`, 'error')
+      showToast(`Error updating student profile: ` + (error.message || ''), 'error')
     }
   }
 
@@ -134,41 +186,129 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
     }
   }
 
-  const handleRevokeCourse = (studentId, courseId, courseTitle) => {
+  const handleRevokeCourse = async (studentId, courseId, courseTitle, enrollmentId) => {
     if (confirm(`Revoke course "${courseTitle}" from candidate?`)) {
-      setStudents(students.map(s => {
-        if (s.id === studentId) {
-          return { ...s, enrolledCourses: s.enrolledCourses.filter(c => c.id !== courseId) }
+      try {
+        let query = supabase.from('enrollments').delete()
+        if (enrollmentId) {
+          query = query.eq('id', enrollmentId)
+        } else {
+          query = query.match({ user_id: studentId, course_id: courseId })
         }
-        return s
-      }))
-      if (selectedStudent && selectedStudent.id === studentId) {
-        setSelectedStudent(prev => ({ ...prev, enrolledCourses: prev.enrolledCourses.filter(c => c.id !== courseId) }))
+        const { error } = await query
+
+        if (error) {
+          showToast(`Failed to revoke course: ${error.message}`, 'error')
+          return
+        }
+
+        setStudents(prev => prev.map(s => {
+          if (s.id === studentId) {
+            return { ...s, enrolledCourses: s.enrolledCourses.filter(c => (c.id !== courseId && c.enrollmentId !== enrollmentId)) }
+          }
+          return s
+        }))
+        if (selectedStudent && selectedStudent.id === studentId) {
+          setSelectedStudent(prev => ({
+            ...prev,
+            enrolledCourses: prev.enrolledCourses.filter(c => (c.id !== courseId && c.enrollmentId !== enrollmentId))
+          }))
+        }
+        showToast(`Course "${courseTitle}" revoked successfully.`, 'success')
+      } catch (err) {
+        showToast(`Revocation error: ${err.message}`, 'error')
       }
     }
   }
 
-  const handleGrantNewCourse = (studentId) => {
-    const courseTitle = prompt("Enter Course Title to Grant Access to Student:", "JEE Advanced Mastery")
-    if (courseTitle) {
-      const newCourse = { id: `c-granted-${Date.now()}`, title: courseTitle, accessDate: formatDateSafe(new Date()) }
-      setStudents(students.map(s => {
-        if (s.id === studentId) {
-          return { ...s, enrolledCourses: [newCourse, ...s.enrolledCourses] }
+  const handleOpenGrantModal = () => {
+    if (availableCourses.length > 0) {
+      setSelectedCourseToGrant(availableCourses[0].id)
+    }
+    setGrantCourseModalOpen(true)
+  }
+
+  const handleConfirmGrantCourse = async () => {
+    if (!selectedStudent || !selectedCourseToGrant) return
+    const targetCourse = availableCourses.find(c => c.id === selectedCourseToGrant)
+    if (!targetCourse) return
+
+    setGrantingLoading(true)
+    try {
+      const { data: newEnrollment, error } = await supabase
+        .from('enrollments')
+        .upsert([{
+          user_id: selectedStudent.id,
+          course_id: selectedCourseToGrant,
+          status: 'active'
+        }], { onConflict: 'user_id,course_id' })
+        .select('id, course_id, status, created_at, courses(id, title)')
+        .single()
+
+      if (error) throw error
+
+      const newCourseEntry = {
+        id: targetCourse.id,
+        enrollmentId: newEnrollment?.id,
+        title: targetCourse.title,
+        accessDate: formatDateSafe(newEnrollment?.created_at || new Date().toISOString()),
+        status: 'active'
+      }
+
+      setStudents(prev => prev.map(s => {
+        if (s.id === selectedStudent.id) {
+          const exists = s.enrolledCourses.some(c => c.id === targetCourse.id)
+          return {
+            ...s,
+            enrolledCourses: exists ? s.enrolledCourses : [newCourseEntry, ...s.enrolledCourses]
+          }
         }
         return s
       }))
-      if (selectedStudent && selectedStudent.id === studentId) {
-        setSelectedStudent(prev => ({ ...prev, enrolledCourses: [newCourse, ...prev.enrolledCourses] }))
-      }
+
+      setSelectedStudent(prev => {
+        const exists = (prev.enrolledCourses || []).some(c => c.id === targetCourse.id)
+        return {
+          ...prev,
+          enrolledCourses: exists ? prev.enrolledCourses : [newCourseEntry, ...(prev.enrolledCourses || [])]
+        }
+      })
+
+      showToast(`Course "${targetCourse.title}" successfully granted!`, 'success')
+      setGrantCourseModalOpen(false)
+    } catch (err) {
+      console.error('[Grant Course Error]:', err)
+      showToast(`Failed to grant course: ${err.message}`, 'error')
+    } finally {
+      setGrantingLoading(false)
     }
   }
 
-  const handleBroadcastAnnouncement = (e) => {
+  const handleBroadcastAnnouncement = async (e) => {
     e.preventDefault()
     if (!announcementMsg.trim()) return
-    showToast(`Notification broadcasted to all enrolled students: "${announcementMsg}"`, 'info')
-    setAnnouncementMsg('')
+    setIsBroadcasting(true)
+    try {
+      const { error } = await supabase
+        .from('announcements')
+        .insert([{
+          title: 'Platform Announcement',
+          message: announcementMsg.trim(),
+          target_audience: 'all',
+          author_id: user?.id || null,
+          created_at: new Date().toISOString()
+        }])
+
+      if (error) throw error
+
+      showToast(`Announcement broadcasted and saved: "${announcementMsg.trim()}"`, 'success')
+      setAnnouncementMsg('')
+    } catch (err) {
+      console.error('[Broadcast Announcement Error]:', err)
+      showToast(`Failed to broadcast announcement: ${err.message}`, 'error')
+    } finally {
+      setIsBroadcasting(false)
+    }
   }
 
   // --- TanStack Table Setup ---
@@ -587,7 +727,7 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
                 <div className="flex justify-between items-center border-b border-slate-100 pb-2">
                   <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest">Active Enrollments</h4>
                   <button
-                    onClick={() => handleGrantNewCourse(selectedStudent.id)}
+                    onClick={handleOpenGrantModal}
                     className="px-2.5 py-1.5 bg-emerald-50 text-emerald-600 font-bold rounded-lg text-[10px] transition cursor-pointer flex items-center gap-1 hover:bg-emerald-100"
                   >
                     <Plus className="w-3 h-3" /> Add Course
@@ -601,13 +741,13 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
                     </div>
                   ) : (
                     selectedStudent.enrolledCourses.map(course => (
-                      <div key={course.id} className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex justify-between items-center group hover:border-slate-300 transition">
+                      <div key={course.enrollmentId || course.id} className="p-3 bg-white rounded-xl border border-slate-100 shadow-sm flex justify-between items-center group hover:border-slate-300 transition">
                         <div className="min-w-0 pr-2">
                           <p className="font-bold text-slate-900 text-xs truncate">{course.title}</p>
                           <p className="text-[10px] font-bold text-slate-400 mt-0.5">Granted: {course.accessDate}</p>
                         </div>
                         <button
-                          onClick={() => handleRevokeCourse(selectedStudent.id, course.id, course.title)}
+                          onClick={() => handleRevokeCourse(selectedStudent.id, course.id, course.title, course.enrollmentId)}
                           className="px-2.5 py-1 bg-white border border-slate-200 hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-500 rounded-lg text-[10px] font-bold transition cursor-pointer shrink-0 opacity-0 group-hover:opacity-100"
                         >
                           Revoke
@@ -632,6 +772,69 @@ export default function StudentRelationshipClient({ user, initialStudents }) {
               >
                 Save Changes
               </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Grant Course Picker Modal */}
+      {grantCourseModalOpen && selectedStudent && (
+        <>
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-60" onClick={() => setGrantCourseModalOpen(false)} />
+          <div className="fixed inset-0 flex items-center justify-center z-60 p-4">
+            <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
+              <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-black text-slate-900 text-sm">Grant Course Access</h3>
+                </div>
+                <button onClick={() => setGrantCourseModalOpen(false)} className="p-1 text-slate-400 hover:text-slate-700 rounded-lg">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-slate-500 font-medium">
+                  Select a course from the platform catalog to enroll <span className="font-bold text-slate-800">{selectedStudent.name}</span>:
+                </p>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block">Available Catalog Courses</label>
+                  <select
+                    value={selectedCourseToGrant}
+                    onChange={e => setSelectedCourseToGrant(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 font-bold outline-none focus:border-emerald-500 focus:bg-white transition cursor-pointer"
+                  >
+                    {availableCourses.length === 0 ? (
+                      <option value="">No courses available</option>
+                    ) : (
+                      availableCourses.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.title} {c.level ? `(${c.level.toUpperCase()})` : ''} - ₹{c.price || 0}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setGrantCourseModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmGrantCourse}
+                  disabled={grantingLoading || !selectedCourseToGrant}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {grantingLoading ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  <span>Grant Enrollment</span>
+                </button>
+              </div>
             </div>
           </div>
         </>

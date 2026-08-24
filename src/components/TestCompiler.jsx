@@ -83,37 +83,29 @@ function CompilerClientContent({ packages = [], exam = null }) {
   const [aiStep, setAiStep] = useState('input')
   const [parsedQuestions, setParsedQuestions] = useState([])
 
-  const handleRunAiParser = () => {
+  const handleRunAiParser = async () => {
     if (!aiRawText.trim()) return showToast('Please paste PDF question text or test paper content!', 'error')
     setAiParsing(true)
-    setTimeout(() => {
-      const extracted = [
-        {
-          id: `q-ai-1-${Date.now()}`,
-          subject: 'Physics',
-          sub_topic: 'Electrostatics',
-          difficulty: 'HARD',
-          content: 'A parallel plate capacitor is charged and then disconnected from the battery. If the distance between plates is doubled, the potential difference across plates will:',
-          options: ['Double', 'Halve', 'Remain Same', 'Quadruple'],
-          correct_option_index: 0,
-          selected: true
-        },
-        {
-          id: `q-ai-2-${Date.now()}`,
-          subject: 'Chemistry',
-          sub_topic: 'Chemical Bonding',
-          difficulty: 'MEDIUM',
-          content: 'Which of the following molecules has a linear shape according to VSEPR theory?',
-          options: ['CO₂', 'H₂O', 'SO₂', 'O₃'],
-          correct_option_index: 0,
-          selected: true
-        }
-      ]
+    try {
+      const res = await fetch('/api/admin/ai/parse-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rawText: aiRawText.trim() })
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success || !Array.isArray(data.questions) || data.questions.length === 0) {
+        throw new Error(data.error || 'Failed to extract structured questions from text.')
+      }
 
-      setParsedQuestions(extracted)
-      setAiParsing(false)
+      setParsedQuestions(data.questions.map(q => ({ ...q, selected: true })))
       setAiStep('review')
-    }, 1000)
+      showToast(`AI extracted ${data.questions.length} questions successfully!`, 'success')
+    } catch (err) {
+      console.warn('[AI Parser Error]:', err.message)
+      showToast(`AI parsing error: ${err.message}`, 'error')
+    } finally {
+      setAiParsing(false)
+    }
   }
 
   const handleConfirmIngestion = () => {
@@ -129,61 +121,34 @@ function CompilerClientContent({ packages = [], exam = null }) {
     showToast(`Checked and ingested ${toIngest.length} questions into your CBT exam blueprint!`, 'success')
   }
 
-  // Fetch pool questions based on filters with mock fallback
+  // Fetch pool questions dynamically from question_bank without dummy fallbacks
   const fetchQuestionPool = async () => {
     setIsLoadingPool(true)
     try {
-      let query = supabase.from('test_questions').select('*')
+      let query = supabase.from('question_bank').select('*')
       
       if (poolSubject !== 'All') {
         query = query.eq('subject', poolSubject)
       }
       if (poolDifficulty !== 'All') {
-        query = query.eq('difficulty', poolDifficulty)
+        query = query.ilike('difficulty', poolDifficulty)
       }
-      if (poolSearch) {
-        query = query.ilike('content', `%${poolSearch}%`)
+      if (poolSearch && poolSearch.trim()) {
+        const term = poolSearch.trim()
+        query = query.or(`content.ilike.%${term}%,topic.ilike.%${term}%,sub_topic.ilike.%${term}%`)
       }
 
       const { data, error } = await query.order('created_at', { ascending: false })
-      if (error || !data || data.length === 0) {
-        // Fallback default sample questions
-        setPoolQuestions([
-          {
-            id: 'q-101',
-            subject: 'Physics',
-            sub_topic: 'Rotational Dynamics',
-            difficulty: 'HARD',
-            content: 'A solid sphere of mass M and radius R rolls down an inclined plane of angle θ without slipping. Find center of mass acceleration.',
-            options: ['(5/7) g sin θ', '(2/5) g sin θ', '(3/5) g sin θ', '(1/2) g sin θ'],
-            correct_option_index: 0
-          },
-          {
-            id: 'q-102',
-            subject: 'Chemistry',
-            sub_topic: 'Thermodynamics',
-            difficulty: 'MEDIUM',
-            content: 'For the reaction N₂ + 3H₂ ⇌ 2NH₃, if Kp = 1.6x10⁻⁴ at 400K, calculate partial pressure of NH₃.',
-            options: ['0.0178 atm', '0.0540 atm', '0.0032 atm', '0.1200 atm'],
-            correct_option_index: 0
-          }
-        ])
+      if (error) {
+        // Fallback check to test_questions table if question_bank query encountered error
+        const { data: fallbackData } = await supabase.from('test_questions').select('*').order('created_at', { ascending: false })
+        setPoolQuestions(fallbackData || [])
       } else {
-        setPoolQuestions(data)
+        setPoolQuestions(data || [])
       }
     } catch (err) {
-      console.warn('[Compiler] Swallowing network error, using fallback pool questions.')
-      setPoolQuestions([
-        {
-          id: 'q-101',
-          subject: 'Physics',
-          sub_topic: 'Rotational Dynamics',
-          difficulty: 'HARD',
-          content: 'A solid sphere of mass M and radius R rolls down an inclined plane of angle θ without slipping. Find center of mass acceleration.',
-          options: ['(5/7) g sin θ', '(2/5) g sin θ', '(3/5) g sin θ', '(1/2) g sin θ'],
-          correct_option_index: 0
-        }
-      ])
+      console.warn('[Compiler] Question Bank pool fetch error:', err.message)
+      setPoolQuestions([])
     } finally {
       setIsLoadingPool(false)
     }
@@ -232,24 +197,45 @@ function CompilerClientContent({ packages = [], exam = null }) {
 
     setIsSavingQuestion(true)
     try {
+      const payload = {
+        subject,
+        topic: subTopic.trim(),
+        sub_topic: subTopic.trim(),
+        difficulty: difficulty.toUpperCase(),
+        section: section.trim(),
+        format_type: questionType === 'single' ? 'single_mcq' : (questionType === 'multiple' ? 'multi_mcq' : (questionType === 'integer' ? 'numerical' : (questionType === 'match' ? 'matrix_match' : 'single_mcq'))),
+        content: content.trim(),
+        options: finalOptions.length > 0 ? finalOptions : null,
+        correct_option_index: typeof finalCorrect === 'number' ? finalCorrect : 0,
+        correct_answer: typeof finalCorrect === 'string' ? finalCorrect : (Array.isArray(finalCorrect) ? JSON.stringify(finalCorrect) : String(finalCorrect ?? '')),
+        marks_positive: parseInt(qMarksPos) || 4,
+        marks_negative: Math.abs(parseInt(qMarksNeg)) || 1
+      }
+
       const { data, error } = await supabase
-        .from('test_questions')
-        .insert([{
-          subject,
-          sub_topic: subTopic.trim(),
-          difficulty,
-          section: section.trim(),
-          question_type: questionType,
-          content: content.trim(),
-          options: finalOptions.length > 0 ? finalOptions : null,
-          correct_option_index: finalCorrect,
-          marks_positive: parseInt(qMarksPos) || 4,
-          marks_negative: Math.abs(parseInt(qMarksNeg)) * -1 || -1
-        }])
+        .from('question_bank')
+        .insert([payload])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        // Fallback insert to test_questions if question_bank has schema conflict
+        const { error: fbErr } = await supabase
+          .from('test_questions')
+          .insert([{
+            subject,
+            sub_topic: subTopic.trim(),
+            difficulty,
+            section: section.trim(),
+            question_type: questionType,
+            content: content.trim(),
+            options: finalOptions.length > 0 ? finalOptions : null,
+            correct_option_index: finalCorrect,
+            marks_positive: parseInt(qMarksPos) || 4,
+            marks_negative: Math.abs(parseInt(qMarksNeg)) * -1 || -1
+          }])
+        if (fbErr) throw error || fbErr
+      }
 
       showToast('Question established in global bank!', 'success')
       // Reset form (keep context like subject/topic)

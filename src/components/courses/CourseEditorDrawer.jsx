@@ -50,6 +50,8 @@ export default function CourseEditorDrawer({
   const [endDate, setEndDate] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [badge, setBadge] = useState('');
+  const [instructors, setInstructors] = useState([]);
+  const [selectedInstructorId, setSelectedInstructorId] = useState('');
 
   // Exam addition form
   const [newExamTitle, setNewExamTitle] = useState('');
@@ -64,6 +66,25 @@ export default function CourseEditorDrawer({
   const [isAddingSession, setIsAddingSession] = useState(false);
 
   const [editingExam, setEditingExam] = useState(null);
+
+  // Fetch instructors
+  useEffect(() => {
+    const fetchInstructors = async () => {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, role')
+          .in('role', ['teacher', 'instructor', 'admin', 'superadmin'])
+          .order('full_name');
+        if (data) setInstructors(data);
+      } catch (err) {
+        console.warn('[CourseEditorDrawer] Fetch instructors error:', err?.message);
+      }
+    };
+    if (isOpen) {
+      fetchInstructors();
+    }
+  }, [isOpen]);
 
   // Use Effect: Load Subresources when course changes
   useEffect(() => {
@@ -80,6 +101,7 @@ export default function CourseEditorDrawer({
     setEndDate(course.end_date || '');
     setThumbnailUrl(course.thumbnail_url || '');
     setBadge(course.badge || '');
+    setSelectedInstructorId(course.instructor_id || '');
 
     setActiveTab('overview');
     setEditingExam(null);
@@ -163,6 +185,7 @@ export default function CourseEditorDrawer({
 
     setIsSavingOverview(true);
     try {
+      const chosenInstructor = instructors.find(i => i.id === selectedInstructorId);
       const updates = {
         title: title.trim(),
         description: description.trim() || null,
@@ -173,7 +196,10 @@ export default function CourseEditorDrawer({
         start_date: startDate || null,
         end_date: endDate || null,
         thumbnail_url: thumbnailUrl.trim() || null,
-        badge: badge.trim() || null
+        badge: badge.trim() || null,
+        instructor_id: selectedInstructorId || null,
+        instructor_name: chosenInstructor ? (chosenInstructor.full_name || chosenInstructor.email) : null,
+        instructor_role: chosenInstructor ? (chosenInstructor.role === 'teacher' ? 'Faculty Lead' : 'Senior Instructor') : null
       };
 
       const { data, error } = await supabase
@@ -490,6 +516,25 @@ export default function CourseEditorDrawer({
                     <option value="Mathematics">Mathematics</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Assigned Faculty Instructor */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider block">
+                  Assigned Faculty / Instructor
+                </label>
+                <select
+                  value={selectedInstructorId}
+                  onChange={e => setSelectedInstructorId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 font-bold outline-none focus:border-indigo-500 focus:bg-white cursor-pointer"
+                >
+                  <option value="">-- Unassigned / Platform Default --</option>
+                  {instructors.map(inst => (
+                    <option key={inst.id} value={inst.id}>
+                      {inst.full_name || inst.email} ({inst.role ? inst.role.toUpperCase() : 'INSTRUCTOR'})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Price & MRP */}

@@ -134,33 +134,7 @@ export default function CourseExamCompilerTab({
       setPoolQuestions(data || []);
     } catch (err) {
       console.warn('[Compiler Tab] Canonical Question Bank pool fetch error:', err.message);
-      // Fallback sample questions if table is initially empty
-      setPoolQuestions([
-        {
-          id: 'sample-qb-101',
-          subject: 'Physics',
-          topic: 'Rotational Dynamics',
-          sub_topic: 'Rotational Dynamics',
-          difficulty: 'HARD',
-          format_type: 'single_mcq',
-          content: 'A solid sphere of mass M and radius R rolls down an inclined plane of angle $\\theta$ without slipping. Find center of mass acceleration.',
-          options: ['(5/7) g sin θ', '(2/5) g sin θ', '(3/5) g sin θ', '(1/2) g sin θ'],
-          correct_option_index: 0,
-          correct_answer: '(5/7) g sin θ'
-        },
-        {
-          id: 'sample-qb-102',
-          subject: 'Chemistry',
-          topic: 'Thermodynamics',
-          sub_topic: 'Thermodynamics',
-          difficulty: 'MEDIUM',
-          format_type: 'single_mcq',
-          content: 'For the reaction $N_2 + 3H_2 \\rightleftharpoons 2NH_3$, calculate Gibbs Free Energy $\\Delta G^{\\circ}$.',
-          options: ['-33.2 kJ/mol', '+16.5 kJ/mol', '0 kJ/mol', '-50.1 kJ/mol'],
-          correct_option_index: 0,
-          correct_answer: '-33.2 kJ/mol'
-        }
-      ]);
+      setPoolQuestions([]);
     } finally {
       setIsLoadingPool(false);
     }

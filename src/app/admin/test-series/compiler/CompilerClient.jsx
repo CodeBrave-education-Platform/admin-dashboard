@@ -62,61 +62,33 @@ function CompilerClientContent({ packages = [] }) {
   // AI PDF Question Importer State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false)
 
-  // Fetch pool questions based on filters with mock fallback
+  // Fetch pool questions dynamically from question_bank without dummy fallbacks
   const fetchQuestionPool = async () => {
     setIsLoadingPool(true)
     try {
-      let query = supabase.from('test_questions').select('*')
+      let query = supabase.from('question_bank').select('*')
       
       if (poolSubject !== 'All') {
         query = query.eq('subject', poolSubject)
       }
       if (poolDifficulty !== 'All') {
-        query = query.eq('difficulty', poolDifficulty)
+        query = query.ilike('difficulty', poolDifficulty)
       }
-      if (poolSearch) {
-        query = query.ilike('content', `%${poolSearch}%`)
+      if (poolSearch && poolSearch.trim()) {
+        const term = poolSearch.trim()
+        query = query.or(`content.ilike.%${term}%,topic.ilike.%${term}%,sub_topic.ilike.%${term}%`)
       }
 
       const { data, error } = await query.order('created_at', { ascending: false })
-      if (error || !data || data.length === 0) {
-        // Fallback default sample questions
-        setPoolQuestions([
-          {
-            id: 'q-101',
-            subject: 'Physics',
-            sub_topic: 'Rotational Dynamics',
-            difficulty: 'HARD',
-            content: 'A solid sphere of mass M and radius R rolls down an inclined plane of angle θ without slipping. Find center of mass acceleration.',
-            options: ['(5/7) g sin θ', '(2/5) g sin θ', '(3/5) g sin θ', '(1/2) g sin θ'],
-            correct_option_index: 0
-          },
-          {
-            id: 'q-102',
-            subject: 'Chemistry',
-            sub_topic: 'Thermodynamics',
-            difficulty: 'MEDIUM',
-            content: 'For the reaction N₂ + 3H₂ ⇌ 2NH₃, if Kp = 1.6x10⁻⁴ at 400K, calculate partial pressure of NH₃.',
-            options: ['0.0178 atm', '0.0540 atm', '0.0032 atm', '0.1200 atm'],
-            correct_option_index: 0
-          }
-        ])
+      if (error) {
+        const { data: fallbackData } = await supabase.from('test_questions').select('*').order('created_at', { ascending: false })
+        setPoolQuestions(fallbackData || [])
       } else {
-        setPoolQuestions(data)
+        setPoolQuestions(data || [])
       }
     } catch (err) {
-      console.warn('[Compiler] Swallowing network error, using fallback pool questions.')
-      setPoolQuestions([
-        {
-          id: 'q-101',
-          subject: 'Physics',
-          sub_topic: 'Rotational Dynamics',
-          difficulty: 'HARD',
-          content: 'A solid sphere of mass M and radius R rolls down an inclined plane of angle θ without slipping. Find center of mass acceleration.',
-          options: ['(5/7) g sin θ', '(2/5) g sin θ', '(3/5) g sin θ', '(1/2) g sin θ'],
-          correct_option_index: 0
-        }
-      ])
+      console.warn('[Compiler] Question Bank pool fetch error:', err.message)
+      setPoolQuestions([])
     } finally {
       setIsLoadingPool(false)
     }
@@ -141,24 +113,46 @@ function CompilerClientContent({ packages = [] }) {
 
     setIsSavingQuestion(true)
     try {
+      const payload = {
+        subject,
+        topic: subTopic.trim(),
+        sub_topic: subTopic.trim(),
+        difficulty: difficulty.toUpperCase(),
+        section: section.trim(),
+        format_type: 'single_mcq',
+        content: content.trim(),
+        options,
+        correct_option_index: correctOptionIdx,
+        correct_answer: options[correctOptionIdx] || '',
+        marks_positive: parseInt(qMarksPos) || 4,
+        marks_negative: Math.abs(parseInt(qMarksNeg)) || 1
+      }
+
       const { data, error } = await supabase
-        .from('test_questions')
-        .insert([{
-          subject,
-          sub_topic: subTopic.trim(),
-          difficulty,
-          content: content.trim(),
-          options,
-          correct_option_index: correctOptionIdx
-        }])
+        .from('question_bank')
+        .insert([payload])
         .select()
         .single()
 
-      if (error) throw error
+      if (error) {
+        const { error: fbErr } = await supabase
+          .from('test_questions')
+          .insert([{
+            subject,
+            sub_topic: subTopic.trim(),
+            difficulty,
+            section: section.trim(),
+            content: content.trim(),
+            options,
+            correct_option_index: correctOptionIdx,
+            marks_positive: parseInt(qMarksPos) || 4,
+            marks_negative: Math.abs(parseInt(qMarksNeg)) * -1 || -1
+          }])
+        if (fbErr) throw error || fbErr
+      }
 
       showToast('Question established in global bank!', 'success')
       // Reset form
-      setSubTopic('')
       setContent('')
       setOptions(['', '', '', ''])
       setCorrectOptionIdx(0)

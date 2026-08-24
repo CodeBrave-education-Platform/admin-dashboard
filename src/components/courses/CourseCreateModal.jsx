@@ -26,6 +26,8 @@ export default function CourseCreateModal({
   const [endDate, setEndDate] = useState('');
   const [thumbnailUrl, setThumbnailUrl] = useState('');
   const [badge, setBadge] = useState('');
+  const [instructors, setInstructors] = useState([]);
+  const [selectedInstructorId, setSelectedInstructorId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Auto-generate slug when title changes
@@ -43,6 +45,27 @@ export default function CourseCreateModal({
     }
   }, [title]);
 
+  // Fetch instructors from profiles table
+  useEffect(() => {
+    const fetchInstructors = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, email, role')
+          .in('role', ['teacher', 'instructor', 'admin', 'superadmin'])
+          .order('full_name');
+        if (data && data.length > 0) {
+          setInstructors(data);
+        }
+      } catch (err) {
+        console.warn('[CourseCreateModal] Fetch instructors error:', err?.message);
+      }
+    };
+    if (isOpen) {
+      fetchInstructors();
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e) => {
@@ -55,7 +78,8 @@ export default function CourseCreateModal({
     setIsSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      const instructorId = user?.id || null;
+      const chosenInstructor = instructors.find(i => i.id === selectedInstructorId);
+      const instructorId = selectedInstructorId || user?.id || null;
 
       const payload = {
         title: title.trim(),
@@ -68,7 +92,9 @@ export default function CourseCreateModal({
         end_date: endDate || null,
         thumbnail_url: thumbnailUrl.trim() || null,
         badge: badge.trim() || null,
-        instructor_id: instructorId
+        instructor_id: instructorId,
+        instructor_name: chosenInstructor ? (chosenInstructor.full_name || chosenInstructor.email) : null,
+        instructor_role: chosenInstructor ? (chosenInstructor.role === 'teacher' ? 'Faculty Lead' : 'Senior Instructor') : null
       };
 
       const { data, error } = await supabase
@@ -99,6 +125,7 @@ export default function CourseCreateModal({
       setEndDate('');
       setThumbnailUrl('');
       setBadge('');
+      setSelectedInstructorId('');
 
       if (onCourseCreated) {
         onCourseCreated(data);
@@ -208,6 +235,25 @@ export default function CourseCreateModal({
                 <option value="Mathematics">Mathematics</option>
               </select>
             </div>
+          </div>
+
+          {/* Assigned Faculty Instructor */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider block">
+              Assigned Faculty / Instructor
+            </label>
+            <select
+              value={selectedInstructorId}
+              onChange={e => setSelectedInstructorId(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs text-slate-900 outline-none focus:border-indigo-500 focus:bg-white transition cursor-pointer font-bold"
+            >
+              <option value="">-- Current Administrator (Default) --</option>
+              {instructors.map(inst => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.full_name || inst.email} ({inst.role ? inst.role.toUpperCase() : 'INSTRUCTOR'})
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Pricing */}

@@ -23,6 +23,8 @@ export default function AdminDashboardClient() {
   const [recentAttempts, setRecentAttempts] = useState([]);
   const [courseEnrollments, setCourseEnrollments] = useState([]);
   const [batchEnrollments, setBatchEnrollments] = useState([]);
+  const [liveSessions, setLiveSessions] = useState([]);
+  const [batches, setBatches] = useState([]);
   
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -87,6 +89,19 @@ export default function AdminDashboardClient() {
         .select('*');
       setBatchEnrollments(batchEnrollData || []);
 
+      // 5. Fetch live sessions & batches dynamically
+      const { data: liveData } = await supabase
+        .from('live_sessions')
+        .select('*')
+        .order('scheduled_start', { ascending: false });
+      setLiveSessions(liveData || []);
+
+      const { data: batchesData } = await supabase
+        .from('batches')
+        .select('*')
+        .order('created_at', { ascending: false });
+      setBatches(batchesData || []);
+
     } catch (err) {
       console.error('[Dashboard Ingest Error]:', err);
     } finally {
@@ -136,7 +151,33 @@ export default function AdminDashboardClient() {
   });
 
   const activeStudentsCount = students.filter(s => s.role === 'student' || !s.role).length;
-  const liveClassesCount = courses.length; // Simplified proxy for live classes
+
+  // Dynamic time-bounded calculations
+  const now = new Date();
+  const startOfCurrentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const currentMonthStudents = students.filter(s => {
+    if (!s.created_at) return false;
+    const d = new Date(s.created_at);
+    return !isNaN(d.getTime()) && d >= startOfCurrentMonth;
+  });
+
+  const priorStudentsCount = students.length - currentMonthStudents.length;
+  const growthRate = priorStudentsCount > 0
+    ? ((currentMonthStudents.length / priorStudentsCount) * 100).toFixed(1)
+    : (currentMonthStudents.length > 0 ? '100' : '0.0');
+
+  const liveClassesCount = liveSessions.length > 0 ? liveSessions.length : (batches.length > 0 ? batches.length : courses.length);
+
+  const currentMonthEnrollments = [...courseEnrollments, ...batchEnrollments].filter(e => {
+    const dStr = e.created_at || e.enrolled_at;
+    if (!dStr) return false;
+    const d = new Date(dStr);
+    return !isNaN(d.getTime()) && d >= startOfCurrentMonth;
+  });
+  const newEnrollmentsCount = currentMonthEnrollments.length > 0
+    ? currentMonthEnrollments.length
+    : (courseEnrollments.length + batchEnrollments.length);
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 font-sans max-w-5xl mx-auto pb-20">
@@ -181,7 +222,9 @@ export default function AdminDashboardClient() {
                 </h2>
                 <p className="text-sm font-bold text-white/90">Total Active Students</p>
                 <div className="mt-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">+8.2% this month</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">
+                    +{currentMonthStudents.length} ({growthRate}%) this month
+                  </span>
                 </div>
               </div>
             </div>
@@ -195,9 +238,11 @@ export default function AdminDashboardClient() {
                 <h2 className="text-6xl font-black text-white tracking-tighter mb-2 group-hover:scale-105 transition-transform origin-left">
                   {liveClassesCount}
                 </h2>
-                <p className="text-sm font-bold text-white/90">Active Courses</p>
+                <p className="text-sm font-bold text-white/90">{liveSessions.length > 0 ? 'Live Cohorts & Sessions' : 'Active Courses'}</p>
                 <div className="mt-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">+{batchEnrollments.length} New Enrollments</span>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">
+                    +{newEnrollmentsCount} New Enrollments
+                  </span>
                 </div>
               </div>
             </div>

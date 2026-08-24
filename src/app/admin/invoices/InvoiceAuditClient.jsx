@@ -51,14 +51,14 @@ export default function InvoiceAuditClient({ user, profile, initialInvoices }) {
     }
 
     return {
-      id: inv.id ? inv.id.slice(0, 8).toUpperCase() : '1001',
+      id: inv.id ? inv.id.slice(0, 8).toUpperCase() : (inv.invoice_number || 'N/A'),
       fullId: inv.id,
       courseTitle: title,
       category,
       studentName: inv.profiles?.full_name || 'Registered Student',
       studentEmail: inv.profiles?.email || 'N/A',
       studentPhone: inv.profiles?.phone || 'N/A',
-      razorpayId: inv.razorpay_payment_id || 'pay_Nsh721Hhs812',
+      razorpayId: inv.razorpay_payment_id || inv.payment_id || 'N/A',
       amount: inv.amount_paid === 0 ? 'Free' : (typeof inv.amount_paid === 'number' ? inv.amount_paid : (parseFloat(inv.amount_paid) || 0)),
       date: inv.invoice_date || inv.created_at || new Date().toISOString(),
       status: inv.status === 'captured' ? 'Paid' : (inv.status || 'Paid'),

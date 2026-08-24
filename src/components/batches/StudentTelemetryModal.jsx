@@ -1,13 +1,20 @@
 'use client'
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createClient } from '@/utils/supabase/client';
 import { 
   X, Mail, Phone, GraduationCap, Users, 
-  BookOpen, Clock, BarChart2, CheckCircle2, Award 
+  BookOpen, Clock, BarChart2, CheckCircle2, Award, Loader2
 } from 'lucide-react';
 
 export default function StudentTelemetryModal({ student, isOpen, onClose }) {
+  const supabase = createClient();
+  const [telemetryLoading, setTelemetryLoading] = useState(false);
+  const [avgScore, setAvgScore] = useState(null);
+  const [attemptsCount, setAttemptsCount] = useState(0);
+  const [completedLessonsCount, setCompletedLessonsCount] = useState(0);
+
   // Handle escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -18,6 +25,53 @@ export default function StudentTelemetryModal({ student, isOpen, onClose }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  const studentId = student?.user_id || student?.id;
+
+  useEffect(() => {
+    if (!isOpen || !studentId) return;
+
+    let isMounted = true;
+    const fetchTelemetry = async () => {
+      setTelemetryLoading(true);
+      try {
+        const [testAttemptsRes, assessAttemptsRes, progressRes] = await Promise.all([
+          supabase.from('test_attempts').select('score').eq('user_id', studentId),
+          supabase.from('assessment_attempts').select('score').eq('user_id', studentId),
+          supabase.from('user_progress').select('lesson_id').eq('user_id', studentId)
+        ]);
+
+        if (!isMounted) return;
+
+        const scores = [
+          ...(testAttemptsRes.data || []),
+          ...(assessAttemptsRes.data || [])
+        ]
+          .map(a => typeof a.score === 'number' ? a.score : parseFloat(a.score))
+          .filter(s => !isNaN(s));
+
+        setAttemptsCount(scores.length);
+        if (scores.length > 0) {
+          const mean = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+          setAvgScore(mean);
+        } else {
+          setAvgScore(null);
+        }
+
+        setCompletedLessonsCount((progressRes.data || []).length);
+      } catch (err) {
+        console.warn('[StudentTelemetryModal] Fetch telemetry error:', err?.message);
+      } finally {
+        if (isMounted) setTelemetryLoading(false);
+      }
+    };
+
+    fetchTelemetry();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [studentId, isOpen]);
 
   if (!isOpen || !student) return null;
 
@@ -60,7 +114,7 @@ export default function StudentTelemetryModal({ student, isOpen, onClose }) {
                   {student.full_name || student.name || 'Anonymous Student'}
                 </h3>
                 <p className="text-[10px] text-slate-500 mt-0.5">
-                  Student ID: <span className="font-mono text-slate-400">{student.id || student.user_id || 'N/A'}</span>
+                  Student ID: <span className="font-mono text-slate-400">{studentId || 'N/A'}</span>
                 </p>
               </div>
             </div>
@@ -94,7 +148,7 @@ export default function StudentTelemetryModal({ student, isOpen, onClose }) {
                   <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
                 </div>
                 <p className="text-xs font-bold text-slate-800 truncate">
-                  {student.preferred_subjects || student.preferred_subject || (isNeet ? 'PCB (Physics, Chem, Bio)' : 'PCM (Physics, Chem, Math)')}
+                  {student.preferred_subjects || student.preferred_subject || student.target_focus || 'General Curriculum'}
                 </p>
               </div>
 
@@ -104,7 +158,7 @@ export default function StudentTelemetryModal({ student, isOpen, onClose }) {
                   <Clock className="w-3.5 h-3.5 text-teal-500" />
                 </div>
                 <p className="text-xs font-bold text-slate-800 truncate">
-                  {student.daily_study_hours || '8 Hours / Day'}
+                  {student.daily_study_hours ? `${student.daily_study_hours} Hours / Day` : 'Self-Paced (Not Set)'}
                 </p>
               </div>
 
@@ -114,7 +168,13 @@ export default function StudentTelemetryModal({ student, isOpen, onClose }) {
                   <BarChart2 className="w-3.5 h-3.5 text-indigo-600" />
                 </div>
                 <p className="text-xs font-black text-indigo-700 font-mono">
-                  {student.test_average || '214 / 300'}
+                  {telemetryLoading ? (
+                    <span className="text-slate-400 font-normal text-[11px]">Loading...</span>
+                  ) : avgScore !== null ? (
+                    `${avgScore} / 300`
+                  ) : (
+                    <span className="text-slate-400 font-normal text-[11px]">No tests attempted</span>
+                  )}
                 </p>
               </div>
 
@@ -124,7 +184,13 @@ export default function StudentTelemetryModal({ student, isOpen, onClose }) {
                   <Award className="w-3.5 h-3.5 text-emerald-500" />
                 </div>
                 <p className="text-xs font-black text-emerald-700 font-mono">
-                  {student.syllabus_progress || '68% Completed'}
+                  {telemetryLoading ? (
+                    <span className="text-slate-400 font-normal text-[11px]">Loading...</span>
+                  ) : completedLessonsCount > 0 ? (
+                    `${completedLessonsCount} Lessons Done`
+                  ) : (
+                    <span className="text-slate-400 font-normal text-[11px]">0% (No lessons yet)</span>
+                  )}
                 </p>
               </div>
             </div>
@@ -153,7 +219,7 @@ export default function StudentTelemetryModal({ student, isOpen, onClose }) {
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Dream College</span>
                 <div className="flex items-center gap-2.5 text-slate-800 font-bold bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
                   <GraduationCap className="w-4 h-4 text-indigo-500 shrink-0" />
-                  <span>{student.dream_college || (isNeet ? 'AIIMS New Delhi' : 'IIT Bombay (Computer Science)')}</span>
+                  <span>{student.dream_college || student.target_college || 'Not specified'}</span>
                 </div>
               </div>
 
@@ -161,7 +227,7 @@ export default function StudentTelemetryModal({ student, isOpen, onClose }) {
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Assigned Academic Mentor</span>
                 <div className="flex items-center gap-2.5 text-slate-800 font-bold bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
                   <Users className="w-4 h-4 text-teal-600 shrink-0" />
-                  <span>{student.study_mentor || 'Dr. Sarah Jenkins'}</span>
+                  <span>{student.study_mentor || student.mentor_name || 'Unassigned'}</span>
                 </div>
               </div>
             </div>
