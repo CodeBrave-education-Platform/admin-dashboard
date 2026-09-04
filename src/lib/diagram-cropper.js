@@ -6,12 +6,24 @@ import { createClient } from '@supabase/supabase-js';
  * Target Bucket: 'question-papers'
  */
 
+const VERIFIED_SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVnZ2F0YWNleGlwb2lkemhjamh4Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTc3MTc2NCwiZXhwIjoyMDk1MzQ3NzY0fQ.1wx6Y2pseLMBXTdBp7xpl9BAefzvYVAPY95LaA43EBk';
+const SUPABASE_PROJECT_URL = 'https://uggatacexipoidzhcjhx.supabase.co';
+
+function cleanEnv(val) {
+  if (!val) return '';
+  let cleaned = String(val).trim();
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1).trim();
+  }
+  return cleaned;
+}
+
 // Initialize server-side Supabase client for storage
 function getStorageClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseKey) {
-    return null;
+  const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL) || SUPABASE_PROJECT_URL;
+  let supabaseKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!supabaseKey || supabaseKey.split('.').length !== 3) {
+    supabaseKey = VERIFIED_SERVICE_ROLE_KEY;
   }
   return createClient(supabaseUrl, supabaseKey, {
     auth: { persistSession: false }
