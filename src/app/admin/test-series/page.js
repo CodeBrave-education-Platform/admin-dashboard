@@ -7,245 +7,228 @@ import { invalidateCache } from '@/utils/invalidateCache';
 import AdminLayoutShell from '@/components/AdminLayoutShell';
 import { useToast } from '@/components/ToastProvider';
 import ConfirmDialogModal from '@/components/ConfirmDialogModal';
-import TestSeriesStatsHeader from '@/components/test-series/TestSeriesStatsHeader';
-import TestSeriesGrid from '@/components/test-series/TestSeriesGrid';
-import TestSeriesEditorDrawer from '@/components/test-series/TestSeriesEditorDrawer';
-import TestSeriesCreateModal from '@/components/test-series/TestSeriesCreateModal';
+import TestPortalTabs from '@/components/test-series/TestPortalTabs';
+import AllTestsTable from '@/components/test-series/AllTestsTable';
+import PdfQuestionPaperGrid from '@/components/test-series/PdfQuestionPaperGrid';
+import PdfUploader from '@/components/test-series/PdfUploader';
 
-function TestSeriesManagementContent() {
+function TestPortalContent() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
 
-  const urlPackageId = searchParams.get('id') || searchParams.get('packageId');
+  const tabParam = searchParams.get('tab');
+  const initialTab = (tabParam === 'pdf' || tabParam === 'pdf_repository') 
+    ? 'pdf_repository' 
+    : 'all_tests';
 
-  const [packages, setPackages] = useState([]);
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [exams, setExams] = useState([]);
+  const [documents, setDocuments] = useState([]);
   const [attempts, setAttempts] = useState([]);
-  const [packageEnrollments, setPackageEnrollments] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedPackage, setSelectedPackage] = useState(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState(null);
 
-  // Fetch test packages, linked exams, attempts, and enrollment tallies
-  const fetchDashboardData = useCallback(async () => {
+  // Modals state
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'exam' | 'document', data: object }
+
+  // Sync tab with URL if changed
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    const newUrl = tab === 'pdf_repository' 
+      ? '/admin/test-series?tab=pdf' 
+      : '/admin/test-series';
+    router.replace(newUrl, { scroll: false });
+  };
+
+  // Callback for child components to update exam lists
+  const handleExamsUpdated = useCallback((newExams) => {
+    if (Array.isArray(newExams)) {
+      setExams(newExams);
+    }
+  }, []);
+
+  // Fetch test_exams, question_paper_documents, and test_attempts
+  const fetchPortalData = useCallback(async () => {
     try {
       setLoading(true);
-      const [packagesRes, examsRes, attemptsRes, invoicesRes] = await Promise.all([
-        supabase.from('test_packages').select('*, test_exams(*)').order('created_at', { ascending: false }),
-        supabase.from('test_exams').select('*').order('created_at', { ascending: false }),
-        supabase.from('test_attempts').select('*, profiles(full_name, email), test_exams(title)').order('completed_at', { ascending: false }),
-        supabase.from('invoices').select('package_id').not('package_id', 'is', null)
+      const [examsRes, docsRes, attemptsRes] = await Promise.all([
+        supabase
+          .from('test_exams')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('question_paper_documents')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('test_attempts')
+          .select('id, exam_id, score, status, completed_at')
+          .order('completed_at', { ascending: false })
       ]);
 
-      if (packagesRes.data) {
-        setPackages(packagesRes.data);
-      } else if (packagesRes.error) {
-        // Fallback simple query
-        const fallback = await supabase.from('test_packages').select('*').order('created_at', { ascending: false });
-        if (fallback.data) setPackages(fallback.data);
+      if (examsRes.data) {
+        setExams(examsRes.data);
+      } else if (examsRes.error) {
+        console.warn('[Fetch Exams Error]:', examsRes.error.message);
       }
 
-      if (examsRes.data) setExams(examsRes.data);
-      if (attemptsRes.data) setAttempts(attemptsRes.data);
+      if (docsRes.data) {
+        setDocuments(docsRes.data);
+      } else if (docsRes.error) {
+        console.warn('[Fetch Question Paper Documents Error]:', docsRes.error.message);
+      }
 
-      if (invoicesRes.data) {
-        const counts = {};
-        invoicesRes.data.forEach(inv => {
-          counts[inv.package_id] = (counts[inv.package_id] || 0) + 1;
-        });
-        setPackageEnrollments(counts);
+      if (attemptsRes.data) {
+        setAttempts(attemptsRes.data);
+      } else if (attemptsRes.error) {
+        console.warn('[Fetch Attempts Error]:', attemptsRes.error.message);
       }
     } catch (err) {
-      console.error('[Fetch Test Series Error]:', err.message);
-      showToast('Failed to load test series catalog', 'error');
+      console.error('[Fetch Test Portal Data Error]:', err.message);
+      showToast('Failed to load test portal data', 'error');
     } finally {
       setLoading(false);
     }
   }, [supabase, showToast]);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    fetchPortalData();
+  }, [fetchPortalData]);
 
-  // URL deep-linking (?id=...) sync with back-button support
-  useEffect(() => {
-    if (packages.length > 0) {
-      if (urlPackageId) {
-        const match = packages.find(p => p.id === urlPackageId);
-        if (match) {
-          setSelectedPackage(match);
-          setIsDrawerOpen(true);
-        }
-      } else if (isDrawerOpen) {
-        setIsDrawerOpen(false);
-        setSelectedPackage(null);
-      }
-    }
-  }, [urlPackageId, packages]);
-
-  const handleSelectPackage = (pkg) => {
-    setSelectedPackage(pkg);
-    setIsDrawerOpen(true);
-    router.replace(`/admin/test-series?id=${pkg.id}`, { scroll: false });
+  // Handle uploaded PDF document
+  const handleDocumentUploaded = (newDoc) => {
+    setDocuments(prev => [newDoc, ...prev]);
+    // Switch to PDF tab to show the newly uploaded paper
+    setActiveTab('pdf_repository');
   };
 
-  const handleCloseDrawer = () => {
-    setIsDrawerOpen(false);
-    setSelectedPackage(null);
-    router.replace('/admin/test-series', { scroll: false });
-  };
-
-  const handleTogglePackageStatus = async (pkgOrId, nextStatus) => {
-    const pkgId = typeof pkgOrId === 'object' && pkgOrId !== null ? pkgOrId.id : pkgOrId;
-    const currentPkg = packages.find(p => p.id === pkgId);
-    const targetStatus = typeof nextStatus === 'boolean'
-      ? nextStatus
-      : (typeof pkgOrId === 'object' && pkgOrId !== null ? !(pkgOrId.is_active !== false) : !(currentPkg?.is_active !== false));
-
-    // Optimistic UI state update
-    setPackages(prev => prev.map(p => p.id === pkgId ? { ...p, is_active: targetStatus } : p));
-    setSelectedPackage(prev => prev?.id === pkgId ? { ...prev, is_active: targetStatus } : prev);
-
-    try {
-      const { error } = await supabase
-        .from('test_packages')
-        .update({ is_active: targetStatus })
-        .eq('id', pkgId);
-
-      if (error) throw error;
-
-      showToast(`Package status set to ${targetStatus ? 'Active' : 'Inactive'}`, 'success');
-      await invalidateCache('catalog', pkgId);
-    } catch (err) {
-      console.error('[Toggle Package Status Error]:', err.message);
-      showToast('Failed to update package status: ' + err.message, 'error');
-      // Revert optimistic update
-      setPackages(prev => prev.map(p => p.id === pkgId ? { ...p, is_active: !targetStatus } : p));
-      setSelectedPackage(prev => prev?.id === pkgId ? { ...prev, is_active: !targetStatus } : prev);
-    }
-  };
-
-  const handlePackageCreated = (newPkg) => {
-    setPackages(prev => [newPkg, ...prev]);
-    handleSelectPackage(newPkg);
-  };
-
-  const handlePackageUpdated = (updatedPkg) => {
-    setPackages(prev => prev.map(p => p.id === updatedPkg.id ? { ...p, ...updatedPkg } : p));
-    setSelectedPackage(prev => prev?.id === updatedPkg.id ? { ...prev, ...updatedPkg } : prev);
-  };
-
-  const handlePackageDeleted = async (pkgId) => {
-    setPackages(prev => prev.filter(p => p.id !== pkgId));
-    if (selectedPackage?.id === pkgId) {
-      handleCloseDrawer();
-    }
-  };
-
+  // Safe deletion execution for either exam or question paper document
   const handleConfirmDelete = async () => {
-    if (!deleteConfirmTarget) return;
+    if (!deleteTarget) return;
+
+    const { type, data } = deleteTarget;
+
     try {
-      const { error } = await supabase.from('test_packages').delete().eq('id', deleteConfirmTarget.id);
-      if (error) throw error;
-      showToast('Test package blueprint successfully deleted', 'success');
-      await invalidateCache('catalog', deleteConfirmTarget.id);
-      handlePackageDeleted(deleteConfirmTarget.id);
+      if (type === 'exam') {
+        const { error } = await supabase
+          .from('test_exams')
+          .delete()
+          .eq('id', data.id);
+
+        if (error) throw error;
+
+        setExams(prev => prev.filter(e => e.id !== data.id));
+        showToast(`Exam "${data.title}" successfully deleted`, 'success');
+        await invalidateCache('exams', data.id);
+      } else if (type === 'document') {
+        // Attempt removing file from Supabase storage bucket
+        if (data.metadata?.storage_path) {
+          try {
+            await supabase.storage.from('question-papers').remove([data.metadata.storage_path]);
+          } catch (storageErr) {
+            console.warn('[Storage delete warning]:', storageErr.message);
+          }
+        }
+
+        const { error } = await supabase
+          .from('question_paper_documents')
+          .delete()
+          .eq('id', data.id);
+
+        if (error) throw error;
+
+        setDocuments(prev => prev.filter(d => d.id !== data.id));
+        showToast(`Question paper "${data.title}" successfully deleted`, 'success');
+      }
     } catch (err) {
-      showToast('Failed to delete package: ' + err.message, 'error');
+      console.error('[Delete Error]:', err.message);
+      showToast(`Delete failed: ${err.message}`, 'error');
     } finally {
-      setDeleteConfirmTarget(null);
+      setDeleteTarget(null);
     }
   };
 
-  // Quick stats calculations
-  const totalPackages = packages.length;
+  // Metrics calculations
   const totalExams = exams.length;
-  const activeCandidates = Object.values(packageEnrollments).reduce((a, b) => a + b, 0) || attempts.length;
-  const premiumPackages = packages.filter(p => p.price_ledger?.status === 'premium' || Number(p.price_ledger?.price || 0) > 0).length;
-  const averageScore = attempts.length > 0 
-    ? Math.round(attempts.reduce((sum, att) => sum + (att.score || 0), 0) / attempts.length) 
-    : 0;
-
-  const handleExamsUpdated = useCallback((updatedExams) => {
-    setExams(updatedExams);
-  }, []);
+  const totalPdfs = documents.length;
+  const readyToCompileCount = documents.filter(
+    d => d.status === 'ready_to_compile' || d.status === 'ready'
+  ).length;
+  const totalAttempts = attempts.length;
 
   return (
     <AdminLayoutShell
-      title="Test Series & CBT Assessment Studio"
-      subtitle="Configure CBT Mock Test Blueprints, Author Question Weightages, and Track Live Proctoring Telemetry"
+      title="Test Portal"
+      subtitle="Manage standalone exams, multi-format blueprints, and PDF question paper repository"
     >
       <div className="space-y-6">
-        {/* Metric Summary Ribbon */}
-        <TestSeriesStatsHeader
-          totalPackages={totalPackages}
+        {/* Unified Header, Metrics Ribbon & 2-Tab Navigation */}
+        <TestPortalTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
           totalExams={totalExams}
-          activeCandidates={activeCandidates}
-          premiumPackages={premiumPackages}
-          averageScore={averageScore}
+          totalPdfs={totalPdfs}
+          readyToCompileCount={readyToCompileCount}
+          totalAttempts={totalAttempts}
+          onOpenUploadModal={() => setIsUploadModalOpen(true)}
         />
 
-        {/* Bento Grid Layout */}
-        <TestSeriesGrid
-          packages={packages}
-          isLoading={loading}
-          packageEnrollments={packageEnrollments}
-          selectedPackage={selectedPackage}
-          onSelectPackage={handleSelectPackage}
-          onCreatePackageClick={() => setIsCreateModalOpen(true)}
-          onTogglePackageStatus={handleTogglePackageStatus}
-          onDeletePackage={(pkgOrId) => {
-            const pkgId = typeof pkgOrId === 'object' && pkgOrId !== null ? pkgOrId.id : pkgOrId;
-            const match = packages.find(p => p.id === pkgId);
-            setDeleteConfirmTarget(match || (typeof pkgOrId === 'object' && pkgOrId !== null ? pkgOrId : { id: pkgId, title: 'Test Package' }));
-          }}
-        />
+        {/* Tab 1: All Tests (Compiled Standalone Exams Direct Table) */}
+        {activeTab === 'all_tests' && (
+          <AllTestsTable
+            exams={exams}
+            attempts={attempts}
+            isLoading={loading}
+            onDeleteExam={(exam) => setDeleteTarget({ type: 'exam', data: exam })}
+          />
+        )}
+
+        {/* Tab 2: PDF Question Papers (Question Paper Repository Grid) */}
+        {activeTab === 'pdf_repository' && (
+          <PdfQuestionPaperGrid
+            documents={documents}
+            isLoading={loading}
+            onOpenUploadModal={() => setIsUploadModalOpen(true)}
+            onDeleteDocument={(doc) => setDeleteTarget({ type: 'document', data: doc })}
+          />
+        )}
       </div>
 
-      {/* Slide-out Test Series Drawer */}
-      <TestSeriesEditorDrawer
-        isOpen={isDrawerOpen}
-        packageData={selectedPackage}
-        exams={exams}
-        onClose={handleCloseDrawer}
-        onPackageUpdated={handlePackageUpdated}
-        onPackageDeleted={handlePackageDeleted}
-        onExamsUpdated={handleExamsUpdated}
+      {/* Modern Drag-and-Drop PDF Uploader Modal */}
+      <PdfUploader
+        isOpen={isUploadModalOpen}
+        onClose={() => setIsUploadModalOpen(false)}
+        onUploadSuccess={handleDocumentUploaded}
       />
 
-      {/* Fast Test Package Blueprint Creation Modal */}
-      <TestSeriesCreateModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onPackageCreated={handlePackageCreated}
-      />
-
-      {/* Safe Deletion Confirmation Dialog */}
+      {/* Confirmation Dialog for Deletions */}
       <ConfirmDialogModal
-        isOpen={!!deleteConfirmTarget}
-        title="Delete Test Series Package"
-        message={`Are you sure you want to permanently delete "${deleteConfirmTarget?.title || 'this package'}" and all its linked exam blueprints and question papers?`}
+        isOpen={!!deleteTarget}
+        title={deleteTarget?.type === 'exam' ? 'Delete Exam' : 'Delete Question Paper PDF'}
+        message={
+          deleteTarget?.type === 'exam'
+            ? `Are you sure you want to permanently delete the exam "${deleteTarget?.data?.title}"? All associated attempt records and cached questions will be removed.`
+            : `Are you sure you want to permanently delete the question paper "${deleteTarget?.data?.title}"? The PDF file will be removed from storage.`
+        }
         confirmLabel="Permanently Delete"
         type="danger"
         onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteConfirmTarget(null)}
+        onCancel={() => setDeleteTarget(null)}
       />
     </AdminLayoutShell>
   );
 }
 
-export default function TestSeriesDashboardPage() {
+export default function TestPortalPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-[400px] flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-600"></div>
       </div>
     }>
-      <TestSeriesManagementContent />
+      <TestPortalContent />
     </Suspense>
   );
 }

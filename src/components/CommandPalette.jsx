@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Command } from 'cmdk'
-import { Search, Monitor, Book, GraduationCap, Users, Ticket, Activity, FileText } from 'lucide-react'
+import { Search, Monitor, Book, GraduationCap, Users, Ticket, Activity, FileText, Layers } from 'lucide-react'
 
 export default function CommandPalette() {
   const [open, setOpen] = useState(false)
@@ -74,8 +74,8 @@ export default function CommandPalette() {
                 onSelect={() => runCommand(() => router.push('/admin/test-series'))}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer aria-selected:bg-indigo-50 aria-selected:text-indigo-700 text-slate-700 font-bold text-xs mt-1 transition-colors"
               >
-                <Activity className="w-4 h-4 text-rose-500" />
-                <span>Test Series Catalog</span>
+                <Layers className="w-4 h-4 text-rose-500" />
+                <span>Test Portal</span>
               </Command.Item>
               <Command.Item 
                 onSelect={() => runCommand(() => router.push('/admin/students'))}

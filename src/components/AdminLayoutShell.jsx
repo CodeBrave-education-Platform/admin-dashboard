@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { 
-  LayoutDashboard, GraduationCap, Loader2, ChevronRight, Menu, X, Award, LogOut, BookOpen, Radio, Package, HelpCircle
+  LayoutDashboard, GraduationCap, Loader2, ChevronRight, Menu, X, Award, LogOut, BookOpen, Radio, Package, HelpCircle, Layers
 } from 'lucide-react';
 import CommandPalette from '@/components/CommandPalette';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -31,7 +31,7 @@ function SidebarNav({ pathname, courses, batches, loadingSidebarData, collapsed,
   ];
 
   const testingSection = [
-    { label: 'Test Packages', href: '/admin/test-series', icon: Package },
+    { label: 'Test Portal', href: '/admin/test-series', icon: Layers },
     { label: 'Question Bank', href: '/admin/questions', icon: HelpCircle }
   ];
 

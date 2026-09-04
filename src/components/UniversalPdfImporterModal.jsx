@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import KatexRenderer from '@/components/KatexRenderer';
 import { Sparkles, Upload, FileText, CheckCircle2, Trash2, Image as ImageIcon, AlertCircle, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ToastProvider';
+import { bindAnswerKeysToQuestions, segmentQuestionsBySubject } from '@/lib/pdf-vision-parser';
+import { cropCanvasDiagram } from '@/lib/diagram-cropper-client';
 
 /**
  * Reads a File or Blob asynchronously as a Base64 Data URL (data:application/pdf;base64,...)
@@ -123,6 +125,7 @@ export default function UniversalPdfImporterModal({
 
     setAiParsing(true);
     let allParsedQuestions = [];
+    let accumulatedAnswerKeyMap = {};
 
     try {
       if (selectedFile) {
@@ -130,6 +133,7 @@ export default function UniversalPdfImporterModal({
         const fileArrayBuffer = await selectedFile.arrayBuffer();
         const pdfDoc = await pdfjs.getDocument({ data: fileArrayBuffer }).promise;
         const totalPages = pdfDoc.numPages;
+        const docCleanId = (selectedFile.name || 'exam').replace(/[^a-zA-Z0-9_-]/g, '_');
 
         for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
           setAiProgressText(`Extracting page ${pageNum} of ${totalPages}...`);
@@ -150,19 +154,46 @@ export default function UniversalPdfImporterModal({
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               imageBase64,
-              mimeType: 'image/jpeg'
+              mimeType: 'image/jpeg',
+              pageNum,
+              docId: docCleanId
             })
           });
 
           if (res.ok) {
             const data = await res.json();
+            if (data.is_answer_key_page && data.answer_key_map) {
+              accumulatedAnswerKeyMap = { ...accumulatedAnswerKeyMap, ...data.answer_key_map };
+            }
             if (data.success && Array.isArray(data.questions)) {
-              allParsedQuestions = [...allParsedQuestions, ...data.questions];
+              const processedPageQuestions = data.questions.map(q => {
+                let diagUrl = q.diagram_url || q.image_url || '';
+                if (!diagUrl && q.has_diagram && q.diagram_box_2d) {
+                  diagUrl = cropCanvasDiagram(canvas, q.diagram_box_2d);
+                }
+                return {
+                  ...q,
+                  diagram_url: diagUrl,
+                  image_url: diagUrl,
+                  diagramUrl: diagUrl,
+                  imageUrl: diagUrl
+                };
+              });
+              allParsedQuestions = [...allParsedQuestions, ...processedPageQuestions];
             }
           } else {
             console.warn(`Failed to parse page ${pageNum}: ${res.status}`);
           }
         }
+
+        // Two-Pass Post-Processing: Bind Answer Key Matrix across all pages
+        if (Object.keys(accumulatedAnswerKeyMap).length > 0) {
+          const bound = bindAnswerKeysToQuestions(allParsedQuestions, accumulatedAnswerKeyMap);
+          allParsedQuestions = bound.questions;
+        }
+
+        // Auto-detect multi-subject boundaries across full document
+        allParsedQuestions = segmentQuestionsBySubject(allParsedQuestions);
       } else if (aiRawText.trim()) {
         const formData = new FormData();
         formData.append('parserType', parserType || 'gemini_ai_multimodal');
@@ -184,25 +215,40 @@ export default function UniversalPdfImporterModal({
       if (allParsedQuestions.length > 0) {
         const marked = allParsedQuestions.map((q, idx) => {
           const contentStr = q.content || q.questionText || '';
-          const diagramUrlStr = q.diagram_url || q.diagramUrl || '';
+          const diagramUrlStr = q.diagram_url || q.image_url || q.diagramUrl || '';
           const correctAns = q.correct_answer || q.correctAnswer || (Array.isArray(q.options) && typeof q.correct_option_index === 'number' ? q.options[q.correct_option_index] : '');
 
           return {
             id: q.id || `pdf-q-${idx + 1}-${Date.now()}`,
-            subject: q.subject || 'GENERAL',
+            question_number: q.question_number || (idx + 1),
+            subject: q.subject || 'Physics',
+            section: q.section || (q.formatType === 'numerical' ? 'Section B' : 'Section A'),
             sub_topic: q.sub_topic || q.topic || 'General',
             difficulty: q.difficulty || 'MEDIUM',
             formatType: q.formatType || 'single_mcq',
+            questionType: q.questionType || (q.formatType === 'numerical' ? 'integer' : (q.formatType === 'multi_mcq' ? 'multiple' : (q.formatType === 'matrix_match' ? 'match' : 'single'))),
             content: contentStr,
             questionText: contentStr,
+            has_diagram: Boolean(q.has_diagram || diagramUrlStr),
+            diagram_box_2d: q.diagram_box_2d || null,
+            diagram_caption: q.diagram_caption || '',
             diagram_url: diagramUrlStr,
+            image_url: diagramUrlStr,
             diagramUrl: diagramUrlStr,
+            imageUrl: diagramUrlStr,
             options: Array.isArray(q.options) ? q.options : [],
             correct_option_index: typeof q.correct_option_index === 'number' ? q.correct_option_index : 0,
+            correctOptionIdx: typeof q.correctOptionIdx === 'number' ? q.correctOptionIdx : (typeof q.correct_option_index === 'number' ? q.correct_option_index : 0),
+            correct_options: Array.isArray(q.correct_options) ? q.correct_options : [],
+            correctOptions: Array.isArray(q.correctOptions) ? q.correctOptions : (Array.isArray(q.correct_options) ? q.correct_options : []),
             correct_answer: correctAns,
             correctAnswer: correctAns,
+            integerAnswer: q.integerAnswer || q.integer_answer || (q.formatType === 'numerical' ? correctAns : ''),
+            integer_answer: q.integer_answer || q.integerAnswer || (q.formatType === 'numerical' ? correctAns : ''),
+            matrixMatchAnswer: q.matrixMatchAnswer || q.matrix_match_answer || (q.formatType === 'matrix_match' ? correctAns : ''),
+            matrix_match_answer: q.matrix_match_answer || q.matrixMatchAnswer || (q.formatType === 'matrix_match' ? correctAns : ''),
             explanation: q.explanation || q.solution_text || '',
-            marks: q.marks || { positive: 4, negative: -1 },
+            marks: q.marks || (q.formatType === 'numerical' ? { positive: 4, negative: 0 } : (q.formatType === 'multi_mcq' ? { positive: 4, negative: -2 } : { positive: 4, negative: -1 })),
             selected: true
           };
         });
