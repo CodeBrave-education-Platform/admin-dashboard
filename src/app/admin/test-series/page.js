@@ -123,21 +123,13 @@ function TestPortalContent() {
         showToast(`Exam "${data.title}" successfully deleted`, 'success');
         await invalidateCache('exams', data.id);
       } else if (type === 'document') {
-        // Attempt removing file from Supabase storage bucket
-        if (data.metadata?.storage_path) {
-          try {
-            await supabase.storage.from('question-papers').remove([data.metadata.storage_path]);
-          } catch (storageErr) {
-            console.warn('[Storage delete warning]:', storageErr.message);
-          }
+        const res = await fetch(`/api/admin/test-series/documents?id=${encodeURIComponent(data.id)}`, {
+          method: 'DELETE',
+        });
+        const result = await res.json();
+        if (!res.ok || !result.success) {
+          throw new Error(result.error || 'Failed to delete question paper document');
         }
-
-        const { error } = await supabase
-          .from('question_paper_documents')
-          .delete()
-          .eq('id', data.id);
-
-        if (error) throw error;
 
         setDocuments(prev => prev.filter(d => d.id !== data.id));
         showToast(`Question paper "${data.title}" successfully deleted`, 'success');

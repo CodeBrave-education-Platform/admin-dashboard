@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useRef } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { useToast } from '@/components/ToastProvider';
 import { 
   UploadCloud, 
@@ -20,7 +19,6 @@ export default function PdfUploader({
   onClose,
   onUploadSuccess
 }) {
-  const supabase = createClient();
   const { showToast } = useToast();
   const fileInputRef = useRef(null);
 
@@ -110,76 +108,33 @@ export default function PdfUploader({
     setUploadProgress(15);
 
     try {
-      // 1. Get authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
+      setUploadProgress(25);
 
-      // 2. Prepare unique storage filename
-      const timestamp = Date.now();
-      const sanitizedName = selectedFile.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storageFilePath = `uploads/${timestamp}_${sanitizedName}`;
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('title', title.trim());
+      formData.append('subject', subject);
+      formData.append('target_exam', targetExam);
 
-      setUploadProgress(35);
+      setUploadProgress(50);
 
-      // 3. Upload raw PDF directly to Supabase storage bucket 'question-papers'
-      const { data: uploadData, error: uploadError } = await supabase
-        .storage
-        .from('question-papers')
-        .upload(storageFilePath, selectedFile, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (uploadError) {
-        // If storage bucket is missing or permission fails, handle with detailed message
-        console.error('[Storage Upload Error]:', uploadError);
-        throw new Error(uploadError.message || 'Failed to upload PDF to storage bucket');
-      }
-
-      setUploadProgress(70);
-
-      // 4. Retrieve public URL
-      const { data: urlData } = supabase
-        .storage
-        .from('question-papers')
-        .getPublicUrl(storageFilePath);
-
-      const publicUrl = urlData?.publicUrl || '';
+      const response = await fetch('/api/admin/test-series/upload', {
+        method: 'POST',
+        body: formData
+      });
 
       setUploadProgress(85);
 
-      // 5. Insert metadata record into public.question_paper_documents
-      const docPayload = {
-        title: title.trim(),
-        file_url: publicUrl,
-        file_name: selectedFile.name,
-        file_size_bytes: selectedFile.size,
-        subject: subject,
-        target_exam: targetExam,
-        status: 'ready_to_compile',
-        uploaded_by: user?.id || null,
-        metadata: {
-          original_name: selectedFile.name,
-          storage_path: storageFilePath,
-          uploaded_at: new Date().toISOString()
-        }
-      };
-
-      const { data: insertedDoc, error: insertError } = await supabase
-        .from('question_paper_documents')
-        .insert([docPayload])
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('[Document DB Insert Error]:', insertError);
-        throw new Error(insertError.message || 'Failed to save question paper metadata');
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Failed to upload question paper to repository');
       }
 
       setUploadProgress(100);
       showToast('Question paper uploaded successfully to repository!', 'success');
 
       if (onUploadSuccess) {
-        onUploadSuccess(insertedDoc);
+        onUploadSuccess(result.document);
       }
 
       resetForm();
