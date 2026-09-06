@@ -133,7 +133,7 @@ export async function POST(request) {
         const ai = new GoogleGenAI({ apiKey });
         const cleanBase64 = Buffer.from(pdfBuffer).toString('base64');
 
-        const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+        const modelsToTry = ['gemini-3.6-flash', 'gemini-3.7-flash', 'gemini-3.5-flash', 'gemini-flash-latest'];
         for (const modelName of modelsToTry) {
           try {
             const resp = await ai.models.generateContent({
