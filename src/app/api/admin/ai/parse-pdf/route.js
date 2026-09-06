@@ -14,7 +14,8 @@ import {
   bindAnswerKeysToQuestions,
   segmentQuestionsBySubject,
   groupQuestionsBySubject,
-  compileTestStructure
+  compileTestStructure,
+  extractTextFromPdfBuffer
 } from '@/lib/pdf-vision-parser';
 
 // Re-export parser functions for test suites and dependent modules
@@ -36,9 +37,29 @@ export {
 };
 
 // Next.js Node environment polyfills for pdf-parse (pdf.js dependency)
-if (typeof globalThis.DOMMatrix === 'undefined') globalThis.DOMMatrix = class DOMMatrix {};
-if (typeof globalThis.ImageData === 'undefined') globalThis.ImageData = class ImageData {};
-if (typeof globalThis.Path2D === 'undefined') globalThis.Path2D = class Path2D {};
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  globalThis.DOMMatrix = class DOMMatrix {
+    constructor() {
+      this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
+      this.m11 = 1; this.m12 = 0; this.m13 = 0; this.m14 = 0;
+      this.m21 = 0; this.m22 = 1; this.m23 = 0; this.m24 = 0;
+      this.m31 = 0; this.m32 = 0; this.m33 = 1; this.m34 = 0;
+      this.m41 = 0; this.m42 = 0; this.m43 = 0; this.m44 = 1;
+    }
+  };
+}
+if (typeof globalThis.DOMPoint === 'undefined') {
+  globalThis.DOMPoint = class DOMPoint { constructor(x = 0, y = 0, z = 0, w = 1) { this.x = x; this.y = y; this.z = z; this.w = w; } };
+}
+if (typeof globalThis.DOMRect === 'undefined') {
+  globalThis.DOMRect = class DOMRect { constructor(x = 0, y = 0, w = 0, h = 0) { this.x = x; this.y = y; this.width = w; this.height = h; this.top = y; this.bottom = y + h; this.left = x; this.right = x + w; } };
+}
+if (typeof globalThis.ImageData === 'undefined') {
+  globalThis.ImageData = class ImageData { constructor(w, h) { this.width = w; this.height = h; this.data = new Uint8ClampedArray(w * h * 4); } };
+}
+if (typeof globalThis.Path2D === 'undefined') {
+  globalThis.Path2D = class Path2D {};
+}
 
 export const maxDuration = 60; // Allow 60 seconds for execution
 
@@ -242,14 +263,10 @@ export async function POST(request) {
         let textToUse = rawText && rawText.trim() ? rawText : '';
         if (!textToUse && cleanBase64) {
           try {
-            const pdfParse = (await import('pdf-parse')).default || (await import('pdf-parse'));
             const pdfBuffer = Buffer.from(cleanBase64, 'base64');
-            const parsedPdf = await pdfParse(pdfBuffer);
-            if (parsedPdf && parsedPdf.text) {
-              textToUse = parsedPdf.text;
-            }
+            textToUse = await extractTextFromPdfBuffer(pdfBuffer);
           } catch (pdfErr) {
-            console.warn('[Parse-PDF] pdf-parse fallback warning:', pdfErr.message);
+            console.warn('[Parse-PDF] pdf extraction fallback warning:', pdfErr.message);
           }
         }
 

@@ -5,6 +5,31 @@
  * and deterministic fallback parsing.
  */
 
+// Polyfill browser globals required by pdfjs-dist / pdf-parse in Node.js serverless runtimes
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  globalThis.DOMMatrix = class DOMMatrix {
+    constructor() {
+      this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
+      this.m11 = 1; this.m12 = 0; this.m13 = 0; this.m14 = 0;
+      this.m21 = 0; this.m22 = 1; this.m23 = 0; this.m24 = 0;
+      this.m31 = 0; this.m32 = 0; this.m33 = 1; this.m34 = 0;
+      this.m41 = 0; this.m42 = 0; this.m43 = 0; this.m44 = 1;
+    }
+  };
+}
+if (typeof globalThis.DOMPoint === 'undefined') {
+  globalThis.DOMPoint = class DOMPoint { constructor(x = 0, y = 0, z = 0, w = 1) { this.x = x; this.y = y; this.z = z; this.w = w; } };
+}
+if (typeof globalThis.DOMRect === 'undefined') {
+  globalThis.DOMRect = class DOMRect { constructor(x = 0, y = 0, w = 0, h = 0) { this.x = x; this.y = y; this.width = w; this.height = h; this.top = y; this.bottom = y + h; this.left = x; this.right = x + w; } };
+}
+if (typeof globalThis.ImageData === 'undefined') {
+  globalThis.ImageData = class ImageData { constructor(w, h) { this.width = w; this.height = h; this.data = new Uint8ClampedArray(w * h * 4); } };
+}
+if (typeof globalThis.Path2D === 'undefined') {
+  globalThis.Path2D = class Path2D {};
+}
+
 // ═══════════════════════════════════════════════════════════════
 // GEMINI SYSTEM INSTRUCTION & MULTIMODAL PROMPT
 // ═══════════════════════════════════════════════════════════════
@@ -228,13 +253,17 @@ export function parseAnswerKeyMatrix(text) {
  * @returns {{ questions: Array, boundCount: number }}
  */
 export function bindAnswerKeysToQuestions(questions = [], answerKeyMap = {}) {
-  if (!Array.isArray(questions) || !answerKeyMap || Object.keys(answerKeyMap).length === 0) {
-    return { questions, boundCount: 0 };
+  const inputList = Array.isArray(questions) ? questions : (questions?.questions || []);
+  if (inputList.length === 0 || !answerKeyMap || Object.keys(answerKeyMap).length === 0) {
+    const res = { questions: inputList, boundCount: 0 };
+    Object.defineProperty(res, 'length', { get() { return this.questions.length; }, configurable: true });
+    res[Symbol.iterator] = function* () { yield* this.questions; };
+    return res;
   }
 
   let boundCount = 0;
 
-  const updatedQuestions = questions.map((q, idx) => {
+  const updatedQuestions = inputList.map((q, idx) => {
     const qNumStr = q.question_number != null ? String(q.question_number) : String(idx + 1);
     const keyVal = answerKeyMap[qNumStr] || answerKeyMap[String(idx + 1)];
 
@@ -357,7 +386,10 @@ export function bindAnswerKeysToQuestions(questions = [], answerKeyMap = {}) {
     };
   });
 
-  return { questions: updatedQuestions, boundCount };
+  const bindResult = { questions: updatedQuestions, boundCount };
+  Object.defineProperty(bindResult, 'length', { get() { return this.questions.length; }, configurable: true });
+  bindResult[Symbol.iterator] = function* () { yield* this.questions; };
+  return bindResult;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1003,7 +1035,8 @@ export function parseExtractedText(text) {
  * Returns complete compiler payload structure
  */
 export function compileTestStructure(questions = [], metadata = {}) {
-  const segmented = segmentQuestionsBySubject(questions);
+  const qList = Array.isArray(questions) ? questions : (questions?.questions || []);
+  const segmented = segmentQuestionsBySubject(qList);
   const subjectsMap = groupQuestionsBySubject(segmented);
 
   const diagramsCount = metadata.diagrams_extracted != null
@@ -1033,3 +1066,43 @@ export function parseTextToQuestions(text) {
 export function parseExamPdfText(text) {
   return parseExtractedText(text);
 }
+
+/**
+ * Extracts raw text from a PDF Buffer with support for both pdf-parse v2 and v1,
+ * guaranteed to run in Node.js serverless environments with DOMMatrix polyfills.
+ */
+export async function extractTextFromPdfBuffer(pdfBuffer) {
+  if (!pdfBuffer || !pdfBuffer.length) return '';
+
+  // 1. Try pdf-parse v2 class API
+  try {
+    const pdfParsePkg = await import('pdf-parse');
+    const PDFParseClass = pdfParsePkg.PDFParse || pdfParsePkg.default?.PDFParse;
+    if (typeof PDFParseClass === 'function') {
+      const parser = new PDFParseClass({ data: pdfBuffer });
+      const result = await parser.getText();
+      if (result && typeof result.text === 'string' && result.text.trim()) {
+        return result.text;
+      }
+    }
+  } catch (err2) {
+    console.warn('[PDF Vision Parser] v2 PDFParse getText warning:', err2?.message || err2);
+  }
+
+  // 2. Try pdf-parse v1 function API
+  try {
+    const pdfParsePkg = await import('pdf-parse');
+    const pdfFn = typeof pdfParsePkg === 'function' ? pdfParsePkg : (pdfParsePkg.default || pdfParsePkg);
+    if (typeof pdfFn === 'function') {
+      const parsed = await pdfFn(pdfBuffer);
+      if (parsed && typeof parsed.text === 'string' && parsed.text.trim()) {
+        return parsed.text;
+      }
+    }
+  } catch (err1) {
+    console.warn('[PDF Vision Parser] v1 pdfParse function warning:', err1?.message || err1);
+  }
+
+  return '';
+}
+

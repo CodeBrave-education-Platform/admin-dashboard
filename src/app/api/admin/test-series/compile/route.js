@@ -1,3 +1,28 @@
+// Polyfill browser globals required by pdfjs-dist / pdf-parse in Node.js serverless runtimes
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  globalThis.DOMMatrix = class DOMMatrix {
+    constructor() {
+      this.a = 1; this.b = 0; this.c = 0; this.d = 1; this.e = 0; this.f = 0;
+      this.m11 = 1; this.m12 = 0; this.m13 = 0; this.m14 = 0;
+      this.m21 = 0; this.m22 = 1; this.m23 = 0; this.m24 = 0;
+      this.m31 = 0; this.m32 = 0; this.m33 = 1; this.m34 = 0;
+      this.m41 = 0; this.m42 = 0; this.m43 = 0; this.m44 = 1;
+    }
+  };
+}
+if (typeof globalThis.DOMPoint === 'undefined') {
+  globalThis.DOMPoint = class DOMPoint { constructor(x = 0, y = 0, z = 0, w = 1) { this.x = x; this.y = y; this.z = z; this.w = w; } };
+}
+if (typeof globalThis.DOMRect === 'undefined') {
+  globalThis.DOMRect = class DOMRect { constructor(x = 0, y = 0, w = 0, h = 0) { this.x = x; this.y = y; this.width = w; this.height = h; this.top = y; this.bottom = y + h; this.left = x; this.right = x + w; } };
+}
+if (typeof globalThis.ImageData === 'undefined') {
+  globalThis.ImageData = class ImageData { constructor(w, h) { this.width = w; this.height = h; this.data = new Uint8ClampedArray(w * h * 4); } };
+}
+if (typeof globalThis.Path2D === 'undefined') {
+  globalThis.Path2D = class Path2D {};
+}
+
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import {
@@ -6,7 +31,8 @@ import {
   splitAnswerKeySection,
   parseAnswerKeyMatrix,
   bindAnswerKeysToQuestions,
-  compileTestStructure
+  compileTestStructure,
+  extractTextFromPdfBuffer
 } from '@/lib/pdf-vision-parser';
 
 export const dynamic = 'force-dynamic';
@@ -94,14 +120,10 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // 2. Extract text from PDF buffer
+    // 2. Extract text from PDF buffer with bulletproof v2/v1 fallback
     let rawText = '';
     try {
-      const pdfParse = (await import('pdf-parse')).default || (await import('pdf-parse'));
-      const parsedPdf = await pdfParse(pdfBuffer);
-      if (parsedPdf && parsedPdf.text) {
-        rawText = parsedPdf.text;
-      }
+      rawText = await extractTextFromPdfBuffer(pdfBuffer);
     } catch (parseErr) {
       console.error('[Autonomous Compiler] pdf-parse error:', parseErr);
       return NextResponse.json({
@@ -110,10 +132,10 @@ export async function POST(request) {
       }, { status: 500 });
     }
 
-    if (!rawText.trim()) {
+    if (!rawText || !rawText.trim()) {
       return NextResponse.json({
         success: false,
-        error: 'Extracted PDF content is empty'
+        error: 'Extracted PDF content is empty or unreadable.'
       }, { status: 400 });
     }
 
@@ -128,8 +150,9 @@ export async function POST(request) {
     // C. Bind answer keys from the end of the PDF
     let boundCount = 0;
     if (Object.keys(answerKeyMap).length > 0) {
-      parsedQuestions = bindAnswerKeysToQuestions(parsedQuestions, answerKeyMap);
-      boundCount = parsedQuestions.filter(q => q.correct_answer || (typeof q.correct_option_index === 'number' && q.correct_option_index >= 0)).length;
+      const bindRes = bindAnswerKeysToQuestions(parsedQuestions, answerKeyMap);
+      parsedQuestions = Array.isArray(bindRes) ? bindRes : (bindRes.questions || parsedQuestions);
+      boundCount = bindRes.boundCount || 0;
     }
 
     if (parsedQuestions.length === 0) {
@@ -215,6 +238,7 @@ export async function POST(request) {
       title: examTitle,
       package_id: package_id || null,
       total_questions: compilation.total_questions || parsedQuestions.length,
+      duration_minutes: Number(duration_minutes) || 180,
       marks_scheme: { 
         positive_marks: 4, 
         negative_marks: -1,
