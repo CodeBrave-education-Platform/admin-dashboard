@@ -120,39 +120,94 @@ export async function POST(request) {
       }, { status: 400 });
     }
 
-    // 2. Extract text from PDF buffer with bulletproof v2/v1 fallback
-    let rawText = '';
-    try {
-      rawText = await extractTextFromPdfBuffer(pdfBuffer);
-    } catch (parseErr) {
-      console.error('[Autonomous Compiler] pdf-parse error:', parseErr);
-      return NextResponse.json({
-        success: false,
-        error: `PDF extraction failed: ${parseErr.message}`
-      }, { status: 500 });
-    }
-
-    if (!rawText || !rawText.trim()) {
-      return NextResponse.json({
-        success: false,
-        error: 'Extracted PDF content is empty or unreadable.'
-      }, { status: 400 });
-    }
-
-    // 3. Multimodal / Deterministic Parsing Pipeline
-    // A. Separate question body and end-of-PDF answer key
-    const { questionsText, answerKeyText } = splitAnswerKeySection(rawText);
-    const answerKeyMap = answerKeyText ? parseAnswerKeyMatrix(answerKeyText) : {};
-
-    // B. Parse individual questions
-    let parsedQuestions = parseExtractedText(questionsText || rawText);
-
-    // C. Bind answer keys from the end of the PDF
+    // 2. Multimodal AI + Deterministic Extraction Pipeline
+    const apiKey = cleanEnv(process.env.GEMINI_API_KEY || process.env.GOOGLE_GENAI_API_KEY || process.env.GOOGLE_API_KEY);
+    let parsedQuestions = [];
     let boundCount = 0;
-    if (Object.keys(answerKeyMap).length > 0) {
-      const bindRes = bindAnswerKeysToQuestions(parsedQuestions, answerKeyMap);
-      parsedQuestions = Array.isArray(bindRes) ? bindRes : (bindRes.questions || parsedQuestions);
-      boundCount = bindRes.boundCount || 0;
+
+    // PATH A: Multimodal Gemini AI Vision Digitizer (handles scanned PDFs, diagrams, LaTeX equations)
+    if (apiKey && pdfBuffer) {
+      try {
+        const { GoogleGenAI } = await import('@google/genai');
+        const { GEMINI_SYSTEM_INSTRUCTION } = await import('@/lib/pdf-vision-parser');
+        const ai = new GoogleGenAI({ apiKey });
+        const cleanBase64 = Buffer.from(pdfBuffer).toString('base64');
+
+        const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+        for (const modelName of modelsToTry) {
+          try {
+            const resp = await ai.models.generateContent({
+              model: modelName,
+              contents: [
+                {
+                  inlineData: {
+                    mimeType: 'application/pdf',
+                    data: cleanBase64
+                  }
+                },
+                {
+                  text: 'Extract all questions, detect section/subject boundaries (Physics, Chemistry, Mathematics), extract diagram bounding boxes [ymin, xmin, ymax, xmax], and parse any end-of-PDF answer key matrix into structured JSON.'
+                }
+              ],
+              config: {
+                responseMimeType: 'application/json',
+                systemInstruction: GEMINI_SYSTEM_INSTRUCTION,
+                temperature: 0.1
+              }
+            });
+
+            if (resp) {
+              let textOut = resp.text || '';
+              if (!textOut && resp.candidates?.[0]?.content?.parts) {
+                textOut = resp.candidates[0].content.parts.map(p => p.text || '').join('');
+              }
+              let cleanJ = textOut.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+              cleanJ = cleanJ.replace(/(?<!\\)\\(?!["\\nr]|u[0-9a-fA-F]{4})/g, '\\\\');
+              const dataObj = JSON.parse(cleanJ);
+              if (Array.isArray(dataObj.questions) && dataObj.questions.length > 0) {
+                parsedQuestions = dataObj.questions;
+                boundCount = dataObj.questions.filter(q => q.correct_answer || (typeof q.correct_option_index === 'number' && q.correct_option_index >= 0)).length;
+                break;
+              }
+            }
+          } catch (modelErr) {
+            console.warn(`[Autonomous Compiler] Model ${modelName} notice:`, modelErr.message);
+          }
+        }
+      } catch (aiErr) {
+        console.warn('[Autonomous Compiler] Gemini AI fallback to deterministic extractor:', aiErr.message);
+      }
+    }
+
+    // PATH B: Deterministic Extraction (pdf-parse v2/v1 + pure Node.js zlib stream extractor)
+    if (parsedQuestions.length === 0) {
+      let rawText = '';
+      try {
+        rawText = await extractTextFromPdfBuffer(pdfBuffer);
+      } catch (parseErr) {
+        console.error('[Autonomous Compiler] pdf-parse error:', parseErr);
+      }
+
+      if (!rawText || !rawText.trim()) {
+        return NextResponse.json({
+          success: false,
+          error: 'Extracted PDF content is empty or unreadable. If this is a scanned/image PDF, ensure GEMINI_API_KEY is configured in Vercel environment variables.'
+        }, { status: 400 });
+      }
+
+      // A. Separate question body and end-of-PDF answer key
+      const { questionsText, answerKeyText } = splitAnswerKeySection(rawText);
+      const answerKeyMap = answerKeyText ? parseAnswerKeyMatrix(answerKeyText) : {};
+
+      // B. Parse individual questions
+      parsedQuestions = parseExtractedText(questionsText || rawText);
+
+      // C. Bind answer keys from the end of the PDF
+      if (Object.keys(answerKeyMap).length > 0) {
+        const bindRes = bindAnswerKeysToQuestions(parsedQuestions, answerKeyMap);
+        parsedQuestions = Array.isArray(bindRes) ? bindRes : (bindRes.questions || parsedQuestions);
+        boundCount = bindRes.boundCount || 0;
+      }
     }
 
     if (parsedQuestions.length === 0) {

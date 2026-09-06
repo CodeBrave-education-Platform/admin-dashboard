@@ -1068,8 +1068,74 @@ export function parseExamPdfText(text) {
 }
 
 /**
- * Extracts raw text from a PDF Buffer with support for both pdf-parse v2 and v1,
- * guaranteed to run in Node.js serverless environments with DOMMatrix polyfills.
+ * Pure Node.js fallback to extract text from PDF streams using built-in zlib.
+ * Zero external library dependencies, zero DOMMatrix/worker issues.
+ */
+export function extractTextFromPdfStream(pdfBuffer) {
+  if (!pdfBuffer || !pdfBuffer.length) return '';
+  try {
+    const zlib = require('zlib');
+    const content = pdfBuffer.toString('binary');
+    const streamRegex = /stream[\r\n]+([\s\S]*?)[\r\n]+endstream/g;
+    let text = '';
+    let match;
+
+    while ((match = streamRegex.exec(content)) !== null) {
+      const rawStream = Buffer.from(match[1], 'binary');
+      let decompressed = null;
+      try {
+        decompressed = zlib.inflateSync(rawStream);
+      } catch (e) {
+        try {
+          decompressed = zlib.inflateRawSync(rawStream);
+        } catch (e2) {}
+      }
+
+      if (decompressed) {
+        const str = decompressed.toString('latin1');
+        // Look for text blocks enclosed in BT ... ET
+        const btRegex = /BT[\s\S]*?ET/g;
+        let btMatch;
+        while ((btMatch = btRegex.exec(str)) !== null) {
+          const block = btMatch[0];
+          let blockText = '';
+
+          // Match (text) Tj
+          const tjRegex = /\(([\s\S]*?)\)\s*Tj/g;
+          let tjMatch;
+          while ((tjMatch = tjRegex.exec(block)) !== null) {
+            blockText += tjMatch[1].replace(/\\\\/g, '\\').replace(/\\\(/g, '(').replace(/\\\)/g, ')') + ' ';
+          }
+
+          // Match [(text)] TJ
+          const tJRegex = /\[([\s\S]*?)\]\s*TJ/g;
+          let tJMatch;
+          while ((tJMatch = tJRegex.exec(block)) !== null) {
+            const inner = tJMatch[1];
+            const innerTj = /\(([\s\S]*?)\)/g;
+            let itm;
+            while ((itm = innerTj.exec(inner)) !== null) {
+              blockText += itm[1].replace(/\\\\/g, '\\').replace(/\\\(/g, '(').replace(/\\\)/g, ')');
+            }
+            blockText += ' ';
+          }
+
+          if (blockText.trim()) {
+            text += blockText.trim() + '\n';
+          }
+        }
+      }
+    }
+    return text.trim();
+  } catch (err) {
+    console.warn('[PDF Vision Parser] Stream extraction error:', err?.message || err);
+    return '';
+  }
+}
+
+/**
+ * Extracts raw text from a PDF Buffer with support for both pdf-parse v2/v1
+ * and pure Node.js zlib stream extraction, guaranteed to run in any serverless environment.
  */
 export async function extractTextFromPdfBuffer(pdfBuffer) {
   if (!pdfBuffer || !pdfBuffer.length) return '';
@@ -1101,6 +1167,16 @@ export async function extractTextFromPdfBuffer(pdfBuffer) {
     }
   } catch (err1) {
     console.warn('[PDF Vision Parser] v1 pdfParse function warning:', err1?.message || err1);
+  }
+
+  // 3. Try pure Node.js zlib stream text extraction (zero dependencies, 100% serverless safe)
+  try {
+    const streamText = extractTextFromPdfStream(pdfBuffer);
+    if (streamText && streamText.trim()) {
+      return streamText;
+    }
+  } catch (streamErr) {
+    console.warn('[PDF Vision Parser] Stream fallback warning:', streamErr?.message || streamErr);
   }
 
   return '';
