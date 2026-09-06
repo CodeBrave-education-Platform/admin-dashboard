@@ -18,14 +18,14 @@ function cleanEnv(val) {
   return cleaned;
 }
 
-// Initialize server-side Supabase client for storage
 function getStorageClient() {
-  const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL) || SUPABASE_PROJECT_URL;
   let supabaseKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
-  if (!supabaseKey || supabaseKey.split('.').length !== 3) {
-    supabaseKey = VERIFIED_SERVICE_ROLE_KEY;
+  if (!supabaseKey || supabaseKey !== VERIFIED_SERVICE_ROLE_KEY) {
+    return createClient(SUPABASE_PROJECT_URL, VERIFIED_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false }
+    });
   }
-  return createClient(supabaseUrl, supabaseKey, {
+  return createClient(SUPABASE_PROJECT_URL, supabaseKey, {
     auth: { persistSession: false }
   });
 }

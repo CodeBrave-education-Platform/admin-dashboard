@@ -52,14 +52,27 @@ function cleanEnv(val) {
 }
 
 function getAdminClient(forceFallback = false) {
-  const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL) || SUPABASE_PROJECT_URL;
-  let serviceKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-  if (forceFallback || !serviceKey || serviceKey.split('.').length !== 3) {
-    serviceKey = VERIFIED_SERVICE_ROLE_KEY;
+  if (forceFallback) {
+    return createClient(SUPABASE_PROJECT_URL, VERIFIED_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false }
+    });
   }
 
-  return createClient(supabaseUrl, serviceKey, {
+  const serviceKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  let isServiceRoleForProject = false;
+  if (serviceKey && serviceKey.split('.').length === 3) {
+    try {
+      const payload = JSON.parse(Buffer.from(serviceKey.split('.')[1], 'base64').toString('utf8'));
+      if (payload.role === 'service_role' && payload.ref === 'uggatacexipoidzhcjhx') {
+        isServiceRoleForProject = true;
+      }
+    } catch (_e) {
+      isServiceRoleForProject = false;
+    }
+  }
+
+  const activeKey = isServiceRoleForProject ? serviceKey : VERIFIED_SERVICE_ROLE_KEY;
+  return createClient(SUPABASE_PROJECT_URL, activeKey, {
     auth: { persistSession: false }
   });
 }

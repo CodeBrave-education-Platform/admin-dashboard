@@ -18,14 +18,20 @@ function cleanEnv(val) {
 }
 
 function getAdminClient(forceFallback = false) {
-  const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL) || SUPABASE_PROJECT_URL;
-  let serviceKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-  if (forceFallback || !serviceKey || serviceKey.split('.').length !== 3) {
-    serviceKey = VERIFIED_SERVICE_ROLE_KEY;
+  if (forceFallback) {
+    return createClient(SUPABASE_PROJECT_URL, VERIFIED_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false }
+    });
   }
 
-  return createClient(supabaseUrl, serviceKey, {
+  let serviceKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  if (!serviceKey || serviceKey !== VERIFIED_SERVICE_ROLE_KEY) {
+    return createClient(SUPABASE_PROJECT_URL, VERIFIED_SERVICE_ROLE_KEY, {
+      auth: { persistSession: false }
+    });
+  }
+
+  return createClient(SUPABASE_PROJECT_URL, serviceKey, {
     auth: { persistSession: false }
   });
 }
