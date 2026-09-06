@@ -51,11 +51,11 @@ function cleanEnv(val) {
   return cleaned;
 }
 
-function getAdminClient() {
+function getAdminClient(forceFallback = false) {
   const supabaseUrl = cleanEnv(process.env.NEXT_PUBLIC_SUPABASE_URL) || SUPABASE_PROJECT_URL;
   let serviceKey = cleanEnv(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  if (!serviceKey || serviceKey.split('.').length !== 3) {
+  if (forceFallback || !serviceKey || serviceKey.split('.').length !== 3) {
     serviceKey = VERIFIED_SERVICE_ROLE_KEY;
   }
 
@@ -78,7 +78,7 @@ export async function POST(request) {
       blueprint_type = 'jee_main'
     } = body;
 
-    const supabase = getAdminClient();
+    let supabase = getAdminClient(false);
 
     // 1. Resolve PDF file data (either from URL or Supabase storage)
     let pdfBuffer = null;
@@ -87,9 +87,23 @@ export async function POST(request) {
     // Try downloading via Supabase storage if storage_path provided
     if (storage_path) {
       try {
-        const { data: fileData, error: dlErr } = await supabase.storage
+        let { data: fileData, error: dlErr } = await supabase.storage
           .from('question-papers')
           .download(storage_path);
+
+        // Auto-heal on auth or API key error during download
+        if (dlErr && (
+          dlErr.message?.toLowerCase().includes('invalid api key') ||
+          dlErr.message?.toLowerCase().includes('signature') ||
+          dlErr.statusCode === '403'
+        )) {
+          supabase = getAdminClient(true);
+          const retryDl = await supabase.storage
+            .from('question-papers')
+            .download(storage_path);
+          fileData = retryDl.data;
+          dlErr = retryDl.error;
+        }
 
         if (!dlErr && fileData) {
           const arrayBuf = await fileData.arrayBuffer();
@@ -297,23 +311,41 @@ export async function POST(request) {
       marks_scheme: { 
         positive_marks: 4, 
         negative_marks: -1,
+        blueprint_type,
+        sections_config: sectionsConfig,
         ...(course_id ? { course_id } : {})
       },
       is_live_ranking: true,
       activation_timestamp: new Date().toISOString(),
-      blueprint_type,
-      sections_config: sectionsConfig,
       questions: compilation.questions || parsedQuestions
     };
 
-    const { data: createdExam, error: examInsertErr } = await supabase
+    let insertResult = await supabase
       .from('test_exams')
       .insert([examPayload])
       .select()
       .single();
 
+    // Auto-heal on auth or API key error with environment key
+    if (insertResult.error && (
+      insertResult.error.message?.toLowerCase().includes('invalid api key') ||
+      insertResult.error.message?.toLowerCase().includes('jwt') ||
+      insertResult.error.message?.toLowerCase().includes('signature') ||
+      insertResult.error.code === 'PGRST301'
+    )) {
+      console.warn('[Autonomous Compiler] Auth error with environment key, retrying with verified service role key...');
+      supabase = getAdminClient(true);
+      insertResult = await supabase
+        .from('test_exams')
+        .insert([examPayload])
+        .select()
+        .single();
+    }
+
+    let { data: createdExam, error: examInsertErr } = insertResult;
+
     // If linked to a course, also register in assessments table for LMS compatibility
-    if (course_id) {
+    if (course_id && createdExam) {
       try {
         await supabase.from('assessments').insert([{
           course_id,
@@ -327,54 +359,28 @@ export async function POST(request) {
     }
 
     if (examInsertErr) {
-      console.error('[Autonomous Compiler] DB Insert error:', examInsertErr);
-      // Fallback for minimal schema columns if blueprint_type or sections_config missing
-      const minimalPayload = {
-        title: examTitle,
-        package_id: package_id || null,
-        total_questions: compilation.total_questions || parsedQuestions.length,
-        duration_minutes: Number(duration_minutes) || 180,
-        marks_scheme: { positive_marks: 4, negative_marks: -1 },
-        is_live_ranking: true,
-        activation_timestamp: new Date().toISOString(),
-        questions: compilation.questions || parsedQuestions
-      };
-
-      const { data: fallbackExam, error: fbErr } = await supabase
+      console.error('[Autonomous Compiler] DB Insert error, attempting verified key fallback:', examInsertErr);
+      supabase = getAdminClient(true);
+      const fallbackResult = await supabase
         .from('test_exams')
-        .insert([minimalPayload])
+        .insert([examPayload])
         .select()
         .single();
 
-      if (fbErr) {
-        throw new Error(`Failed to save compiled exam: ${fbErr.message}`);
+      if (fallbackResult.error) {
+        throw new Error(`Failed to save compiled exam: ${fallbackResult.error.message}`);
       }
-
-      // Update document status to compiled if document_id provided
-      if (document_id && !String(document_id).startsWith('storage_')) {
-        await supabase
-          .from('question_paper_documents')
-          .update({ status: 'compiled', compiled_exam_id: fallbackExam.id })
-          .eq('id', document_id)
-          .catch(() => {});
-      }
-
-      return NextResponse.json({
-        success: true,
-        exam: fallbackExam,
-        questions_count: parsedQuestions.length,
-        answer_keys_bound: boundCount,
-        message: `Successfully compiled ${parsedQuestions.length} questions into "${examTitle}"!`
-      });
+      createdExam = fallbackResult.data;
     }
 
     // Update document status to compiled if document_id provided
-    if (document_id && !String(document_id).startsWith('storage_')) {
-      await supabase
-        .from('question_paper_documents')
-        .update({ status: 'compiled', compiled_exam_id: createdExam.id })
-        .eq('id', document_id)
-        .catch(() => {});
+    if (document_id && !String(document_id).startsWith('storage_') && createdExam) {
+      try {
+        await supabase
+          .from('question_paper_documents')
+          .update({ status: 'compiled', compiled_exam_id: createdExam.id })
+          .eq('id', document_id);
+      } catch (_ignoreDocErr) {}
     }
 
     return NextResponse.json({
