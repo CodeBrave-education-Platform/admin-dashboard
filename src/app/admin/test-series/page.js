@@ -8,6 +8,7 @@ import AdminLayoutShell from '@/components/AdminLayoutShell';
 import { useToast } from '@/components/ToastProvider';
 import ConfirmDialogModal from '@/components/ConfirmDialogModal';
 import TestPortalTabs from '@/components/test-series/TestPortalTabs';
+import TestPackagesGrid from '@/components/test-series/TestPackagesGrid';
 import AllTestsTable from '@/components/test-series/AllTestsTable';
 import PdfQuestionPaperGrid from '@/components/test-series/PdfQuestionPaperGrid';
 import PdfUploader from '@/components/test-series/PdfUploader';
@@ -21,9 +22,12 @@ function TestPortalContent() {
   const tabParam = searchParams.get('tab');
   const initialTab = (tabParam === 'pdf' || tabParam === 'pdf_repository') 
     ? 'pdf_repository' 
-    : 'all_tests';
+    : (tabParam === 'all_tests' || tabParam === 'tests')
+      ? 'all_tests'
+      : 'test_packages';
 
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [packages, setPackages] = useState([]);
   const [exams, setExams] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [attempts, setAttempts] = useState([]);
@@ -31,14 +35,19 @@ function TestPortalContent() {
 
   // Modals state
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'exam' | 'document', data: object }
+  const [deleteTarget, setDeleteTarget] = useState(null); // { type: 'exam' | 'document' | 'package', data: object }
 
   // Sync tab with URL if changed
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    const newUrl = tab === 'pdf_repository' 
-      ? '/admin/test-series?tab=pdf' 
-      : '/admin/test-series';
+    let newUrl = '/admin/test-series';
+    if (tab === 'pdf_repository') {
+      newUrl = '/admin/test-series?tab=pdf';
+    } else if (tab === 'all_tests') {
+      newUrl = '/admin/test-series?tab=tests';
+    } else {
+      newUrl = '/admin/test-series?tab=packages';
+    }
     router.replace(newUrl, { scroll: false });
   };
 
@@ -49,24 +58,42 @@ function TestPortalContent() {
     }
   }, []);
 
-  // Fetch test_exams, question_paper_documents, and test_attempts
+  // Fetch test_packages, test_exams, question_paper_documents, and test_attempts
   const fetchPortalData = useCallback(async () => {
     try {
       setLoading(true);
-      const [examsRes, docsRes, attemptsRes] = await Promise.all([
+
+      // 1. Fetch documents via dual-source sync API (Supabase storage uploads + DB)
+      const docsPromise = fetch('/api/admin/test-series/documents')
+        .then(res => res.json())
+        .then(data => data.documents || [])
+        .catch(async () => {
+          const { data } = await supabase.from('question_paper_documents').select('*').order('created_at', { ascending: false });
+          return data || [];
+        });
+
+      // 2. Query packages, exams, attempts in parallel
+      const [packagesRes, examsRes, docsData, attemptsRes] = await Promise.all([
+        supabase
+          .from('test_packages')
+          .select('*')
+          .order('created_at', { ascending: false }),
         supabase
           .from('test_exams')
           .select('*')
           .order('created_at', { ascending: false }),
-        supabase
-          .from('question_paper_documents')
-          .select('*')
-          .order('created_at', { ascending: false }),
+        docsPromise,
         supabase
           .from('test_attempts')
           .select('id, exam_id, score, status, completed_at')
           .order('completed_at', { ascending: false })
       ]);
+
+      if (packagesRes.data) {
+        setPackages(packagesRes.data);
+      } else if (packagesRes.error) {
+        console.warn('[Fetch Packages Error]:', packagesRes.error.message);
+      }
 
       if (examsRes.data) {
         setExams(examsRes.data);
@@ -74,10 +101,8 @@ function TestPortalContent() {
         console.warn('[Fetch Exams Error]:', examsRes.error.message);
       }
 
-      if (docsRes.data) {
-        setDocuments(docsRes.data);
-      } else if (docsRes.error) {
-        console.warn('[Fetch Question Paper Documents Error]:', docsRes.error.message);
+      if (Array.isArray(docsData)) {
+        setDocuments(docsData);
       }
 
       if (attemptsRes.data) {
@@ -100,11 +125,11 @@ function TestPortalContent() {
   // Handle uploaded PDF document
   const handleDocumentUploaded = (newDoc) => {
     setDocuments(prev => [newDoc, ...prev]);
-    // Switch to PDF tab to show the newly uploaded paper
     setActiveTab('pdf_repository');
+    showToast('Question paper uploaded and stored securely', 'success');
   };
 
-  // Safe deletion execution for either exam or question paper document
+  // Safe deletion execution for either exam, package, or question paper document
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
 
@@ -122,6 +147,17 @@ function TestPortalContent() {
         setExams(prev => prev.filter(e => e.id !== data.id));
         showToast(`Exam "${data.title}" successfully deleted`, 'success');
         await invalidateCache('exams', data.id);
+      } else if (type === 'package') {
+        const { error } = await supabase
+          .from('test_packages')
+          .delete()
+          .eq('id', data.id);
+
+        if (error) throw error;
+
+        setPackages(prev => prev.filter(p => p.id !== data.id));
+        showToast(`Test Package "${data.title}" successfully deleted`, 'success');
+        await invalidateCache('packages', data.id);
       } else if (type === 'document') {
         const res = await fetch(`/api/admin/test-series/documents?id=${encodeURIComponent(data.id)}`, {
           method: 'DELETE',
@@ -143,6 +179,7 @@ function TestPortalContent() {
   };
 
   // Metrics calculations
+  const totalPackages = packages.length;
   const totalExams = exams.length;
   const totalPdfs = documents.length;
   const readyToCompileCount = documents.filter(
@@ -153,13 +190,14 @@ function TestPortalContent() {
   return (
     <AdminLayoutShell
       title="Test Portal"
-      subtitle="Manage standalone exams, multi-format blueprints, and PDF question paper repository"
+      subtitle="Manage test packages, standalone exams, and autonomous PDF question paper compiler"
     >
       <div className="space-y-6">
-        {/* Unified Header, Metrics Ribbon & 2-Tab Navigation */}
+        {/* Unified Header, Metrics Ribbon & 3-Tab Navigation */}
         <TestPortalTabs
           activeTab={activeTab}
           onTabChange={handleTabChange}
+          totalPackages={totalPackages}
           totalExams={totalExams}
           totalPdfs={totalPdfs}
           readyToCompileCount={readyToCompileCount}
@@ -167,23 +205,38 @@ function TestPortalContent() {
           onOpenUploadModal={() => setIsUploadModalOpen(true)}
         />
 
-        {/* Tab 1: All Tests (Compiled Standalone Exams Direct Table) */}
+        {/* Tab 1: Test Packages (Bundles containing multiple tests) */}
+        {activeTab === 'test_packages' && (
+          <TestPackagesGrid
+            packages={packages}
+            exams={exams}
+            attempts={attempts}
+            isLoading={loading}
+            onPackageUpdated={fetchPortalData}
+            onDeletePackage={(pkg) => setDeleteTarget({ type: 'package', data: pkg })}
+            onDeleteExam={(exam) => setDeleteTarget({ type: 'exam', data: exam })}
+          />
+        )}
+
+        {/* Tab 2: PDF Question Papers (Question Paper Repository Grid & 1-Click Auto Compile) */}
+        {activeTab === 'pdf_repository' && (
+          <PdfQuestionPaperGrid
+            documents={documents}
+            packages={packages}
+            isLoading={loading}
+            onOpenUploadModal={() => setIsUploadModalOpen(true)}
+            onDeleteDocument={(doc) => setDeleteTarget({ type: 'document', data: doc })}
+            onExamCompiled={fetchPortalData}
+          />
+        )}
+
+        {/* Tab 3: All Tests (Compiled Exams Table) */}
         {activeTab === 'all_tests' && (
           <AllTestsTable
             exams={exams}
             attempts={attempts}
             isLoading={loading}
             onDeleteExam={(exam) => setDeleteTarget({ type: 'exam', data: exam })}
-          />
-        )}
-
-        {/* Tab 2: PDF Question Papers (Question Paper Repository Grid) */}
-        {activeTab === 'pdf_repository' && (
-          <PdfQuestionPaperGrid
-            documents={documents}
-            isLoading={loading}
-            onOpenUploadModal={() => setIsUploadModalOpen(true)}
-            onDeleteDocument={(doc) => setDeleteTarget({ type: 'document', data: doc })}
           />
         )}
       </div>
@@ -198,11 +251,19 @@ function TestPortalContent() {
       {/* Confirmation Dialog for Deletions */}
       <ConfirmDialogModal
         isOpen={!!deleteTarget}
-        title={deleteTarget?.type === 'exam' ? 'Delete Exam' : 'Delete Question Paper PDF'}
+        title={
+          deleteTarget?.type === 'package'
+            ? 'Delete Test Package'
+            : deleteTarget?.type === 'exam'
+              ? 'Delete Exam'
+              : 'Delete Question Paper PDF'
+        }
         message={
-          deleteTarget?.type === 'exam'
-            ? `Are you sure you want to permanently delete the exam "${deleteTarget?.data?.title}"? All associated attempt records and cached questions will be removed.`
-            : `Are you sure you want to permanently delete the question paper "${deleteTarget?.data?.title}"? The PDF file will be removed from storage.`
+          deleteTarget?.type === 'package'
+            ? `Are you sure you want to permanently delete the test package "${deleteTarget?.data?.title}"? Tests inside will become standalone.`
+            : deleteTarget?.type === 'exam'
+              ? `Are you sure you want to permanently delete the exam "${deleteTarget?.data?.title}"? All associated attempt records and questions will be removed.`
+              : `Are you sure you want to permanently delete the question paper "${deleteTarget?.data?.title}"? The PDF file will be removed from storage.`
         }
         confirmLabel="Permanently Delete"
         type="danger"

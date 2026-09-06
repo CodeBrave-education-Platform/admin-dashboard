@@ -29,6 +29,123 @@ function getAdminClient() {
   });
 }
 
+export async function GET(request) {
+  try {
+    const supabase = getAdminClient();
+
+    // 1. Query database records if table exists
+    let dbDocs = [];
+    try {
+      const { data, error } = await supabase
+        .from('question_paper_documents')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        dbDocs = data;
+      } else {
+        console.warn('[Admin Documents API] DB query notice:', error?.message);
+      }
+    } catch (dbErr) {
+      console.warn('[Admin Documents API] DB select exception:', dbErr.message);
+    }
+
+    // 2. Query Supabase Storage bucket 'question-papers' (uploads/ folder)
+    let storageFiles = [];
+    try {
+      const { data: files, error: storageErr } = await supabase
+        .storage
+        .from('question-papers')
+        .list('uploads', {
+          limit: 100,
+          sortBy: { column: 'created_at', order: 'desc' }
+        });
+
+      if (!storageErr && Array.isArray(files)) {
+        storageFiles = files.filter(f => f.name && !f.name.startsWith('.'));
+      }
+    } catch (sErr) {
+      console.warn('[Admin Documents API] Storage list warning:', sErr.message);
+    }
+
+    // 3. Reconcile storage files with DB docs (auto-index any missing uploaded files)
+    const knownPaths = new Set(
+      dbDocs.map(d => d.metadata?.storage_path || `uploads/${d.file_name}`)
+    );
+
+    const missingDocsToInsert = [];
+    for (const file of storageFiles) {
+      const storagePath = `uploads/${file.name}`;
+      if (!knownPaths.has(storagePath)) {
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('question-papers')
+          .getPublicUrl(storagePath);
+
+        // Derive clean title from filename
+        // e.g. 1788670017232_2024_1_English.pdf -> 2024 1 English
+        const rawName = file.name.replace(/^\d+_/, '').replace(/\.pdf$/i, '');
+        const cleanTitle = rawName.replace(/[-_]+/g, ' ').trim() || 'Uploaded Question Paper';
+
+        const synthesizedDoc = {
+          id: `storage_${file.id || file.name}`,
+          title: cleanTitle,
+          file_url: publicUrl || '',
+          file_name: file.name,
+          file_size_bytes: file.metadata?.size || 0,
+          subject: 'Full Syllabus',
+          target_exam: 'JEE Main',
+          status: 'ready_to_compile',
+          metadata: {
+            storage_path: storagePath,
+            original_name: file.name,
+            uploaded_at: file.created_at || new Date().toISOString()
+          },
+          created_at: file.created_at || new Date().toISOString()
+        };
+
+        dbDocs.unshift(synthesizedDoc);
+        knownPaths.add(storagePath);
+
+        missingDocsToInsert.push({
+          title: cleanTitle,
+          file_url: publicUrl || '',
+          file_name: file.name,
+          file_size_bytes: file.metadata?.size || 0,
+          subject: 'Full Syllabus',
+          target_exam: 'JEE Main',
+          status: 'ready_to_compile',
+          metadata: synthesizedDoc.metadata
+        });
+      }
+    }
+
+    // 4. Background persist missing documents to database table if possible
+    if (missingDocsToInsert.length > 0) {
+      supabase
+        .from('question_paper_documents')
+        .insert(missingDocsToInsert)
+        .then(({ data, error }) => {
+          if (error) {
+            console.warn('[Admin Documents API] Auto-index insert notice:', error.message);
+          } else {
+            console.log(`[Admin Documents API] Successfully auto-indexed ${missingDocsToInsert.length} files from storage.`);
+          }
+        })
+        .catch(e => console.warn('[Admin Documents API] Background insert catch:', e.message));
+    }
+
+    return NextResponse.json({
+      success: true,
+      documents: dbDocs
+    });
+
+  } catch (err) {
+    console.error('[Admin Documents API] GET error:', err);
+    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
+
 export async function DELETE(request) {
   try {
     const { searchParams } = new URL(request.url);

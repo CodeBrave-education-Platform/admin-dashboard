@@ -20,6 +20,7 @@ import {
   Plus,
   BookOpen
 } from 'lucide-react';
+import AutonomousCompileModal from './AutonomousCompileModal';
 
 function formatFileSize(bytes = 0) {
   const num = Number(bytes) || 0;
@@ -138,14 +139,17 @@ function PdfPreviewModal({ doc, isOpen, onClose }) {
 
 export default function PdfQuestionPaperGrid({
   documents = [],
+  packages = [],
   isLoading = false,
   onOpenUploadModal,
-  onDeleteDocument
+  onDeleteDocument,
+  onExamCompiled
 }) {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [targetExamFilter, setTargetExamFilter] = useState('all');
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [compileDoc, setCompileDoc] = useState(null);
 
   // Filter documents by search and target exam
   const filteredDocs = useMemo(() => {
@@ -320,9 +324,10 @@ export default function PdfQuestionPaperGrid({
                   </div>
 
                   {/* 1-Click "Compile into Exam" Primary Action */}
-                  <Link
-                    href={`/admin/test-series/compiler?pdfDocId=${doc.id}`}
-                    className={`flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                  <button
+                    type="button"
+                    onClick={() => setCompileDoc(doc)}
+                    className={`flex items-center gap-1.5 px-3.5 py-2 font-bold text-xs rounded-xl shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer ${
                       isCompiled
                         ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                         : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-indigo-500/20'
@@ -330,7 +335,7 @@ export default function PdfQuestionPaperGrid({
                   >
                     <Sparkles className="w-3.5 h-3.5" />
                     <span>{isCompiled ? 'Recompile Exam' : 'Compile into Exam'}</span>
-                  </Link>
+                  </button>
                 </div>
               </div>
             );
@@ -343,6 +348,18 @@ export default function PdfQuestionPaperGrid({
         doc={previewDoc}
         isOpen={!!previewDoc}
         onClose={() => setPreviewDoc(null)}
+      />
+
+      {/* 1-Click Autonomous Exam Compile Modal */}
+      <AutonomousCompileModal
+        isOpen={!!compileDoc}
+        doc={compileDoc}
+        packages={packages}
+        onClose={() => setCompileDoc(null)}
+        onCompileSuccess={(exam) => {
+          setCompileDoc(null);
+          if (onExamCompiled) onExamCompiled(exam);
+        }}
       />
     </div>
   );

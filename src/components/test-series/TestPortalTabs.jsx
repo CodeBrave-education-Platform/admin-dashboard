@@ -14,8 +14,9 @@ import {
 } from 'lucide-react';
 
 export default function TestPortalTabs({
-  activeTab = 'all_tests',
+  activeTab = 'test_packages',
   onTabChange,
+  totalPackages = 0,
   totalExams = 0,
   totalPdfs = 0,
   readyToCompileCount = 0,
@@ -122,28 +123,30 @@ export default function TestPortalTabs({
         </div>
       </div>
 
-      {/* High-visibility 2-Tab Navigation Bar */}
+      {/* High-visibility 3-Tab Navigation Bar */}
       <div className="flex border-b border-slate-200 space-x-2 sm:space-x-4">
+        {/* Tab 1: Test Packages */}
         <button
           type="button"
-          onClick={() => onTabChange('all_tests')}
+          onClick={() => onTabChange('test_packages')}
           className={`group flex items-center gap-2.5 pb-3.5 px-3 sm:px-4 font-bold text-xs sm:text-sm transition-all border-b-2 cursor-pointer select-none ${
-            activeTab === 'all_tests'
+            activeTab === 'test_packages'
               ? 'border-indigo-600 text-indigo-600'
               : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
           }`}
         >
-          <ClipboardList className={`w-4 h-4 ${activeTab === 'all_tests' ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-          <span>All Tests</span>
+          <Layers className={`w-4 h-4 ${activeTab === 'test_packages' ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+          <span>Test Packages</span>
           <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-            activeTab === 'all_tests'
+            activeTab === 'test_packages'
               ? 'bg-indigo-100 text-indigo-700'
               : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
           }`}>
-            {totalExams}
+            {totalPackages}
           </span>
         </button>
 
+        {/* Tab 2: PDF Question Papers */}
         <button
           type="button"
           onClick={() => onTabChange('pdf_repository')}
@@ -165,6 +168,27 @@ export default function TestPortalTabs({
           {readyToCompileCount > 0 && (
             <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-200 animate-ping" />
           )}
+        </button>
+
+        {/* Tab 3: All Tests */}
+        <button
+          type="button"
+          onClick={() => onTabChange('all_tests')}
+          className={`group flex items-center gap-2.5 pb-3.5 px-3 sm:px-4 font-bold text-xs sm:text-sm transition-all border-b-2 cursor-pointer select-none ${
+            activeTab === 'all_tests'
+              ? 'border-indigo-600 text-indigo-600'
+              : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+          }`}
+        >
+          <ClipboardList className={`w-4 h-4 ${activeTab === 'all_tests' ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+          <span>All Tests</span>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+            activeTab === 'all_tests'
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+          }`}>
+            {totalExams}
+          </span>
         </button>
       </div>
     </div>

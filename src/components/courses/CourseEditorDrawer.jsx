@@ -14,6 +14,7 @@ import { useToast } from '@/components/ToastProvider';
 import SyllabusTreeEditor from './SyllabusTreeEditor';
 import CourseFilesManager from './CourseFilesManager';
 import CourseExamCompilerTab from '@/components/courses/CourseExamCompilerTab';
+import AutonomousCompileModal from '@/components/test-series/AutonomousCompileModal';
 
 export default function CourseEditorDrawer({
   isOpen,
@@ -36,6 +37,9 @@ export default function CourseEditorDrawer({
   const [exams, setExams] = useState([]);
   const [liveSessions, setLiveSessions] = useState([]);
   const [doubts, setDoubts] = useState([]);
+  const [availableDocs, setAvailableDocs] = useState([]);
+  const [selectedDocIdToCompile, setSelectedDocIdToCompile] = useState('');
+  const [compileDocTarget, setCompileDocTarget] = useState(null);
   const [loadingSubresources, setLoadingSubresources] = useState(false);
 
   // Overview form fields
@@ -167,6 +171,20 @@ export default function CourseEditorDrawer({
         setDoubts(doubtsData || []);
       } else {
         setDoubts([]);
+      }
+
+      // 6. Available Question Paper PDFs for 1-click autonomous compile
+      try {
+        const docsRes = await fetch('/api/admin/test-series/documents');
+        const docsJson = await docsRes.json();
+        if (Array.isArray(docsJson.documents)) {
+          setAvailableDocs(docsJson.documents);
+          if (docsJson.documents.length > 0) {
+            setSelectedDocIdToCompile(docsJson.documents[0].id);
+          }
+        }
+      } catch (dErr) {
+        console.warn('[CourseEditorDrawer] Error fetching PDF documents:', dErr);
       }
     } catch (err) {
       console.error('[Fetch Subresources Error]:', err.message);
@@ -682,11 +700,64 @@ export default function CourseEditorDrawer({
           {/* TAB 4: EXAMS & CBT */}
           {activeTab === 'exams' && (
             <div className="space-y-6">
+              {/* 1-Click Autonomous Question Paper Compiler for this Course */}
+              <div className="bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200/80 rounded-2xl p-5 space-y-3.5 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 bg-indigo-600 text-white rounded-xl shadow-xs">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                        1-Click Autonomous PDF Exam Compiler
+                      </h4>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        Automatically extract questions, bind answer keys, and attach full mock test to this course.
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-black rounded-full uppercase">
+                    AI Multimodal
+                  </span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3">
+                  <select
+                    value={selectedDocIdToCompile}
+                    onChange={e => setSelectedDocIdToCompile(e.target.value)}
+                    className="flex-1 w-full bg-white border border-indigo-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 font-bold outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    {availableDocs.length === 0 ? (
+                      <option value="">No PDF question papers uploaded yet</option>
+                    ) : (
+                      availableDocs.map(doc => (
+                        <option key={doc.id} value={doc.id}>
+                          📄 {doc.title || doc.file_name} ({doc.target_exam || 'JEE Main'})
+                        </option>
+                      ))
+                    )}
+                  </select>
+
+                  <button
+                    type="button"
+                    disabled={availableDocs.length === 0}
+                    onClick={() => {
+                      const found = availableDocs.find(d => d.id === selectedDocIdToCompile) || availableDocs[0];
+                      if (found) setCompileDocTarget(found);
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl text-xs font-black transition flex items-center justify-center gap-2 cursor-pointer shadow-md shadow-indigo-500/20 disabled:opacity-50 select-none active:scale-[0.98]"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>Auto-Compile into Course</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Add Exam Form */}
               <form onSubmit={handleAddExam} className="bg-slate-50/70 border border-slate-200 rounded-2xl p-5 space-y-4">
                 <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
                   <ClipboardList className="w-4 h-4 text-indigo-600" />
-                  <span>Link CBT Examination or Quiz</span>
+                  <span>Link Custom CBT Assessment or Quiz</span>
                 </h4>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -937,6 +1008,21 @@ export default function CourseEditorDrawer({
           )}
         </div>
       </motion.div>
+
+      {/* 1-Click Autonomous Exam Compile Modal for this Course */}
+      <AutonomousCompileModal
+        isOpen={!!compileDocTarget}
+        doc={compileDocTarget}
+        defaultCourseId={course?.id}
+        onClose={() => setCompileDocTarget(null)}
+        onCompileSuccess={async (exam) => {
+          setCompileDocTarget(null);
+          showToast(`Exam "${exam.title}" compiled and attached to this course!`, 'success');
+          if (course?.id) {
+            await fetchSubresources(course.id);
+          }
+        }}
+      />
     </div>
   );
 }
